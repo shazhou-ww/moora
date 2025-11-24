@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@moora/moorex.svg)](https://www.npmjs.com/package/@moora/moorex)
 [![npm downloads](https://img.shields.io/npm/dm/@moora/moorex.svg)](https://www.npmjs.com/package/@moora/moorex)
-[![test coverage](https://img.shields.io/codecov/c/github/shazhou-ww/moora)](https://codecov.io/gh/shazhou-ww/moora)
+[![test coverage](https://img.shields.io/codecov/c/github/shazhou-ww/moora?flag=moorex)](https://codecov.io/gh/shazhou-ww/moora)
 [![license](https://img.shields.io/npm/l/@moora/moorex.svg)](https://github.com/shazhou-ww/moora/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
