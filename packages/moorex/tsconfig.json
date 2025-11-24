@@ -24,12 +24,6 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-
-    // Monorepo workspace paths
-    "baseUrl": ".",
-    "paths": {
-      "@moora/moorex": ["./packages/moorex"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   }
 }

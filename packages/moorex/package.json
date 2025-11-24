@@ -1,0 +1,55 @@
+{
+  "name": "moorex",
+  "version": "0.2.3",
+  "description": "A generic asynchronous Moore machine for building persistent AI agents that survive crashes, restarts, or migrations",
+  "keywords": [
+    "moore-machine",
+    "state-machine",
+    "agent",
+    "persistent",
+    "effects",
+    "async",
+    "reconciliation",
+    "ai-agent",
+    "state-management",
+    "automata"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moorex.git"
+  },
+  "homepage": "https://github.com/shazhou-ww/moorex#readme",
+  "bugs": {
+    "url": "https://github.com/shazhou-ww/moorex/issues"
+  },
+  "dependencies": {
+    "mutative": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.0.12",
+    "@vitest/ui": "4.0.12",
+    "vitest": "^4.0.12"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "files": [
+    "README.md",
+    "README.zh.md",
+    "llm.md",
+    "src",
+    "moorex.svg"
+  ],
+  "scripts": {
+    "test": "vitest --run --no-ui",
+    "test:coverage": "vitest --run --coverage --no-ui",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest --run --coverage --no-ui"
+  }
+}

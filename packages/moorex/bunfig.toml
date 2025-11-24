@@ -1,0 +1,8 @@
+[test]
+# 排除测试文件本身的覆盖率统计
+coveragePathIgnorePatterns = [
+  "**/tests/**",
+  "**/*.test.ts",
+  "**/*.spec.ts"
+]
+
