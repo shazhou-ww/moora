@@ -142,7 +142,15 @@ program
     try {
       console.log("🔍 Running prepublish checks...\n");
       const rootPkg = await getRootPackageJson();
-      await runPrepublishChecks(rootPkg.version, false);
+      const result = await runPrepublishChecks(rootPkg.version, false);
+      if (result.skippedPackages.length > 0) {
+        console.log("\n⚠️  Warning: Some packages will be skipped during publishing:");
+        for (const skipped of result.skippedPackages) {
+          console.log(
+            `  - ${skipped.name}: version ${skipped.expectedVersion} is not greater than published ${skipped.publishedVersion}`
+          );
+        }
+      }
       console.log("\n✅ All prepublish checks passed!");
     } catch (error) {
       console.error(`\n❌ Error: ${(error as Error).message}`);
@@ -163,15 +171,38 @@ program
       // Run prepublish checks
       console.log("📌 Running prepublish checks...");
       const rootPkg = await getRootPackageJson();
-      await runPrepublishChecks(rootPkg.version, false);
+      const checkResult = await runPrepublishChecks(rootPkg.version, false);
+      if (checkResult.skippedPackages.length > 0) {
+        console.log("\n⚠️  The following packages will be skipped during publishing:");
+        for (const skipped of checkResult.skippedPackages) {
+          console.log(
+            `  - ${skipped.name}: version ${skipped.expectedVersion} is not greater than published ${skipped.publishedVersion}`
+          );
+        }
+        console.log();
+      }
       console.log("✓ All prepublish checks passed\n");
 
       // Get all packages
       const packages = await getAllPackages();
-      console.log(`📌 Found ${packages.length} package(s) to publish\n`);
+      const skippedPackageNames = new Set(
+        checkResult.skippedPackages.map((p) => p.name)
+      );
+      const packagesToPublish = packages.filter(
+        (pkg) => !skippedPackageNames.has(pkg.name)
+      );
+
+      if (packagesToPublish.length === 0) {
+        console.log("⚠️  No packages to publish (all packages were skipped)\n");
+        return;
+      }
+
+      console.log(
+        `📌 Found ${packagesToPublish.length} package(s) to publish${packagesToPublish.length < packages.length ? ` (${packages.length - packagesToPublish.length} skipped)` : ""}\n`
+      );
 
       // Publish each package
-      for (const pkg of packages) {
+      for (const pkg of packagesToPublish) {
         console.log(`📦 Publishing ${pkg.name}@${pkg.version}...`);
         const publishCmd = isDryRun
           ? `cd ${pkg.path} && npm publish --dry-run --access public`
@@ -188,19 +219,41 @@ program
         }
       }
 
-      console.log(`\n✅ All packages published successfully${isDryRun ? " (dry run)" : ""}!`);
+      if (checkResult.skippedPackages.length > 0) {
+        console.log(
+          `\n✅ ${packagesToPublish.length} package(s) published successfully${isDryRun ? " (dry run)" : ""}!`
+        );
+        console.log(
+          `⚠️  ${checkResult.skippedPackages.length} package(s) were skipped (version not greater than published version)`
+        );
+      } else {
+        console.log(`\n✅ All packages published successfully${isDryRun ? " (dry run)" : ""}!`);
+      }
     } catch (error) {
       console.error(`\n❌ Error: ${(error as Error).message}`);
       process.exit(1);
     }
   });
 
+// Type for skipped packages during registry check
+type SkippedPackage = {
+  name: string;
+  expectedVersion: string;
+  publishedVersion: string;
+};
+
+// Type for prepublish check results
+type PrepublishCheckResult = {
+  skippedPackages: SkippedPackage[];
+};
+
 // Helper function: Run prepublish checks
 async function runPrepublishChecks(
   expectedVersion: string,
   skipRegistryCheck: boolean
-): Promise<void> {
+): Promise<PrepublishCheckResult> {
   const packages = await getAllPackages();
+  const skippedPackages: SkippedPackage[] = [];
 
   // Check 1: Version alignment
   console.log("  1️⃣ Checking version alignment...");
@@ -257,16 +310,29 @@ async function runPrepublishChecks(
       const publishedVersion = await getPublishedVersion(pkg.name);
       if (publishedVersion) {
         if (!semver.gt(expectedVersion, publishedVersion)) {
-          throw new Error(
-            `Version ${expectedVersion} is not greater than published version ${publishedVersion} for ${pkg.name}`
+          // Don't throw error, just skip this package
+          skippedPackages.push({
+            name: pkg.name,
+            expectedVersion,
+            publishedVersion,
+          });
+          console.log(
+            `    ⚠️  ${pkg.name}: Skipping (version ${expectedVersion} is not greater than published ${publishedVersion})`
           );
+        } else {
+          console.log(`    ${pkg.name}: ${publishedVersion} -> ${expectedVersion}`);
         }
-        console.log(`    ${pkg.name}: ${publishedVersion} -> ${expectedVersion}`);
       } else {
         console.log(`    ${pkg.name}: New package`);
       }
     }
-    console.log("  ✓ All versions valid for publishing\n");
+    if (skippedPackages.length > 0) {
+      console.log(
+        `  ⚠️  ${skippedPackages.length} package(s) will be skipped during publishing\n`
+      );
+    } else {
+      console.log("  ✓ All versions valid for publishing\n");
+    }
   }
 
   // Check 6: Individual package prepublish checks
@@ -310,6 +376,8 @@ async function runPrepublishChecks(
     );
   }
   console.log(`  ✓ Tag ${tagName} exists and matches current commit\n`);
+
+  return { skippedPackages };
 }
 
 // Helper function: Update all package versions
