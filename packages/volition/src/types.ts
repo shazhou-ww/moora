@@ -30,8 +30,7 @@ export type {
   ChannelMessageSignal,
   ToolResultSignal,
   LLMResponseSignal,
-  CreateChannelSignal,
-  CloseChannelSignal,
+  CreateSubvolitionSignal,
   ReactLoopCompletedSignal,
   VolitionSignal,
 } from './volition-signal';
@@ -40,8 +39,7 @@ export {
   ChannelMessageSignalSchema,
   ToolResultSignalSchema,
   LLMResponseSignalSchema,
-  CreateChannelSignalSchema,
-  CloseChannelSignalSchema,
+  CreateSubvolitionSignalSchema,
   ReactLoopCompletedSignalSchema,
   VolitionSignalSchema,
 } from './volition-signal';

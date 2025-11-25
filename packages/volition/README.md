@@ -107,8 +107,7 @@ type VolitionSignal =
   | { type: 'channel-message'; channelId: number; content: string }
   | { type: 'tool-result'; reactLoopId: string; toolName: string; result: unknown }
   | { type: 'llm-response'; reactLoopId: string; content: string }
-  | { type: 'create-channel'; targetVolition?: unknown }
-  | { type: 'close-channel'; channelId: number }
+  | { type: 'create-subvolition'; target: string }
   | { type: 'react-loop-completed'; reactLoopId: string; response: string };
 ```
 

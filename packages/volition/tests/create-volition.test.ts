@@ -187,23 +187,14 @@ describe('VolitionSignal type', () => {
     expect(signal.content).toBe('LLM response');
   });
 
-  test('create-channel signal', () => {
+  test('create-subvolition signal', () => {
     const signal: VolitionSignal = {
-      type: 'create-channel',
+      type: 'create-subvolition',
+      target: '完成数据分析任务',
     };
 
-    expect(signal.type).toBe('create-channel');
-    expect(signal.targetVolition).toBeUndefined();
-  });
-
-  test('close-channel signal', () => {
-    const signal: VolitionSignal = {
-      type: 'close-channel',
-      channelId: 1,
-    };
-
-    expect(signal.type).toBe('close-channel');
-    expect(signal.channelId).toBe(1);
+    expect(signal.type).toBe('create-subvolition');
+    expect(signal.target).toBe('完成数据分析任务');
   });
 
   test('react-loop-completed signal', () => {
