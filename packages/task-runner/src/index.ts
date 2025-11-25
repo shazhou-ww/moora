@@ -18,4 +18,19 @@ export type {
 
 export { createTaskRunner } from './create-task-runner.js';
 
+// 导出 ID 计算工具
+export type {
+  TaskRunnerId,
+  ChannelId,
+  MessageId,
+} from './id-utils';
+
+export {
+  computeTopLevelTaskRunnerId,
+  computeSubTaskRunnerId,
+  computeChannelId,
+  computeMessageId,
+  parseMessageId,
+} from './id-utils';
+
 
