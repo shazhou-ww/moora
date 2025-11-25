@@ -11,6 +11,14 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     
+    strategy:
+      matrix:
+        include:
+          - package: moorex
+            flag: moorex
+          - package: moorex-fastify
+            flag: moorex-fastify
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,15 +31,15 @@ jobs:
       - name: Install dependencies
         run: bun install
       
-      - name: Run tests for moorex
-        working-directory: packages/moorex
+      - name: Run tests for ${{ matrix.package }}
+        working-directory: packages/${{ matrix.package }}
         run: bun run test:coverage
       
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (${{ matrix.flag }})
         uses: codecov/codecov-action@v4
         with:
-          files: ./packages/moorex/coverage/coverage-final.json
-          flags: moorex
+          files: ./packages/${{ matrix.package }}/coverage/coverage-final.json
+          flags: ${{ matrix.flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
@@ -39,25 +47,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      
-      - name: Install dependencies
-        run: bun install
-      
-      - name: Check TypeScript types for moorex
-        working-directory: packages/moorex
-        run: bunx tsc --noEmit
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [moorex, moorex-fastify]
     
     steps:
       - name: Checkout code
@@ -71,6 +63,30 @@ jobs:
       - name: Install dependencies
         run: bun install
       
-      - name: Verify package builds correctly
-        working-directory: packages/moorex
+      - name: Check TypeScript types for ${{ matrix.package }}
+        working-directory: packages/${{ matrix.package }}
+        run: bunx tsc --noEmit
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        package: [moorex, moorex-fastify]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Verify ${{ matrix.package }} builds correctly
+        working-directory: packages/${{ matrix.package }}
         run: bunx tsc --noEmit

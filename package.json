@@ -10,7 +10,10 @@
     "prepare-version": "bun run scripts/publish.ts prepare-version",
     "prepublish": "bun run scripts/publish.ts prepublish",
     "publish": "bun run scripts/publish.ts publish",
-    "publish:dry-run": "bun run scripts/publish.ts publish --dry-run"
+    "publish:dry-run": "bun run scripts/publish.ts publish --dry-run",
+    "test": "bun run scripts/test-all.ts test",
+    "test:coverage": "bun run scripts/test-all.ts test:coverage",
+    "test:ci": "bun run scripts/test-all.ts test:ci"
   },
   "devDependencies": {
     "@types/bun": "latest",

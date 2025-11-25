@@ -24,6 +24,10 @@ flags:
     paths:
       - packages/moorex/
     carryforward: true
+  moorex-fastify:
+    paths:
+      - packages/moorex-fastify/
+    carryforward: true
 
 comment:
   layout: "reach,diff,flags,tree"
