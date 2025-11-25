@@ -156,7 +156,8 @@ describe('createMoorexNode', () => {
 
       // Check initial state was written
       expect(mockWrite).toHaveBeenCalled();
-      const writeCall = mockWrite.mock.calls[0][0];
+      const writeCall = mockWrite.mock.calls[0]?.[0];
+      expect(writeCall).toBeDefined();
       expect(writeCall).toContain('data:');
       const eventData = JSON.parse(
         writeCall.replace('data: ', '').replace('\n\n', ''),
@@ -293,8 +294,82 @@ describe('createMoorexNode', () => {
       await nextTick();
 
       // After cleanup, no events should be written
-      // The handler should return early at line 63 when isConnected is false
+      // The handler should return early when isConnected is false
       expect(mockWrite).not.toHaveBeenCalled();
+    });
+
+    test('should skip event processing when connection is already closed', async () => {
+      // Create a scenario where the event handler is called after isConnected is set to false
+      // This tests the early return when connection is closed
+      const node = createMoorexNode({ moorex });
+      
+      let capturedEventHandler: ((event: any, moorex: any) => void) | null = null;
+      
+      // Spy on subscribe to capture the event handler
+      const originalSubscribe = moorex.subscribe.bind(moorex);
+      const subscribeSpy = vi.spyOn(moorex, 'subscribe').mockImplementation((handler) => {
+        capturedEventHandler = handler as (event: any, moorex: any) => void;
+        return originalSubscribe(handler);
+      });
+
+      await node.register(mockFastify);
+
+      const mockRequest = {
+        raw: {
+          on: vi.fn(),
+        },
+      } as unknown as FastifyRequest;
+
+      const mockWrite = vi.fn();
+      const mockReply = {
+        raw: {
+          setHeader: vi.fn(),
+          write: mockWrite,
+          destroyed: false,
+          closed: false,
+          end: vi.fn(),
+        },
+      } as unknown as FastifyReply;
+
+      // Initialize the handler
+      await getHandler(mockRequest, mockReply);
+
+      // Now we have captured the event handler
+      // Simulate isConnected being set to false (as would happen in cleanup)
+      // But the handler is still registered and could be called
+      
+      // We need to access the closure variable isConnected
+      // Since we can't directly access it, we'll simulate the scenario by:
+      // 1. Calling cleanup to set isConnected to false
+      // 2. Then manually calling the event handler to test the early return
+      
+      // First, get the cleanup handler
+      const cleanupCall = (mockRequest.raw.on as any).mock.calls.find(
+        (call: any[]) => call[0] === 'close'
+      );
+      const cleanupHandlerRaw = cleanupCall?.[1] as (() => void) | undefined;
+
+      if (cleanupHandlerRaw && capturedEventHandler) {
+        // Call cleanup to set isConnected to false
+        cleanupHandlerRaw();
+
+        // Clear initial write
+        mockWrite.mockClear();
+
+        // Now manually call the event handler with an event
+        // This simulates an event arriving after cleanup but before unsubscribe fully takes effect
+        // The handler should return early because isConnected is false
+        const eventHandlerFn = capturedEventHandler as (event: any, moorex: any) => void;
+        eventHandlerFn({
+          type: 'state-updated',
+          state: { count: 1 },
+        }, moorex);
+
+        // Verify that nothing was written because of the early return
+        expect(mockWrite).not.toHaveBeenCalled();
+      }
+
+      subscribeSpy.mockRestore();
     });
 
     test('should cleanup when reply.raw.destroyed is true', async () => {
@@ -568,6 +643,51 @@ describe('createMoorexNode', () => {
       expect(mockEnd).toHaveBeenCalled();
     });
 
+    test('should be idempotent when cleanup is called multiple times', async () => {
+      // Test that cleanup can be safely called multiple times without side effects
+      const node = createMoorexNode({ moorex });
+      await node.register(mockFastify);
+
+      let cleanupHandler: (() => void) | undefined = undefined;
+      const mockRequest = {
+        raw: {
+          on: vi.fn((event: string, handler: () => void) => {
+            if (event === 'close') {
+              cleanupHandler = handler;
+            }
+          }),
+        },
+      } as unknown as FastifyRequest;
+
+      const mockEnd = vi.fn();
+      const mockReply = {
+        raw: {
+          setHeader: vi.fn(),
+          write: vi.fn(),
+          destroyed: false,
+          closed: false,
+          end: mockEnd,
+        },
+      } as unknown as FastifyReply;
+
+      await getHandler(mockRequest, mockReply);
+
+      // First call to cleanup - sets isConnected to false
+      if (cleanupHandler) {
+        const handlerFn = cleanupHandler as () => void;
+        handlerFn();
+        
+        const firstCallEndCount = mockEnd.mock.calls.length;
+        
+        // Second call to cleanup - isConnected is now false, so should return early
+        // This tests that cleanup is idempotent and safe to call multiple times
+        handlerFn();
+        
+        // end should not be called again
+        expect(mockEnd.mock.calls.length).toBe(firstCallEndCount);
+      }
+    });
+
     test('should handle different event types in SSE stream', async () => {
       const definitionWithEffects: MoorexDefinition<State, Signal, { key: string }> = {
         initiate: () => ({ count: 0 }),
@@ -577,7 +697,7 @@ describe('createMoorexNode', () => {
           }
           return state;
         },
-        effectsAt: (state) => {
+        effectsAt: (state): Record<string, { key: string }> => {
           return state.count > 0 ? { 'effect-1': { key: 'effect-1' } } : {};
         },
       };
@@ -742,8 +862,9 @@ describe('createMoorexNode', () => {
       // Check error response was sent
       expect(mockReply.code).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalled();
+      const sendMock = mockReply.send as unknown as ReturnType<typeof vi.fn>;
       const errorResponse = JSON.parse(
-        mockReply.send.mock.calls[0][0] as string,
+        sendMock.mock.calls[0]?.[0] as string,
       );
       expect(errorResponse.error).toBe('Internal server error');
       expect(errorResponse.message).toBe('Test error');
@@ -767,8 +888,9 @@ describe('createMoorexNode', () => {
       await postHandler(mockRequest, mockReply);
 
       expect(mockReply.code).toHaveBeenCalledWith(500);
+      const sendMock = mockReply.send as unknown as ReturnType<typeof vi.fn>;
       const errorResponse = JSON.parse(
-        mockReply.send.mock.calls[0][0] as string,
+        sendMock.mock.calls[0]?.[0] as string,
       );
       expect(errorResponse.message).toBe('Unknown error');
     });
