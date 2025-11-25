@@ -25,6 +25,24 @@ import {
 import { validateVersion, isValidPrereleaseVersion } from "./utils/version.ts";
 import { getPublishedVersion } from "./utils/registry.ts";
 
+// ANSI color codes
+const colors = {
+  reset: "\x1b[0m",
+  blue: "\x1b[34m",
+  cyan: "\x1b[36m",
+  yellow: "\x1b[33m",
+  green: "\x1b[32m",
+  dim: "\x1b[2m",
+};
+
+// Color for check step titles (easy to change)
+const CHECK_TITLE_COLOR: keyof typeof colors = "cyan";
+
+// Helper function to create colored text
+function colorize(text: string, color: keyof typeof colors): string {
+  return `${colors[color]}${text}${colors.reset}`;
+}
+
 const program = new Command();
 
 program
@@ -269,7 +287,7 @@ async function runPrepublishChecks(
   const skippedPackages: SkippedPackage[] = [];
 
   // Check 1: Version alignment
-  console.log("  1️⃣ Checking version alignment...");
+  console.log(colorize("  1. Checking version alignment...", CHECK_TITLE_COLOR));
   for (const pkg of packages) {
     if (pkg.version !== expectedVersion) {
       throw new Error(
@@ -280,7 +298,7 @@ async function runPrepublishChecks(
   console.log("  ✓ All versions aligned\n");
 
   // Check 2: Inter-dependency versions
-  console.log("  2️⃣ Checking inter-dependency versions...");
+  console.log(colorize("  2. Checking inter-dependency versions...", CHECK_TITLE_COLOR));
   for (const pkg of packages) {
     const pkgJson = await getPackageJson(pkg.path);
     const deps = { ...pkgJson.dependencies, ...pkgJson.devDependencies };
@@ -298,7 +316,7 @@ async function runPrepublishChecks(
   console.log("  ✓ All inter-dependency versions correct\n");
 
   // Check 3: Circular dependencies
-  console.log("  3️⃣ Checking for circular dependencies...");
+  console.log(colorize("  3. Checking for circular dependencies...", CHECK_TITLE_COLOR));
   const circularDeps = await findCircularDependencies(packages);
   if (circularDeps.length > 0) {
     throw new Error(
@@ -308,7 +326,7 @@ async function runPrepublishChecks(
   console.log("  ✓ No circular dependencies\n");
 
   // Check 4: Version format validation
-  console.log("  4️⃣ Validating version format...");
+  console.log(colorize("  4. Validating version format...", CHECK_TITLE_COLOR));
   if (!validateVersion(expectedVersion)) {
     throw new Error(
       `Invalid version format: ${expectedVersion}. Must be standard semver (e.g., 0.1.2) or valid prerelease (e.g., 0.1.2-a1)`
@@ -318,7 +336,7 @@ async function runPrepublishChecks(
 
   // Check 5: Registry version comparison
   if (!skipRegistryCheck) {
-    console.log("  5️⃣ Checking registry versions...");
+    console.log(colorize("  5. Checking registry versions...", CHECK_TITLE_COLOR));
     for (const pkg of packages) {
       const publishedVersion = await getPublishedVersion(pkg.name);
       if (publishedVersion) {
@@ -349,7 +367,7 @@ async function runPrepublishChecks(
   }
 
   // Check 6: Individual package prepublish checks
-  console.log("  6️⃣ Running package prepublish checks...");
+  console.log(colorize("  6. Running package prepublish checks...", CHECK_TITLE_COLOR));
   for (const pkg of packages) {
     const pkgJson = await getPackageJson(pkg.path);
     if (pkgJson.scripts?.prepublishOnly) {
@@ -381,14 +399,14 @@ async function runPrepublishChecks(
   console.log("  ✓ All package checks passed\n");
 
   // Check 7: Uncommitted changes
-  console.log("  7️⃣ Checking for uncommitted changes...");
+  console.log(colorize("  7. Checking for uncommitted changes...", CHECK_TITLE_COLOR));
   if (await hasUncommittedChanges()) {
     throw new Error("There are uncommitted changes in the workspace");
   }
   console.log("  ✓ No uncommitted changes\n");
 
   // Check 8: Version tag exists and matches
-  console.log("  8️⃣ Checking version tag...");
+  console.log(colorize("  8. Checking version tag...", CHECK_TITLE_COLOR));
   const tagName = `v${expectedVersion}`;
   const currentCommit = await getCurrentCommitHash();
   const tagCommit = await getTagCommitHash(tagName);
