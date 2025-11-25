@@ -1,6 +1,8 @@
 # @moora/moorex-fastify
 
 [![npm version](https://img.shields.io/npm/v/@moora/moorex-fastify.svg)](https://www.npmjs.com/package/@moora/moorex-fastify)
+[![npm downloads](https://img.shields.io/npm/dm/@moora/moorex-fastify.svg)](https://www.npmjs.com/package/@moora/moorex-fastify)
+[![test coverage](https://img.shields.io/codecov/c/github/shazhou-ww/moora?flag=moorex-fastify)](https://codecov.io/gh/shazhou-ww/moora)
 [![license](https://img.shields.io/npm/l/@moora/moorex-fastify.svg)](https://github.com/shazhou-ww/moora/blob/main/packages/moorex-fastify/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
