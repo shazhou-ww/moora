@@ -14,7 +14,7 @@ tool executions safely.
 ## Usage
 
 ```typescript
-import { createMoorex, type MoorexDefinition } from 'moorex';
+import { createMoorex, createEffectRunner, type MoorexDefinition } from 'moorex';
 import { create } from 'mutative';
 ```
 
@@ -23,24 +23,30 @@ import { create } from 'mutative';
 > [mutative](https://github.com/unadlib/mutative)). We strongly recommend using
 > mutative's `create()` function for immutable state updates.
 
-> Prepare the agent definition: describe state transitions, desired effects,
-> and how to run them. All function parameters and return values are immutable.
+> Prepare the agent definition: describe state transitions and desired effects.
+> All function parameters and return values are immutable.
 
 ```typescript
 const definition: MoorexDefinition<AgentState, AgentSignal, AgentEffect> = {
   initiate: () => initialState,
   transition: (signal) => (state) => reduceState(state, signal),
   effectsAt: (state) => decideEffects(state),
-  runEffect: (effect, state, key) => buildEffectRunner(effect, state, key),
 };
 ```
 
-> Spin up the Moorex agent, subscribe to events, and dispatch the first user message.
+> Spin up the Moorex agent, create an effect runner to handle effects, subscribe to events, and dispatch the first user message.
 
 ```typescript
 const agent = createMoorex(definition);
 
-agent.on((event) => {
+// Create and subscribe an effect runner
+const runEffect = (effect, state, key) => ({
+  start: async (dispatch) => { /* execute effect */ },
+  cancel: () => { /* cancel effect */ },
+});
+agent.subscribe(createEffectRunner(runEffect));
+
+agent.subscribe((event) => {
   console.log(event);
 });
 
@@ -57,13 +63,12 @@ type MoorexDefinition<State, Signal, Effect> = {
   initiate: () => Immutable<State>;
   transition: (signal: Immutable<Signal>) => (state: Immutable<State>) => Immutable<State>;
   effectsAt: (state: Immutable<State>) => Record<string, Immutable<Effect>>;
-  runEffect: (effect: Immutable<Effect>, state: Immutable<State>, key: string) => EffectInitializer<Signal>;
 };
 
 // Machine instance
 type Moorex<State, Signal, Effect> = {
   dispatch(signal: Immutable<Signal>): void;
-  on(handler: (event: MoorexEvent<State, Signal, Effect>) => void): CancelFn;
+  subscribe(handler: (event: MoorexEvent<State, Signal, Effect>, moorex: Moorex<State, Signal, Effect>) => void): CancelFn;
   getState(): Immutable<State>;
 };
 
@@ -71,10 +76,8 @@ type Moorex<State, Signal, Effect> = {
 type MoorexEvent<State, Signal, Effect> =
   | { type: 'signal-received'; signal: Immutable<Signal> }
   | { type: 'state-updated'; state: Immutable<State> }
-  | { type: 'effect-started'; effect: Immutable<Effect> }
-  | { type: 'effect-completed'; effect: Immutable<Effect> }
-  | { type: 'effect-canceled'; effect: Immutable<Effect> }
-  | { type: 'effect-failed'; effect: Immutable<Effect>; error: unknown };
+  | { type: 'effect-started'; effect: Immutable<Effect>; key: string }
+  | { type: 'effect-canceled'; effect: Immutable<Effect>; key: string };
 
 // Effect initializer
 type EffectInitializer<Signal> = {
@@ -99,7 +102,35 @@ mutative's `create()` for immutable updates:
 - `effectsAt(state)`: returns a Record of effects implied by the state (keys
   serve as effect identifiers). `state` is immutable; return immutable effect
   objects.
-- `runEffect(effect, state, key)`: returns `{ start, cancel }` to execute and abort
-  each effect; receives the effect, the state that generated it, and the effect's key. All
-  parameters are immutable (except key which is a string).
+
+### Running Effects
+
+To actually execute effects, use `createEffectRunner`:
+
+```typescript
+import { createEffectRunner } from 'moorex';
+
+const runEffect = (
+  effect: Immutable<Effect>,
+  state: Immutable<State>,
+  key: string,
+) => ({
+  start: async (dispatch) => {
+    // Execute the effect
+    // Use dispatch to send signals back to the machine
+  },
+  cancel: () => {
+    // Cancel the effect if needed
+  },
+});
+
+agent.subscribe(createEffectRunner(runEffect));
+```
+
+The `runEffect` function receives:
+- `effect`: The effect to run (immutable)
+- `state`: The **current state** of the machine (immutable, obtained via `moorex.getState()`)
+- `key`: The effect's key from the Record returned by `effectsAt`
+
+All parameters are immutable (except `key` which is a string).
 

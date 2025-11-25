@@ -31,7 +31,7 @@ yarn add @moora/moorex mutative
 Import and create your first Moorex machine:
 
 ```typescript
-import { createMoorex, type MoorexDefinition } from '@moora/moorex';
+import { createMoorex, createEffectRunner, type MoorexDefinition } from '@moora/moorex';
 import { create } from 'mutative';
 
 // Define your types and create the definition
@@ -40,12 +40,20 @@ const definition: MoorexDefinition<YourState, YourSignal, YourEffect> = {
   initiate: () => ({ /* initial state */ }),
   transition: (signal) => (state) => create(state, (draft) => { /* update draft */ }),
   effectsAt: (state) => ({ /* return effects record */ }),
-  runEffect: (effect, state, key) => ({ start: async () => {}, cancel: () => {} }),
 };
 
-// Create and use the machine
+// Create the machine
 const machine = createMoorex(definition);
-machine.on((event) => console.log(event));
+
+// Create and subscribe an effect runner to handle effects
+const runEffect = (effect, state, key) => ({
+  start: async (dispatch) => { /* execute effect */ },
+  cancel: () => { /* cancel effect */ },
+});
+machine.subscribe(createEffectRunner(runEffect));
+
+// Use the machine
+machine.subscribe((event) => console.log(event));
 machine.dispatch({ /* your signal */ });
 ```
 
@@ -111,54 +119,16 @@ With Moorex, after rehydrating state we run effect reconciliation and the agent
 continues exactly where it left off. No effect can exist without corresponding
 state, and removing state automatically cancels redundant effects.
 
-## Defining a Moorex Machine
-
-To create a Moorex machine, you define **three types** and **four functions**:
-
-### Three Types
-
-1. **`State`**: The shape of your machine's internal state. Represents the
-   current configuration of your agent or application.
-
-2. **`Signal`**: Input events that trigger state transitions. Examples: user
-   messages, tool responses, timer ticks.
-
-3. **`Effect`**: Side effects implied by the state. Examples: LLM API calls,
-   tool executions, timeouts. Note: Effect types no longer need a `key`
-   property; the Record key from `effectsAt` serves as the identifier.
-
-All three types must be **immutable** (read-only). See the [Immutability](#immutability)
-section below for details.
-
-### Four Functions
-
-1. **`initiate(): Immutable<State>`**: Returns the initial state. Can hydrate
-   from persistent storage for recovery.
-
-2. **`transition(signal: Immutable<Signal>): (state: Immutable<State>) => Immutable<State>`**:
-   A pure reducer function. Takes a signal and returns a function that transforms
-   the current state into the next state. Must not mutate the input state.
-
-3. **`effectsAt(state: Immutable<State>): Record<string, Immutable<Effect>>`**:
-   Returns a Record (key-value map) of effects that should be running based on
-   the current state. The Record keys serve as stable effect identifiers for
-   reconciliation.
-
-4. **`runEffect(effect: Immutable<Effect>, state: Immutable<State>, key: string): EffectInitializer<Signal>`**:
-   Creates an initializer with `start` and `cancel` methods to execute and abort
-   each effect. Receives the effect, the state that generated it, and the effect's key.
-
-These four functions form a `MoorexDefinition<State, Signal, Effect>`, which you
-pass to `createMoorex()` to instantiate the machine.
-
 ## Immutability
 
 All data types in Moorex (State, Signal, Effect) are **read-only/immutable**
 using the `Immutable` type from
 [mutative](https://github.com/unadlib/mutative).
 
-Moorex requires `transition`, `effectsAt`, and `runEffect` to be **pure
-functions** — they must not modify their inputs. Immutability protects against
+Moorex requires `transition` and `effectsAt` to be **pure functions** — they
+must not modify their inputs. The `runEffect` function passed to
+`createEffectRunner` should also be pure (except that the returned `start` and
+`cancel` methods can perform side effects). Immutability protects against
 accidental mutations that would violate this constraint and lead to bugs. All
 state, signal, and effect objects are protected from modification, ensuring:
 
@@ -173,8 +143,11 @@ All function parameters and return values in `MoorexDefinition` are immutable:
   returns `Immutable<State>`
 - `effectsAt(state)` receives `Immutable<State>`, returns
   `Record<string, Immutable<Effect>>`
+
+The `runEffect` function passed to `createEffectRunner` also receives immutable
+parameters:
 - `runEffect(effect, state, key)` receives `Immutable<Effect>`,
-  `Immutable<State>`, and `string` (key)
+  `Immutable<State>` (the current state), and `string` (key)
 
 We strongly recommend using mutative's `create()` function for immutable updates:
 
@@ -204,7 +177,7 @@ The example below sketches a resilient agent that decides what to do based on
 its state.
 
 ```typescript
-import { createMoorex, type MoorexDefinition } from './index';
+import { createMoorex, createEffectRunner, type MoorexDefinition } from './index';
 import { create } from 'mutative';
 
 // Define your signal types - these trigger state transitions
@@ -268,50 +241,51 @@ const definition: MoorexDefinition<AgentState, Signal, Effect> = {
     return {};
   },
 
-  // Effect runner: (effect, state, key) => { start, cancel }
-  // Creates an initializer for running a specific effect.
-  // Note: receives effect, the state that generated this effect, and the effect's key.
-  runEffect: (effect, state, key) => {
-    if (effect.kind === 'call-llm') {
-      return {
-        // Async function that runs the effect and dispatches signals on
-        // completion
-        start: async (dispatch) => {
-          // Call LLM with effect.prompt
-          // When done, dispatch assistant message signal
-          // dispatch({ type: 'assistant', message: completion });
-        },
-        // Function to cancel the effect if it's no longer needed
-        cancel: () => {
-          // Cancel the LLM call (e.g., abort fetch, close connection)
-        },
-      };
-    }
-    if (effect.kind === 'call-tool') {
-      return {
-        start: async (dispatch) => {
-          // Execute tool with effect.name and effect.input.
-          // When done, dispatch tool result signal:
-          // dispatch({ type: 'tool', name: effect.id, result: '...' });
-        },
-        cancel: () => {
-          // Cancel tool execution if possible
-        },
-      };
-    }
-    // TypeScript exhaustiveness check
-    throw new Error(`Unknown effect kind ${(effect satisfies never).kind}`);
-  },
 };
 
 // Create the Moorex machine instance
 const agent = createMoorex(definition);
 
+// Create and subscribe an effect runner to handle effects
+const runEffect = (effect, state, key) => {
+  if (effect.kind === 'call-llm') {
+    return {
+      // Async function that runs the effect and dispatches signals on
+      // completion
+      start: async (dispatch) => {
+        // Call LLM with effect.prompt
+        // When done, dispatch assistant message signal
+        // dispatch({ type: 'assistant', message: completion });
+      },
+      // Function to cancel the effect if it's no longer needed
+      cancel: () => {
+        // Cancel the LLM call (e.g., abort fetch, close connection)
+      },
+    };
+  }
+  if (effect.kind === 'call-tool') {
+    return {
+      start: async (dispatch) => {
+        // Execute tool with effect.name and effect.input.
+        // When done, dispatch tool result signal:
+        // dispatch({ type: 'tool', name: effect.id, result: '...' });
+      },
+      cancel: () => {
+        // Cancel tool execution if possible
+      },
+    };
+  }
+  // TypeScript exhaustiveness check
+  throw new Error(`Unknown effect kind ${(effect satisfies never).kind}`);
+};
+
+agent.subscribe(createEffectRunner(runEffect));
+
 // Subscribe to events (state updates, effect lifecycle, etc.)
-agent.on((event) => {
+agent.subscribe((event) => {
   console.log('[agent-event]', event);
   // event.type can be: 'signal-received', 'state-updated', 'effect-started',
-  // 'effect-completed', 'effect-canceled', 'effect-failed'
+  // 'effect-canceled'
 });
 
 // Dispatch signals to trigger state transitions
@@ -342,12 +316,11 @@ On every state change Moorex:
 The Record's keys serve as effect identifiers for reconciliation, so Effect
 types no longer need to have a `key` property.
 
-Each effect's lifecycle is managed by the `runEffect(effect, state, key)` return value:
+Each effect's lifecycle is managed by the `runEffect` function passed to `createEffectRunner`:
 
-- `runEffect(effect, state, key)` receives the effect, the state that generated it, and the effect's key
-  it, returning an initializer with `start` and `cancel` methods.
+- `runEffect(effect, state, key)` receives the effect, the **current state** of the machine (obtained via `moorex.getState()`), and the effect's key, returning an initializer with `start` and `cancel` methods.
 - `start(dispatch)` launches the effect and resolves when it finishes. Use
-  `dispatch` to send signals back to the machine.
+  `dispatch` to send signals back to the machine. The `dispatch` function is guarded: if the effect is canceled, subsequent calls to `dispatch` will be ignored.
 - `cancel()` aborts the effect; Moorex calls this when the effect key is no
   longer needed.
 

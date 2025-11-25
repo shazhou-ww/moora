@@ -27,21 +27,29 @@ yarn add @moora/moorex mutative
 导入并创建你的第一个 Moorex 自动机：
 
 ```typescript
-import { createMoorex, type MoorexDefinition } from '@moora/moorex';
+import { createMoorex, createEffectRunner, type MoorexDefinition } from '@moora/moorex';
 import { create } from 'mutative';
 
 // 定义你的类型并创建定义
 // （详见下面的示例部分）
 const definition: MoorexDefinition<YourState, YourSignal, YourEffect> = {
-  initiate: () => ({ /* initial state */ }),
+  initiate: () => ({ /* 初始状态 */ }),
   transition: (signal) => (state) => create(state, (draft) => { /* update draft */ }),
   effectsAt: (state) => ({ /* return effects record */ }),
-  runEffect: (effect, state, key) => ({ start: async () => {}, cancel: () => {} }),
 };
 
-// 创建并使用自动机
+// 创建自动机
 const machine = createMoorex(definition);
-machine.on((event) => console.log(event));
+
+// 创建并订阅 effect runner 来处理 effects
+const runEffect = (effect, state, key) => ({
+  start: async (dispatch) => { /* 执行 effect */ },
+  cancel: () => { /* 取消 effect */ },
+});
+machine.subscribe(createEffectRunner(runEffect));
+
+// 使用自动机
+machine.subscribe((event) => console.log(event));
 machine.dispatch({ /* your signal */ });
 ```
 
@@ -69,10 +77,7 @@ machine.dispatch({ /* your signal */ });
 3. **`effectsAt(state: Immutable<State>): Record<string, Immutable<Effect>>`**:
    基于当前状态返回应该运行的副作用的 Record（键值映射）。Record 的键用作稳定的副作用标识符以进行协调。
 
-4. **`runEffect(effect: Immutable<Effect>, state: Immutable<State>, key: string): EffectInitializer<Signal>`**:
-   创建一个初始化器，包含 `start` 和 `cancel` 方法，用于执行和取消每个副作用。接收副作用、生成该副作用的状态以及副作用的 key。
-
-这四个函数组成一个 `MoorexDefinition<State, Signal, Effect>`，你将其传递给 `createMoorex()` 以实例化自动机。
+这三个函数组成一个 `MoorexDefinition<State, Signal, Effect>`，你将其传递给 `createMoorex()` 以实例化自动机。
 
 ## 为什么为持久化 Agent 使用 Moorex？
 
@@ -89,41 +94,12 @@ AI 智能体经常在调用大语言模型（LLM）的同时与用户和工具�
 
 使用 Moorex，在重新注入状态后，我们运行副作用协调，智能体会从上次中断的地方继续。没有对应状态的副作用无法存在，移除状态会自动取消冗余的副作用。
 
-## 定义 Moorex 自动机
-
-要创建一个 Moorex 自动机，你需要定义**三个类型**和**四个函数**：
-
-### 三个类型
-
-1. **`State`**: 你的自动机内部状态的形状。表示你的智能体或应用的当前配置。
-
-2. **`Signal`**: 触发状态转换的输入事件。例如：用户消息、工具响应、定时器触发。
-
-3. **`Effect`**: 由状态驱动的副作用。例如：LLM API 调用、工具执行、超时。注意：Effect 类型不再需要 `key` 属性；`effectsAt` 返回的 Record 键用作标识符。
-
-所有三个类型都必须是**不可变的**（只读）。有关详细信息，请参见下面的[不可变性](#不可变性)部分。
-
-### 四个函数
-
-1. **`initiate(): Immutable<State>`**: 返回初始状态。可以从持久化存储中恢复状态以用于恢复。
-
-2. **`transition(signal: Immutable<Signal>): (state: Immutable<State>) => Immutable<State>`**:
-   一个纯 reducer 函数。接收一个信号并返回一个函数，该函数将当前状态转换为下一个状态。不能修改输入状态。
-
-3. **`effectsAt(state: Immutable<State>): Record<string, Immutable<Effect>>`**:
-   基于当前状态返回应该运行的副作用的 Record（键值映射）。Record 的键用作稳定的副作用标识符以进行协调。
-
-4. **`runEffect(effect: Immutable<Effect>, state: Immutable<State>, key: string): EffectInitializer<Signal>`**:
-   创建一个初始化器，包含 `start` 和 `cancel` 方法，用于执行和取消每个副作用。接收副作用、生成该副作用的状态以及副作用的 key。
-
-这四个函数组成一个 `MoorexDefinition<State, Signal, Effect>`，你将其传递给 `createMoorex()` 以实例化自动机。
-
 ## 不可变性
 
 Moorex 中的所有数据类型（State、Signal、Effect）都是**只读/不可变的**，使用来自
 [mutative](https://github.com/unadlib/mutative) 的 `Immutable` 类型。
 
-Moorex 要求 `transition`、`effectsAt` 和 `runEffect` 必须是**纯函数**——它们不能修改输入。不可变性防止意外突变，这些突变会违反此约束并导致 bug。所有状态、信号和副作用对象都受到保护，防止修改，确保：
+Moorex 要求 `transition` 和 `effectsAt` 必须是**纯函数**——它们不能修改输入。传递给 `createEffectRunner` 的 `runEffect` 函数也应该是纯函数（除了返回的 `start` 和 `cancel` 方法可以执行副作用）。不可变性防止意外突变，这些突变会违反此约束并导致 bug。所有状态、信号和副作用对象都受到保护，防止修改，确保：
 
 - **纯性保证**: 函数不会意外修改输入
 - **正确性**: 状态转换保持可预测和可重现
@@ -134,7 +110,9 @@ Moorex 要求 `transition`、`effectsAt` 和 `runEffect` 必须是**纯函数**�
 - `initiate()` 返回 `Immutable<State>`
 - `transition(signal)` 接收 `Immutable<Signal>` 和 `Immutable<State>`，返回 `Immutable<State>`
 - `effectsAt(state)` 接收 `Immutable<State>`，返回 `Record<string, Immutable<Effect>>`
-- `runEffect(effect, state, key)` 接收 `Immutable<Effect>`、`Immutable<State>` 和 `string`（key）
+
+传递给 `createEffectRunner` 的 `runEffect` 函数也接收不可变参数：
+- `runEffect(effect, state, key)` 接收 `Immutable<Effect>`、`Immutable<State>`（当前状态）和 `string`（key）
 
 我们强烈建议使用 mutative 的 `create()` 函数进行不可变更新：
 
@@ -163,7 +141,7 @@ transition: (signal) => (state) => {
 下面的示例展示了一个根据其状态决定操作的弹性智能体。
 
 ```typescript
-import { createMoorex, type MoorexDefinition } from './index';
+import { createMoorex, createEffectRunner, type MoorexDefinition } from './index';
 import { create } from 'mutative';
 
 // 定义你的信号类型——这些触发状态转换
@@ -221,49 +199,50 @@ const definition: MoorexDefinition<AgentState, Signal, Effect> = {
     return {};
   },
 
-  // 副作用运行器: (effect, state, key) => { start, cancel }
-  // 创建用于运行特定副作用的初始化器。
-  // 注意：接收副作用、生成该副作用的状态以及副作用的 key。
-  runEffect: (effect, state, key) => {
-    if (effect.kind === 'call-llm') {
-      return {
-        // 运行副作用并在完成时派发信号的异步函数
-        start: async (dispatch) => {
-          // 使用 effect.prompt 调用 LLM
-          // 完成后，派发助手消息信号
-          // dispatch({ type: 'assistant', message: completion });
-        },
-        // 如果不再需要副作用，取消副作用的函数
-        cancel: () => {
-          // 取消 LLM 调用（例如，中止 fetch，关闭连接）
-        },
-      };
-    }
-    if (effect.kind === 'call-tool') {
-      return {
-        start: async (dispatch) => {
-          // 使用 effect.name 和 effect.input 执行工具。
-          // 完成后，派发工具结果信号：
-          // dispatch({ type: 'tool', name: effect.id, result: '...' });
-        },
-        cancel: () => {
-          // 如果可能，取消工具执行
-        },
-      };
-    }
-    // TypeScript 穷尽性检查
-    throw new Error(`Unknown effect kind ${(effect satisfies never).kind}`);
-  },
 };
 
 // 创建 Moorex 自动机实例
 const agent = createMoorex(definition);
 
+// 创建并订阅 effect runner 来处理副作用
+const runEffect = (effect, state, key) => {
+  if (effect.kind === 'call-llm') {
+    return {
+      // 运行副作用并在完成时派发信号的异步函数
+      start: async (dispatch) => {
+        // 使用 effect.prompt 调用 LLM
+        // 完成后，派发助手消息信号
+        // dispatch({ type: 'assistant', message: completion });
+      },
+      // 如果不再需要副作用，取消副作用的函数
+      cancel: () => {
+        // 取消 LLM 调用（例如，中止 fetch，关闭连接）
+      },
+    };
+  }
+  if (effect.kind === 'call-tool') {
+    return {
+      start: async (dispatch) => {
+        // 使用 effect.name 和 effect.input 执行工具。
+        // 完成后，派发工具结果信号：
+        // dispatch({ type: 'tool', name: effect.id, result: '...' });
+      },
+      cancel: () => {
+        // 如果可能，取消工具执行
+      },
+    };
+  }
+  // TypeScript 穷尽性检查
+  throw new Error(`Unknown effect kind ${(effect satisfies never).kind}`);
+};
+
+agent.subscribe(createEffectRunner(runEffect));
+
 // 订阅事件（状态更新、副作用生命周期等）
-agent.on((event) => {
+agent.subscribe((event) => {
   console.log('[agent-event]', event);
   // event.type 可以是: 'signal-received', 'state-updated', 'effect-started',
-  // 'effect-completed', 'effect-canceled', 'effect-failed'
+  // 'effect-canceled'
 });
 
 // 派发信号以触发状态转换
@@ -289,10 +268,10 @@ const currentState = agent.getState();
 
 Record 的键用作协调的副作用标识符，因此 Effect 类型不再需要具有 `key` 属性。
 
-每个副作用的生命周期由 `runEffect(effect, state)` 返回值管理：
+每个副作用的生命周期由传递给 `createEffectRunner` 的 `runEffect` 函数管理：
 
-- `runEffect(effect, state)` 接收副作用和生成它的状态，返回一个带有 `start` 和 `cancel` 方法的初始化器。
-- `start(dispatch)` 启动副作用并在完成时解析。使用 `dispatch` 将信号发送回自动机。
+- `runEffect(effect, state, key)` 接收副作用、自动机的**当前状态**（通过 `moorex.getState()` 获取）以及副作用的 key，返回一个带有 `start` 和 `cancel` 方法的初始化器。
+- `start(dispatch)` 启动副作用并在完成时解析。使用 `dispatch` 将信号发送回自动机。`dispatch` 函数是受保护的：如果副作用被取消，后续对 `dispatch` 的调用将被忽略。
 - `cancel()` 中止副作用；当不再需要副作用键时，Moorex 会调用此方法。
 
 Moorex 在内存中跟踪运行的副作用。如果副作用完成或拒绝，自动机会自动删除它并发出相应的事件。
