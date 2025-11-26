@@ -5,14 +5,22 @@ import { z } from 'zod';
 // ============================================================================
 
 /**
- * 任务状态
+ * 响应状态
  */
-export const TaskStatusSchema = z.enum([
-  'pending',      // 待处理
-  'running',      // 运行中
+export const ResponseStatusSchema = z.enum([
+  'waiting',      // 等待用户输入
   'completed',    // 已完成
-  'failed',       // 失败
   'cancelled',    // 已取消
+]);
+
+/**
+ * 任务状态
+ * 
+ * 任务状态可以是 'in-progress'（进行中）或 ResponseStatus（响应状态）
+ */
+export const TaskStatusSchema = z.union([
+  z.literal('in-progress'),
+  ResponseStatusSchema,
 ]);
 
 /**
@@ -33,8 +41,6 @@ export const UserTaskSchema = z.object({
   updatedAt: z.number(),
   /** 任务结果（如果已完成） */
   result: z.unknown().optional(),
-  /** 错误信息（如果失败） */
-  error: z.string().optional(),
 });
 
 /**
@@ -49,8 +55,6 @@ export const UserMessageSchema = z.object({
   taskId: z.string().optional(),
   /** 消息时间戳 */
   timestamp: z.number(),
-  /** 是否已发送 */
-  sent: z.boolean(),
 });
 
 /**
@@ -59,14 +63,21 @@ export const UserMessageSchema = z.object({
 export const TaskResponseSchema = z.object({
   /** 响应唯一标识符 */
   id: z.string(),
-  /** 响应内容 */
-  content: z.string(),
-  /** 关联的任务 ID */
-  taskId: z.string(),
+  /** 响应内容（支持普通文本或流式输出） */
+  response: z.discriminatedUnion('isStream', [
+    z.object({
+      isStream: z.literal(false),
+      content: z.string(),
+    }),
+    z.object({
+      isStream: z.literal(true),
+      streamId: z.string(),
+    }),
+  ]),
+  /** 关联的任务 ID（如果有） */
+  taskId: z.string().optional(),
   /** 响应时间戳 */
   timestamp: z.number(),
-  /** 是否已发送给用户 */
-  sent: z.boolean(),
 });
 
 // ============================================================================
@@ -93,6 +104,7 @@ export const OrchestratorStateSchema = z.object({
 // TypeScript 类型导出（通过 z.infer 从 Zod Schema 推导）
 // ============================================================================
 
+export type ResponseStatus = z.infer<typeof ResponseStatusSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type UserTask = z.infer<typeof UserTaskSchema>;
 export type UserMessage = z.infer<typeof UserMessageSchema>;

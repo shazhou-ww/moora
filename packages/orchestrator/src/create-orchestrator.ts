@@ -94,14 +94,13 @@ export const createOrchestrator = (): MoorexDefinition<
 
           switch (signal.type) {
             case 'user-input': {
-              // 用户输入：创建用户消息
+              // 用户输入：创建用户消息（用户输入本身就是已发送状态）
               const messageId = generateId('msg', now);
               const message: UserMessage = {
                 id: messageId,
                 content: signal.content,
                 taskId: signal.taskId,
                 timestamp: now,
-                sent: false,
               };
               draft.pendingUserMessages.push(message);
 
@@ -122,7 +121,7 @@ export const createOrchestrator = (): MoorexDefinition<
                 id: taskId,
                 content: signal.content,
                 task: signal.task,
-                status: 'pending',
+                status: 'in-progress',
                 createdAt: now,
                 updatedAt: now,
               };
@@ -131,48 +130,43 @@ export const createOrchestrator = (): MoorexDefinition<
               break;
             }
 
-            case 'task-response': {
-              // 任务响应：更新任务状态，创建任务响应消息
-              const task = draft.tasks[signal.taskId];
-              if (task) {
-                task.status = signal.completed ? 'completed' : 'running';
-                task.result = signal.completed ? signal.content : undefined;
-                task.error = signal.error;
-                task.updatedAt = now;
+            case 'reply-to-user': {
+              // 回复用户：更新相关任务状态，创建响应消息
+              // 更新任务状态（如果有 taskUpdates）
+              for (const taskUpdate of signal.taskUpdates) {
+                const task = draft.tasks[taskUpdate.id];
+                if (task) {
+                  task.status = taskUpdate.status;
+                  // 如果完成，保存结果
+                  if (taskUpdate.status === 'completed') {
+                    // 如果是普通文本，保存 content；如果是流式，保存整个 response 对象
+                    task.result = signal.response.isStream
+                      ? signal.response
+                      : signal.response.content;
+                  }
+                  task.updatedAt = now;
+                }
               }
 
-              // 创建任务响应消息
+              // 清理相关任务之前的响应消息（只保留最新的响应）
+              if (signal.taskUpdates.length > 0) {
+                const taskIds = signal.taskUpdates.map((tu) => tu.id);
+                draft.pendingTaskResponses = draft.pendingTaskResponses.filter(
+                  (r) => !r.taskId || !taskIds.includes(r.taskId),
+                );
+              }
+
+              // 创建新的响应消息
               const responseId = generateId('response', now);
               const response: TaskResponse = {
                 id: responseId,
-                content: signal.content,
-                taskId: signal.taskId,
+                response: signal.response,
+                taskId: signal.taskUpdates.length > 0
+                  ? signal.taskUpdates[0]!.id
+                  : undefined,
                 timestamp: now,
-                sent: false,
               };
               draft.pendingTaskResponses.push(response);
-              break;
-            }
-
-            case 'task-completed': {
-              // 任务完成：更新任务状态
-              const task = draft.tasks[signal.taskId];
-              if (task) {
-                task.status = 'completed';
-                task.result = signal.result;
-                task.updatedAt = now;
-              }
-              break;
-            }
-
-            case 'task-failed': {
-              // 任务失败：更新任务状态
-              const task = draft.tasks[signal.taskId];
-              if (task) {
-                task.status = 'failed';
-                task.error = signal.error;
-                task.updatedAt = now;
-              }
               break;
             }
 
@@ -182,28 +176,6 @@ export const createOrchestrator = (): MoorexDefinition<
               if (task) {
                 task.status = 'cancelled';
                 task.updatedAt = now;
-              }
-              break;
-            }
-
-            case 'user-message-sent': {
-              // 用户消息已发送：标记消息为已发送并从队列中移除
-              const messageIndex = draft.pendingUserMessages.findIndex(
-                (msg) => msg.id === signal.messageId,
-              );
-              if (messageIndex !== -1) {
-                draft.pendingUserMessages.splice(messageIndex, 1);
-              }
-              break;
-            }
-
-            case 'task-response-sent': {
-              // 任务响应已发送：标记消息为已发送并从队列中移除
-              const messageIndex = draft.pendingTaskResponses.findIndex(
-                (msg) => msg.id === signal.messageId,
-              );
-              if (messageIndex !== -1) {
-                draft.pendingTaskResponses.splice(messageIndex, 1);
               }
               break;
             }
@@ -224,31 +196,27 @@ export const createOrchestrator = (): MoorexDefinition<
 
       // 为每个待发送的用户消息创建 effect
       for (const message of state.pendingUserMessages) {
-        if (!message.sent) {
-          effects[`send-user-message-${message.id}`] = {
-            kind: 'send-user-message',
-            messageId: message.id,
-            content: message.content,
-            taskId: message.taskId,
-          };
-        }
+        effects[`send-user-message-${message.id}`] = {
+          kind: 'send-user-message',
+          messageId: message.id,
+          content: message.content,
+          taskId: message.taskId,
+        };
       }
 
       // 为每个待发送的任务响应创建 effect
       for (const response of state.pendingTaskResponses) {
-        if (!response.sent) {
-          effects[`send-task-response-${response.id}`] = {
-            kind: 'send-task-response',
-            messageId: response.id,
-            taskId: response.taskId,
-            content: response.content,
-          };
-        }
+        effects[`send-task-response-${response.id}`] = {
+          kind: 'send-task-response',
+          messageId: response.id,
+          taskId: response.taskId,
+          content: response.response,
+        };
       }
 
-      // 为每个待处理的任务创建执行 effect
+      // 为每个进行中的任务创建执行 effect
       for (const task of Object.values(state.tasks)) {
-        if (task.status === 'pending') {
+        if (task.status === 'in-progress') {
           effects[`execute-task-${task.id}`] = {
             kind: 'execute-task',
             taskId: task.id,

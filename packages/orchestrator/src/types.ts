@@ -6,6 +6,7 @@
 
 // 导出状态相关类型
 export type {
+  ResponseStatus,
   TaskStatus,
   UserTask,
   UserMessage,
@@ -14,6 +15,7 @@ export type {
 } from './orchestrator-state';
 
 export {
+  ResponseStatusSchema,
   TaskStatusSchema,
   UserTaskSchema,
   UserMessageSchema,
@@ -23,26 +25,22 @@ export {
 
 // 导出信号相关类型
 export type {
+  TaskUpdate,
+  OrchestratorResponse as UserResponseContent,
   UserInputSignal,
   CreateTaskSignal,
-  TaskResponseSignal,
-  TaskCompletedSignal,
-  TaskFailedSignal,
+  ReplyToUserSignal,
   CancelTaskSignal,
-  UserMessageSentSignal,
-  TaskResponseSentSignal,
   OrchestratorSignal,
 } from './orchestrator-signal';
 
 export {
+  TaskUpdateSchema,
+  OrchestratorResponseSchema as UserResponseContentSchema,
   UserInputSignalSchema,
   CreateTaskSignalSchema,
-  TaskResponseSignalSchema,
-  TaskCompletedSignalSchema,
-  TaskFailedSignalSchema,
+  ReplyToUserSignalSchema,
   CancelTaskSignalSchema,
-  UserMessageSentSignalSchema,
-  TaskResponseSentSignalSchema,
   OrchestratorSignalSchema,
 } from './orchestrator-signal';
 

@@ -36,7 +36,7 @@ describe('createOrchestrator', () => {
     expect(task).toBeDefined();
     expect(task?.content).toBe('Test task');
     expect(task?.task).toBe('default');
-    expect(task?.status).toBe('pending');
+    expect(task?.status).toBe('in-progress');
   });
 
   it('should handle user-input signal', () => {
@@ -51,10 +51,9 @@ describe('createOrchestrator', () => {
     const state = orchestrator.getState();
     expect(state.pendingUserMessages.length).toBe(1);
     expect(state.pendingUserMessages[0]?.content).toBe('Hello');
-    expect(state.pendingUserMessages[0]?.sent).toBe(false);
   });
 
-  it('should handle task-response signal', () => {
+  it('should handle reply-to-user signal', () => {
     const definition = createOrchestrator();
     const orchestrator = createMoorex(definition);
 
@@ -71,18 +70,60 @@ describe('createOrchestrator', () => {
     expect(taskId).toBeDefined();
     if (!taskId) return;
 
-    // Send task response
+    // Send reply with waiting status (using regular text, with task update)
     orchestrator.dispatch({
-      type: 'task-response',
-      taskId,
-      content: 'Task response',
-      completed: false,
+      type: 'reply-to-user',
+      response: { isStream: false, content: 'Task response' },
+      taskUpdates: [{ id: taskId, status: 'waiting' }],
     });
 
     const state2 = orchestrator.getState();
-    expect(state2.tasks[taskId]?.status).toBe('running');
+    expect(state2.tasks[taskId]?.status).toBe('waiting');
     expect(state2.pendingTaskResponses.length).toBe(1);
-    expect(state2.pendingTaskResponses[0]?.content).toBe('Task response');
+    expect(state2.pendingTaskResponses[0]?.response).toEqual({
+      isStream: false,
+      content: 'Task response',
+    });
+    expect(state2.pendingTaskResponses[0]?.taskId).toBe(taskId);
+
+    // Send reply with completed status (using regular text, with task update)
+    orchestrator.dispatch({
+      type: 'reply-to-user',
+      response: { isStream: false, content: 'Task completed' },
+      taskUpdates: [{ id: taskId, status: 'completed' }],
+    });
+
+    const state3 = orchestrator.getState();
+    expect(state3.tasks[taskId]?.status).toBe('completed');
+    expect(state3.tasks[taskId]?.result).toBe('Task completed');
+
+    // Test streaming response (with task update)
+    orchestrator.dispatch({
+      type: 'reply-to-user',
+      response: { isStream: true, streamId: 'stream-123' },
+      taskUpdates: [{ id: taskId, status: 'waiting' }],
+    });
+
+    const state4 = orchestrator.getState();
+    expect(state4.pendingTaskResponses[0]?.response).toEqual({
+      isStream: true,
+      streamId: 'stream-123',
+    });
+
+    // Test reply without task update (general message)
+    orchestrator.dispatch({
+      type: 'reply-to-user',
+      response: { isStream: false, content: 'General message' },
+      taskUpdates: [],
+    });
+
+    const state5 = orchestrator.getState();
+    expect(state5.pendingTaskResponses.length).toBe(1);
+    expect(state5.pendingTaskResponses[0]?.response).toEqual({
+      isStream: false,
+      content: 'General message',
+    });
+    expect(state5.pendingTaskResponses[0]?.taskId).toBeUndefined();
   });
 
   it('should generate effects for pending messages', async () => {
@@ -111,7 +152,7 @@ describe('createOrchestrator', () => {
     expect(effects.some((key) => key.startsWith('send-user-message-'))).toBe(true);
   });
 
-  it('should generate execute-task effect for pending tasks', async () => {
+  it('should generate execute-task effect for in-progress tasks', async () => {
     const definition = createOrchestrator();
     const orchestrator = createMoorex(definition);
 

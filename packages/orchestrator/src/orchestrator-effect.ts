@@ -23,15 +23,28 @@ export const SendUserMessageEffectSchema = z.object({
  * 发送任务响应给用户 Effect
  *
  * 当需要向用户发送任务响应时触发
+ * 
+ * content 支持两种形式：
+ * - 普通文本：{ isStream: false, content: string }
+ * - 流式输出：{ isStream: true, streamId: string }
  */
 export const SendTaskResponseEffectSchema = z.object({
   kind: z.literal('send-task-response'),
   /** 消息 ID */
   messageId: z.string(),
-  /** 任务 ID */
-  taskId: z.string(),
-  /** 响应内容 */
-  content: z.string(),
+  /** 任务 ID（如果有） */
+  taskId: z.string().optional(),
+  /** 响应内容（支持普通文本或流式输出） */
+  content: z.discriminatedUnion('isStream', [
+    z.object({
+      isStream: z.literal(false),
+      content: z.string(),
+    }),
+    z.object({
+      isStream: z.literal(true),
+      streamId: z.string(),
+    }),
+  ]),
 });
 
 /**
