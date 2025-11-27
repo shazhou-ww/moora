@@ -19,9 +19,6 @@ export type {
 } from './types';
 
 // 导出 pubsub
-export type { PubSub } from './pubsub';
-export { createPubSub, createStreamFromPubSub } from './pubsub';
-
-// 导出主要函数
-export { createAutomata } from './create-automata';
-export { createMooreEffectController } from './create-effect-controller';
+export type { PubSub } from './pub-sub';
+export { createPubSub } from './pub-sub';
+export { createMoorex } from './moorex';
