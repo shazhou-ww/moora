@@ -6,13 +6,19 @@ import type {
   AgentState,
   InternalMessage,
   LLMCall,
+  AgentTask,
+  AgentTaskStatus,
   UserMessageInput,
   LLMCallStartedInput,
   LLMResponseInput,
   LLMErrorInput,
   ToolResultInput,
   ToolErrorInput,
-  CancelInput,
+  CancelTaskInput,
+  UpdateTaskSummaryInput,
+  TaskCreatedInput,
+  TaskStatusUpdatedInput,
+  MessageLinkedToTaskInput,
 } from "../types";
 import { initialAgentState } from "./state-machine";
 
@@ -29,13 +35,13 @@ export const handleUserMessage = (
     role: "user",
     content: input.content,
     timestamp: Date.now(),
+    taskIds: input.taskHints,
   };
   return {
     ...state,
     phase: "processing",
     messages: [...state.messages, newMessage],
     currentRequestId: input.requestId,
-    error: undefined,
   };
 };
 
@@ -58,6 +64,7 @@ export const handleLLMCallStarted = (
     content: "",
     timestamp: Date.now(),
     streaming: true,
+    taskIds: [], // 将在后续通过 message-linked-to-task 输入关联
   };
 
   // 创建 LLM 调用历史记录
@@ -92,15 +99,17 @@ export const handleLLMResponse = (
     (msg) => msg.role === "assistant" && msg.streaming
   );
 
+  const existingMessage = existingAssistantIndex >= 0
+    ? state.messages[existingAssistantIndex]!
+    : null;
   const assistantMessage: InternalMessage = {
     id:
-      existingAssistantIndex >= 0
-        ? state.messages[existingAssistantIndex]!.id
-        : `msg-${Date.now()}-${Math.random()}`,
+      existingMessage?.id ?? `msg-${Date.now()}-${Math.random()}`,
     role: "assistant",
     content: input.response,
     timestamp: Date.now(),
     streaming: false,
+    taskIds: existingMessage?.taskIds ?? [],
   };
 
   const updatedMessages =
@@ -180,7 +189,6 @@ export const handleLLMError = (
     ...state,
     llmHistory: updatedLLMHistory,
     phase: "error",
-    error: input.error,
   };
 };
 
@@ -264,32 +272,107 @@ export const handleToolError = (
     ...state,
     toolHistory: updatedToolHistory,
     phase: "error",
-    error: input.error,
   };
 };
 
 /**
- * 处理取消输入
+ * 处理取消 Task 输入
  * @internal
  */
-export const handleCancel = (
-  input: CancelInput,
+export const handleCancelTask = (
+  input: CancelTaskInput,
   state: AgentState
 ): AgentState => {
-  if (input.requestId !== state.currentRequestId) {
-    return state;
-  }
-
-  // 移除流式输出中的消息
-  const updatedMessages = state.messages.map((msg) =>
-    msg.streaming ? { ...msg, streaming: false } : msg
+  const updatedTasks = state.tasks.map((task) =>
+    task.id === input.taskId
+      ? { ...task, status: "cancelled" as AgentTaskStatus }
+      : task
   );
 
   return {
     ...state,
-    phase: "idle",
+    tasks: updatedTasks,
+  };
+};
+
+/**
+ * 处理更新 Task 简介输入
+ * @internal
+ */
+export const handleUpdateTaskSummary = (
+  input: UpdateTaskSummaryInput,
+  state: AgentState
+): AgentState => {
+  const updatedTasks = state.tasks.map((task) =>
+    task.id === input.taskId
+      ? { ...task, summary: input.summary }
+      : task
+  );
+
+  return {
+    ...state,
+    tasks: updatedTasks,
+  };
+};
+
+/**
+ * 处理 Task 创建输入
+ * @internal
+ */
+export const handleTaskCreated = (
+  input: TaskCreatedInput,
+  state: AgentState
+): AgentState => {
+  const newTask: AgentTask = {
+    id: input.taskId,
+    status: "running",
+    summary: input.summary,
+    requestId: input.requestId,
+  };
+
+  return {
+    ...state,
+    tasks: [...state.tasks, newTask],
+  };
+};
+
+/**
+ * 处理 Task 状态更新输入
+ * @internal
+ */
+export const handleTaskStatusUpdated = (
+  input: TaskStatusUpdatedInput,
+  state: AgentState
+): AgentState => {
+  const updatedTasks = state.tasks.map((task) =>
+    task.id === input.taskId
+      ? { ...task, status: input.status }
+      : task
+  );
+
+  return {
+    ...state,
+    tasks: updatedTasks,
+  };
+};
+
+/**
+ * 处理消息关联 Task 输入
+ * @internal
+ */
+export const handleMessageLinkedToTask = (
+  input: MessageLinkedToTaskInput,
+  state: AgentState
+): AgentState => {
+  const updatedMessages = state.messages.map((msg) =>
+    msg.id === input.messageId
+      ? { ...msg, taskIds: [...msg.taskIds, input.taskId] }
+      : msg
+  );
+
+  return {
+    ...state,
     messages: updatedMessages,
-    currentRequestId: undefined,
   };
 };
 

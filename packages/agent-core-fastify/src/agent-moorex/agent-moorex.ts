@@ -6,10 +6,9 @@ import type { MoorexDefinition, EffectController } from "@moora/moorex";
 import type {
   AgentState,
   AgentInput,
-  AgentEffect,
-  AgentMoorexOptions,
-} from "../types";
-import { initialAgentState, agentTransition } from "../state-machine";
+} from "@moora/agent-core-state-machine";
+import type { AgentEffect, AgentMoorexOptions } from "../types";
+import { initialAgentState, agentTransition } from "@moora/agent-core-state-machine";
 import {
   createLLMEffectController,
   createToolEffectController,

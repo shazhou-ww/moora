@@ -1,8 +1,8 @@
 // ============================================================================
-// Frontend Controller 辅助函数
+// App Controller 辅助函数
 // ============================================================================
 
-import type { AgentState, AgentInput } from "../types";
+import type { AgentState, AgentInput } from "@moora/agent-core-state-machine";
 
 /**
  * SSE 连接管理器

@@ -8,15 +8,19 @@ export type {
   InternalMessage,
   LLMCall,
   ToolCall,
+  AgentTask,
+  AgentTaskStatus,
   UserMessageInput,
   LLMCallStartedInput,
   LLMResponseInput,
   LLMErrorInput,
   ToolResultInput,
   ToolErrorInput,
-  CancelInput,
-  ClearInput,
-  ErrorInput,
+  CancelTaskInput,
+  UpdateTaskSummaryInput,
+  TaskCreatedInput,
+  TaskStatusUpdatedInput,
+  MessageLinkedToTaskInput,
 } from "../types";
 
 export {

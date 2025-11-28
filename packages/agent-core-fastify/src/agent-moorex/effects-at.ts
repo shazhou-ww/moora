@@ -2,7 +2,8 @@
 // Agent Moorex Effects At - 计算 Effects
 // ============================================================================
 
-import type { AgentState, AgentEffect } from "../types";
+import type { AgentState } from "@moora/agent-core-state-machine";
+import type { AgentEffect } from "../types";
 
 /**
  * 从 AgentState 计算当前状态下关心的副作用集

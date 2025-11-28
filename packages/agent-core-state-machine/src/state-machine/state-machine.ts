@@ -11,7 +11,11 @@ import {
   handleLLMError,
   handleToolResult,
   handleToolError,
-  handleCancel,
+  handleCancelTask,
+  handleUpdateTaskSummary,
+  handleTaskCreated,
+  handleTaskStatusUpdated,
+  handleMessageLinkedToTask,
 } from "./transitions";
 
 /**
@@ -20,6 +24,7 @@ import {
 export const initialAgentState = (): AgentState => ({
   phase: "idle",
   messages: [],
+  tasks: [],
   llmHistory: [],
   toolHistory: [],
 });
@@ -44,16 +49,16 @@ export const agentTransition = (input: AgentInput) => (state: AgentState): Agent
       return handleToolResult(input, state);
     case "tool-error":
       return handleToolError(input, state);
-    case "cancel":
-      return handleCancel(input, state);
-    case "clear":
-      return initialAgentState();
-    case "error":
-      return {
-        ...state,
-        phase: "error",
-        error: input.error,
-      };
+    case "cancel-task":
+      return handleCancelTask(input, state);
+    case "update-task-summary":
+      return handleUpdateTaskSummary(input, state);
+    case "task-created":
+      return handleTaskCreated(input, state);
+    case "task-status-updated":
+      return handleTaskStatusUpdated(input, state);
+    case "message-linked-to-task":
+      return handleMessageLinkedToTask(input, state);
     default:
       return state;
   }

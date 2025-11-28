@@ -1,5 +1,5 @@
 // ============================================================================
-// Frontend Controller - 前端控制器实现
+// App Controller - 前端控制器实现
 // ============================================================================
 
 import type {
@@ -7,7 +7,8 @@ import type {
   AgentAppState,
   AgentAppEvent,
 } from "@moora/agent-webui-protocol";
-import type { AgentState, AgentInput, CreateAgentControllerOptions } from "../types";
+import type { AgentState, AgentInput } from "@moora/agent-core-state-machine";
+import type { CreateAgentControllerOptions } from "../types";
 import { createPubSub } from "@moora/moorex";
 import { createSSEConnection, sendInputToServer } from "./helpers";
 import { mapAppState, interpretAppEvent } from "./mappers";
@@ -44,9 +45,8 @@ export const createAgentController = (
 
   // 当前状态
   let currentState: AgentAppState = {
-    status: "idle",
     messages: [],
-    isProcessing: false,
+    tasks: [],
   };
 
   // 当前请求 ID（用于 cancel 操作）
@@ -73,16 +73,13 @@ export const createAgentController = (
 
   // 处理错误
   const handleError = (error: string) => {
-    currentState = {
-      ...currentState,
-      status: "error",
-      error,
-    };
-    statePubSub.pub(currentState);
+    // 错误通过消息方式告知用户，而不是单独的 error 字段
+    // 这里可以记录错误日志，但不更新状态
+    console.error("Agent controller error:", error);
   };
 
   return {
-    subscribe: (handler) => {
+    subscribe: (handler: (state: AgentAppState) => void) => {
       // 立即发送当前状态
       handler(currentState);
 
@@ -90,21 +87,8 @@ export const createAgentController = (
       return statePubSub.sub(handler);
     },
 
-    notify: (event) => {
+    notify: (event: AgentAppEvent) => {
       const inputs = interpretAppEvent(event);
-
-      // 处理 cancel 事件，需要填充 requestId
-      if (event.type === "cancel") {
-        if (currentRequestId) {
-          inputs[0] = {
-            type: "cancel",
-            requestId: currentRequestId,
-          };
-        } else {
-          // 没有正在进行的请求，忽略
-          return;
-        }
-      }
 
       // 处理 user-message，记录 requestId
       if (event.type === "user-message") {
@@ -114,6 +98,7 @@ export const createAgentController = (
           type: "user-message",
           requestId,
           content: event.content,
+          taskHints: event.taskHints,
         };
       }
 

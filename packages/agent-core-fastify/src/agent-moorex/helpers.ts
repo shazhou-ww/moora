@@ -3,7 +3,8 @@
 // ============================================================================
 
 import type { Dispatch, EffectController } from "@moora/moorex";
-import type { AgentInput, CallLLMEffect, CallToolEffect, Tool } from "../types";
+import type { AgentInput } from "@moora/agent-core-state-machine";
+import type { CallLLMEffect, CallToolEffect, Tool } from "../types";
 
 /**
  * 创建 LLM 调用的 Effect 控制器

@@ -1,0 +1,51 @@
+{
+  "name": "@moora/agent-core-app-controller",
+  "version": "0.1.0",
+  "description": "Agent App Controller - Frontend controller implementation",
+  "keywords": [
+    "agent",
+    "controller",
+    "frontend",
+    "ai-agent"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moora.git",
+    "directory": "packages/agent-core-app-controller"
+  },
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-core-app-controller#readme",
+  "bugs": {
+    "url": "https://github.com/shazhou-ww/moora/issues"
+  },
+  "dependencies": {
+    "@moora/moorex": "0.1.0",
+    "@moora/agent-webui-protocol": "0.1.0",
+    "@moora/agent-core-state-machine": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.0.12",
+    "@vitest/ui": "4.0.12",
+    "vitest": "^4.0.12"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "files": [
+    "README.md",
+    "README.zh.md",
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest --run --no-ui",
+    "test:coverage": "vitest --run --coverage --no-ui",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest --run --coverage --no-ui"
+  }
+}
+

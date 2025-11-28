@@ -4,12 +4,14 @@
 
 ## 概述
 
-Agent 系统被设计为 4 个独立的包，每个包都有明确的职责边界：
+Agent 系统被设计为多个独立的包，每个包都有明确的职责边界：
 
 1. **@moora/agent-webui-protocol** - 协议定义层
-2. **@moora/agent-core** - 核心逻辑层
-3. **@moora/agent-webui** - 前端应用层
-4. **@moora/agent-service** - 服务端层
+2. **@moora/agent-core-state-machine** - 状态机定义层
+3. **@moora/agent-core-app-controller** - 前端控制器层
+4. **@moora/agent-core-fastify** - Fastify 集成层
+5. **@moora/agent-webui** - 前端应用层
+6. **@moora/agent-service** - 服务端层
 
 这种分层设计实现了关注点分离，使得每个包都可以独立迭代和测试。
 
@@ -31,40 +33,34 @@ Agent 系统被设计为 4 个独立的包，每个包都有明确的职责边�
 │  - AgentAppState: 用户可见的状态                             │
 │  - AgentAppEvent: 用户可触发的事件                           │
 │  - AgentController: 前端控制器接口                           │
-└────────────────────┬────────────────────────────────────────┘
-                     │ 实现
-                     ▼
+└───────┬───────────────────────────────┬──────────────────────┘
+        │ 实现                          │ 使用
+        ▼                               ▼
+┌──────────────────────────┐  ┌──────────────────────────────┐
+│ agent-core-app-controller│  │  agent-core-fastify          │
+│  (前端控制器层)            │  │  (Fastify 集成层)            │
+│  - mapAppState            │  │  - Agent Moorex              │
+│  - interpretAppEvent      │  │  - effectsAt, runEffect      │
+│  - createAgentController   │  │  - createAgentFastifyNode   │
+│    - POST 发送 Input       │  │  - 基于 moorex-fastify       │
+│    - SSE 监听事件          │  └───────────┬──────────────────┘
+└───────────┬───────────────┘              │ 使用
+            │ 使用                          │
+            ▼                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 @moora/agent-core                           │
-│  (核心逻辑层)                                                 │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Agent State Machine                                  │  │
-│  │ - AgentState, AgentInput (前后端共用)                │  │
-│  │ - initial, transition                                │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Frontend Controller                                  │  │
-│  │ - mapAppState: AgentState → AgentAppState            │  │
-│  │ - interpretAppEvent: AgentAppEvent → AgentInput[]    │  │
-│  │ - createAgentController: 实现 AgentController        │  │
-│  │   - 通过 POST 发送 Input                             │  │
-│  │   - 通过 SSE 监听 state-updated 事件                 │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Agent Moorex                                          │  │
-│  │ - AgentEffect 类型定义                                │  │
-│  │ - effectsAt: AgentState → Record<string, Effect>    │  │
-│  │ - runEffect: 处理 LLM & Tool Effects                 │  │
-│  └──────────────────────────────────────────────────────┘  │
+│         @moora/agent-core-state-machine                     │
+│  (状态机定义层)                                               │
+│  - AgentState, AgentInput (前后端共用)                      │
+│  - initial, transition                                       │
+│  - agentStateMachine                                         │
 └────────────────────┬────────────────────────────────────────┘
                      │ 使用
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              @moora/agent-service                           │
 │  (服务端层)                                                   │
-│  - 基于 @moora/moorex-fastify                               │
-│  - 集成 Agent State Machine                                 │
-│  - 集成 Agent Moorex (effectsAt, runEffect)                 │
+│  - 使用 agent-core-fastify 创建 Fastify 节点                 │
+│  - 配置 LLM 和 Tools                                         │
 │  - 提供 HTTP API (POST + SSE)                               │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -111,46 +107,44 @@ type AgentController = {
 - 前端应用完全基于这些类型定义，不预设实现
 - 通过依赖注入的方式接收 `AgentController` 实例
 
-### 2. @moora/agent-core
+### 2. @moora/agent-core-state-machine
 
 **职责边界：**
-- ✅ 实现 Agent 状态机（前后端共用）
-- ✅ 实现前端控制器（将协议类型转换为内部类型）
-- ✅ 实现 Agent Moorex（Effects 处理逻辑）
-- ✅ 提供状态转换函数
+- ✅ 定义 Agent 状态机（前后端共用）
+- ✅ 定义 `AgentState`（内部状态，包含所有实现细节）
+- ✅ 定义 `AgentInput`（状态机输入信号）
+- ✅ 实现 `initial` 和 `transition` 函数
 - ❌ 不包含 UI 实现
 - ❌ 不包含服务端框架集成
+- ❌ 不包含 Effects 处理逻辑
 
-**核心模块：**
-
-#### 2.1 Agent State Machine
-
-**文件：** `src/agent-state.ts`
-
-**职责：**
-- 定义 `AgentState`（内部状态，包含所有实现细节）
-- 定义 `AgentInput`（状态机输入信号）
-- 实现 `initial` 和 `transition` 函数
-- 前后端共用，确保状态同步
-
-**关键设计：**
-- `AgentState` 包含完整的内部状态（LLM 历史、Tool 历史等）
-- `AgentInput` 包含所有可能的状态转换信号
+**核心内容：**
+- `AgentState`: 完整的内部状态（LLM 历史、Tool 历史等）
+- `AgentInput`: 所有可能的状态转换信号
+- `agentStateMachine`: 状态机定义（initial, transition）
 - 状态转换函数是纯函数，易于测试
 
-#### 2.2 Frontend Controller
-
-**文件：** `src/frontend-controller.ts`
-
-**职责：**
-- `mapAppState`: 将内部 `AgentState` 映射为用户可见的 `AgentAppState`
-- `interpretAppEvent`: 将用户事件 `AgentAppEvent` 解释为内部 `AgentInput[]`
-- `createAgentController`: 创建 `AgentController` 实例
-
 **关键设计：**
-- 前端控制器通过 POST 请求发送 `AgentInput[]` 到服务端
-- 前端控制器通过 SSE 监听 `state-updated` 事件来更新状态
-- 状态映射函数隐藏内部实现细节，只暴露用户需要的信息
+- 前后端共用，确保状态同步
+- 状态转换函数是纯函数，无副作用
+
+### 3. @moora/agent-core-app-controller
+
+**职责边界：**
+- ✅ 实现前端控制器（将协议类型转换为内部类型）
+- ✅ `mapAppState`: 将内部 `AgentState` 映射为用户可见的 `AgentAppState`
+- ✅ `interpretAppEvent`: 将用户事件 `AgentAppEvent` 解释为内部 `AgentInput[]`
+- ✅ `createAgentController`: 创建 `AgentController` 实例
+- ✅ 通过 POST 请求发送 `AgentInput[]` 到服务端
+- ✅ 通过 SSE 监听 `state-updated` 事件来更新状态
+- ❌ 不包含 UI 实现
+- ❌ 不包含服务端框架集成
+- ❌ 不包含状态机定义（依赖 agent-core-state-machine）
+
+**核心内容：**
+- `createAgentController`: 创建前端控制器实例
+- `mapAppState`: 状态映射函数，隐藏内部实现细节
+- `interpretAppEvent`: 事件解释函数，将用户事件转换为内部输入
 
 **通信流程：**
 ```
@@ -159,14 +153,23 @@ type AgentController = {
 状态更新 ← mapAppState ← AgentState ← SSE (state-updated) ← 服务端
 ```
 
-#### 2.3 Agent Moorex
+### 4. @moora/agent-core-fastify
 
-**文件：** `src/agent-moorex.ts`（待实现）
+**职责边界：**
+- ✅ 实现 Agent Moorex（Effects 处理逻辑）
+- ✅ 定义 `AgentEffect` 类型（LLM 调用、Tool 调用等）
+- ✅ 实现 `effectsAt`: 从 `AgentState` 计算当前需要的 Effects
+- ✅ 实现 `runEffect`: 执行 Effect（调用 LLM、调用 Tool 等）
+- ✅ 创建 Fastify 节点（基于 `@moora/moorex-fastify`）
+- ❌ 不包含 UI 实现
+- ❌ 不包含状态机定义（依赖 agent-core-state-machine）
 
-**职责：**
-- 定义 `AgentEffect` 类型（LLM 调用、Tool 调用等）
-- 实现 `effectsAt`: 从 `AgentState` 计算当前需要的 Effects
-- 实现 `runEffect`: 执行 Effect（调用 LLM、调用 Tool 等）
+**核心内容：**
+- `AgentEffect`: Effect 类型定义（CallLLMEffect, CallToolEffect）
+- `agentEffectsAt`: 从状态计算 Effects
+- `createAgentRunEffect`: 创建 Effect 运行函数
+- `createAgentMoorexDefinition`: 创建 Agent Moorex 定义
+- `createAgentFastifyNode`: 创建 Fastify 节点
 
 **关键设计：**
 - Effects 不包含向用户发送消息（前端通过同步状态获取消息）
@@ -175,8 +178,9 @@ type AgentController = {
   - `CallToolEffect`: 调用 Tool
 - `effectsAt` 函数根据状态决定需要执行哪些 Effects
 - `runEffect` 函数执行 Effect 并通过 `dispatch` 产生新的 `AgentInput`
+- 基于 `@moora/moorex-fastify` 提供 Fastify 集成
 
-### 3. @moora/agent-webui
+### 5. @moora/agent-webui
 
 **职责边界：**
 - ✅ 实现基于 React + MUI 的前端 UI
@@ -184,7 +188,7 @@ type AgentController = {
 - ✅ 通过依赖注入接收 `AgentController`
 - ✅ 提供 `useAgentController` hook
 - ❌ 不包含 Agent 业务逻辑
-- ❌ 不直接依赖 `@moora/agent-core`
+- ❌ 不直接依赖 `@moora/agent-core-*` 包
 
 **核心设计：**
 - 前端应用不预设 `AgentController` 的实现
@@ -193,6 +197,8 @@ type AgentController = {
 
 **示例：**
 ```typescript
+import { createAgentController } from '@moora/agent-core-app-controller';
+
 // 应用入口
 function App({ controller }: { controller: AgentController }) {
   const { state, notify } = useAgentController(controller);
@@ -209,47 +215,47 @@ const controller = createAgentController({ endpoint: '/api/agent' });
 ReactDOM.render(<App controller={controller} />, root);
 ```
 
-### 4. @moora/agent-service
+### 6. @moora/agent-service
 
 **职责边界：**
 - ✅ 集成 `@moora/moorex-fastify` 提供 HTTP API
-- ✅ 使用 `@moora/agent-core` 的状态机和 Moorex
+- ✅ 使用 `@moora/agent-core-fastify` 创建 Fastify 节点
 - ✅ 配置 LLM 和 Tool 的具体实现
 - ✅ 启动 Fastify 服务器
 - ❌ 不包含前端 UI
 - ❌ 不包含核心业务逻辑（由 agent-core 提供）
 
 **核心设计：**
-- 基于 `@moora/moorex-fastify` 创建 MoorexNode
-- 使用 `agentStateMachine` 创建 Moorex 实例
-- 配置 `effectsAt` 和 `runEffect` 函数
-- 提供 POST 和 SSE 端点
+- 使用 `@moora/agent-core-fastify` 创建 Agent Fastify 节点
+- 配置 LLM 和 Tools
+- 提供 HTTP API (POST + SSE)
 
 **示例：**
 ```typescript
-// 创建 Moorex 定义
-const agentMoorexDefinition: MoorexDefinition<AgentInput, AgentEffect, AgentState> = {
-  initial: initialAgentState,
-  transition: agentTransition,
-  effectsAt: agentEffectsAt,  // 从 agent-core 导入
-  runEffect: agentRunEffect,  // 从 agent-core 导入，但需要配置 LLM/Tool
-};
+import { createAgentFastifyNode } from '@moora/agent-core-fastify';
 
-// 创建 Moorex 实例
-const moorex = createMoorex(agentMoorexDefinition);
-
-// 创建 Fastify 节点
-const moorexNode = createMoorexNode({
-  moorex,
-  handlePost: async (input, dispatch) => {
-    const inputs: AgentInput[] = JSON.parse(input);
-    dispatch(inputs);
-    return { code: 200, content: JSON.stringify({ success: true }) };
+// 创建 Agent Fastify 节点
+const agentNode = createAgentFastifyNode({
+  moorexOptions: {
+    callLLM: async ({ prompt }) => {
+      // 调用 LLM API
+      return 'Response';
+    },
+    tools: {
+      search: {
+        name: 'search',
+        description: 'Search tool',
+        execute: async (args) => {
+          // 执行 Tool
+          return 'Result';
+        },
+      },
+    },
   },
 });
 
 // 注册到 Fastify
-await fastify.register(moorexNode.register, { prefix: '/api/agent' });
+await fastify.register(agentNode.register, { prefix: '/api/agent' });
 ```
 
 ## 数据流
@@ -261,9 +267,9 @@ await fastify.register(moorexNode.register, { prefix: '/api/agent' });
    ↓
 2. UI 调用 controller.notify({ type: 'user-message', content: '...' })
    ↓
-3. Frontend Controller 的 interpretAppEvent 将事件转换为 AgentInput[]
+3. App Controller 的 interpretAppEvent 将事件转换为 AgentInput[]
    ↓
-4. Frontend Controller 通过 POST 请求发送 AgentInput[] 到服务端
+4. App Controller 通过 POST 请求发送 AgentInput[] 到服务端
    ↓
 5. 服务端的 handlePost 接收请求，调用 moorex.dispatch(input)
    ↓
@@ -283,9 +289,9 @@ await fastify.register(moorexNode.register, { prefix: '/api/agent' });
    ↓
 13. 服务端通过 SSE 将事件发送给前端
    ↓
-14. Frontend Controller 接收 state-updated 事件，调用 mapAppState
+14. App Controller 接收 state-updated 事件，调用 mapAppState
    ↓
-15. Frontend Controller 发布新的 AgentAppState
+15. App Controller 发布新的 AgentAppState
    ↓
 16. UI 通过 subscribe 接收更新，重新渲染
 ```
@@ -302,14 +308,22 @@ await fastify.register(moorexNode.register, { prefix: '/api/agent' });
 @moora/agent-webui
   └─> @moora/agent-webui-protocol (仅类型)
 
-@moora/agent-core
+@moora/agent-core-app-controller
+  ├─> @moora/moorex (PubSub)
+  ├─> @moora/agent-webui-protocol (协议类型)
+  └─> @moora/agent-core-state-machine (状态机类型)
+
+@moora/agent-core-fastify
   ├─> @moora/moorex (核心状态机)
-  └─> @moora/agent-webui-protocol (协议类型)
+  ├─> @moora/moorex-fastify (Fastify 集成)
+  └─> @moora/agent-core-state-machine (状态机)
 
 @moora/agent-service
-  ├─> @moora/moorex-fastify (HTTP 集成)
-  ├─> @moora/agent-core (状态机和 Moorex)
+  ├─> @moora/agent-core-fastify (Fastify 节点)
   └─> fastify (Web 框架)
+
+@moora/agent-core-state-machine
+  └─> @moora/moorex (StateMachine 类型)
 
 @moora/agent-webui-protocol
   └─> (无依赖，纯类型定义)
@@ -321,7 +335,9 @@ await fastify.register(moorexNode.register, { prefix: '/api/agent' });
 
 每个包都有明确的职责边界，互不干扰：
 - **Protocol**: 只定义接口，不包含实现
-- **Core**: 只包含业务逻辑，不包含 UI 或框架集成
+- **State Machine**: 只包含状态机定义，不包含 UI 或框架集成
+- **App Controller**: 只包含前端控制器实现，不包含 UI 或状态机定义
+- **Fastify**: 只包含 Fastify 集成和 Effects 处理，不包含 UI 或状态机定义
 - **WebUI**: 只包含 UI 实现，不包含业务逻辑
 - **Service**: 只包含服务端集成，不包含业务逻辑
 
@@ -332,31 +348,35 @@ await fastify.register(moorexNode.register, { prefix: '/api/agent' });
 - 便于替换实现（可以有不同的 controller 实现）
 - 降低耦合度
 
+前端控制器通过 `@moora/agent-core-app-controller` 创建，完全基于协议定义。
+
 ### 3. 类型安全
 
 所有包之间的交互都通过明确的类型定义：
-- Protocol 包定义所有接口类型
-- Core 包实现这些接口
+- Protocol 包定义前端接口类型
+- State Machine 包定义状态机类型（前后端共用）
+- App Controller 包实现前端控制器接口
+- Fastify 包实现服务端集成
 - 其他包使用这些类型确保类型安全
 
 ### 4. 前后端状态同步
 
 通过共享状态机定义确保前后端状态一致：
-- `AgentState` 和 `AgentInput` 在前后端共用
-- 前端通过 `mapAppState` 隐藏内部细节
-- 后端通过 SSE 实时同步状态
+- `AgentState` 和 `AgentInput` 在 `agent-core-state-machine` 中定义，前后端共用
+- 前端通过 `mapAppState`（在 `agent-core-app-controller` 中）隐藏内部细节
+- 后端通过 SSE（在 `agent-core-fastify` 中）实时同步状态
 
 ## 扩展性
 
 ### 迭代不同版本的 Agent
 
-由于核心逻辑在 `@moora/agent-core` 中，可以创建多个版本的实现：
+由于状态机在 `@moora/agent-core-state-machine` 中，可以创建多个版本的实现：
 
 ```typescript
-// agent-core/src/v1/agent-state.ts
+// agent-core-state-machine/src/v1/state-machine.ts
 export const agentStateMachineV1 = { ... };
 
-// agent-core/src/v2/agent-state.ts
+// agent-core-state-machine/src/v2/state-machine.ts
 export const agentStateMachineV2 = { ... };
 ```
 
@@ -366,7 +386,7 @@ export const agentStateMachineV2 = { ... };
 
 ```typescript
 // 使用 React
-import { createAgentController } from '@moora/agent-core';
+import { createAgentController } from '@moora/agent-core-app-controller';
 const controller = createAgentController({ endpoint: '/api/agent' });
 
 // 使用 Vue
@@ -375,14 +395,14 @@ const controller = createAgentController({ endpoint: '/api/agent' });
 
 ### 替换后端框架
 
-由于服务端逻辑在 Core 中，可以轻松替换后端框架：
+由于服务端逻辑在 `agent-core-fastify` 中，可以轻松替换后端框架：
 
 ```typescript
 // 当前：基于 Fastify
-import { createMoorexNode } from '@moora/moorex-fastify';
+import { createAgentFastifyNode } from '@moora/agent-core-fastify';
 
-// 未来：可以创建 @moora/moorex-express
-import { createMoorexNode } from '@moora/moorex-express';
+// 未来：可以创建 @moora/agent-core-express
+import { createAgentExpressNode } from '@moora/agent-core-express';
 ```
 
 ## 总结

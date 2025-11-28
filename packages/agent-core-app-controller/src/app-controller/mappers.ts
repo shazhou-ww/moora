@@ -1,9 +1,9 @@
 // ============================================================================
-// Frontend Controller Mappers - 状态和事件映射函数
+// App Controller Mappers - 状态和事件映射函数
 // ============================================================================
 
 import type { AgentAppState, AgentAppEvent } from "@moora/agent-webui-protocol";
-import type { AgentState, AgentInput } from "../types";
+import type { AgentState, AgentInput } from "@moora/agent-core-state-machine";
 
 /**
  * 将 AgentState 映射为 AgentAppState
@@ -25,35 +25,38 @@ import type { AgentState, AgentInput } from "../types";
  * ```
  */
 export const mapAppState = (state: AgentState): AgentAppState => {
-  // 确定状态
-  let status: AgentAppState["status"] = "idle";
-  if (state.phase === "error") {
-    status = "error";
-  } else if (state.phase === "processing") {
-    // 检查是否有正在进行的 LLM 调用
-    const hasActiveLLM = state.llmHistory.some(
-      (call) =>
-        call.requestId === state.currentRequestId &&
-        !call.response &&
-        !call.error
-    );
-    status = hasActiveLLM ? "thinking" : "responding";
-  }
-
   // 转换消息格式
-  const messages = state.messages.map((msg) => ({
-    id: msg.id,
-    role: msg.role,
-    content: msg.content,
-    timestamp: msg.timestamp,
-    streaming: msg.streaming,
+  const messages = state.messages.map((msg) => {
+    if (msg.role === "user") {
+      return {
+        id: msg.id,
+        role: "user" as const,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        taskIds: msg.taskIds,
+      };
+    } else {
+      return {
+        id: msg.id,
+        role: "assistant" as const,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        streaming: msg.streaming ?? false,
+        taskIds: msg.taskIds,
+      };
+    }
+  });
+
+  // 转换 tasks 格式（移除 requestId 字段，因为这是内部字段）
+  const tasks = state.tasks.map((task) => ({
+    id: task.id,
+    status: task.status,
+    summary: task.summary,
   }));
 
   return {
-    status,
     messages,
-    error: state.error,
-    isProcessing: state.phase === "processing",
+    tasks,
   };
 };
 
@@ -83,31 +86,26 @@ export const interpretAppEvent = (event: AgentAppEvent): AgentInput[] => {
           type: "user-message",
           requestId,
           content: event.content,
+          taskHints: event.taskHints,
         },
       ];
     }
 
-    case "cancel": {
-      // 需要从当前状态获取 requestId，这里返回一个占位符
-      // 实际实现中，controller 需要访问当前状态
+    case "cancel-task": {
       return [
         {
-          type: "cancel",
-          requestId: "", // 将在 createAgentController 中处理
+          type: "cancel-task",
+          taskId: event.taskId,
         },
       ];
     }
 
-    case "retry": {
-      // 重试逻辑：重新发送最后一条用户消息
-      // 实际实现中需要从状态中获取
-      return [];
-    }
-
-    case "clear": {
+    case "update-task-summary": {
       return [
         {
-          type: "clear",
+          type: "update-task-summary",
+          taskId: event.taskId,
+          summary: event.summary,
         },
       ];
     }

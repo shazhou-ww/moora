@@ -1,11 +1,10 @@
 {
-  "name": "@moora/agent-core",
+  "name": "@moora/agent-core-fastify",
   "version": "0.1.0",
-  "description": "Core Agent logic - State Machine, Frontend Controller, and Agent Moorex implementation",
+  "description": "Agent Core Fastify - Fastify integration with Agent Moorex",
   "keywords": [
     "agent",
-    "core",
-    "state-machine",
+    "fastify",
     "moorex",
     "ai-agent"
   ],
@@ -17,15 +16,16 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/shazhou-ww/moora.git",
-    "directory": "packages/agent-core"
+    "directory": "packages/agent-core-fastify"
   },
-  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-core#readme",
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-core-fastify#readme",
   "bugs": {
     "url": "https://github.com/shazhou-ww/moora/issues"
   },
   "dependencies": {
     "@moora/moorex": "0.1.0",
-    "@moora/agent-webui-protocol": "0.1.0"
+    "@moora/moorex-fastify": "0.1.0",
+    "@moora/agent-core-state-machine": "0.1.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

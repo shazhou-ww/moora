@@ -14,6 +14,72 @@
         "typescript": "^5",
       },
     },
+    "packages/agent-core-app-controller": {
+      "name": "@moora/agent-core-app-controller",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/agent-core-state-machine": "0.1.0",
+        "@moora/agent-webui-protocol": "0.1.0",
+        "@moora/moorex": "0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@vitest/coverage-v8": "^4.0.12",
+        "@vitest/ui": "4.0.12",
+        "vitest": "^4.0.12",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/agent-core-fastify": {
+      "name": "@moora/agent-core-fastify",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/agent-core-state-machine": "0.1.0",
+        "@moora/moorex": "0.1.0",
+        "@moora/moorex-fastify": "0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@vitest/coverage-v8": "^4.0.12",
+        "@vitest/ui": "4.0.12",
+        "vitest": "^4.0.12",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/agent-core-state-machine": {
+      "name": "@moora/agent-core-state-machine",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/moorex": "0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@vitest/coverage-v8": "^4.0.12",
+        "@vitest/ui": "4.0.12",
+        "vitest": "^4.0.12",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/agent-webui-protocol": {
+      "name": "@moora/agent-webui-protocol",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/moorex": "0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/moorex": {
       "name": "@moora/moorex",
       "version": "0.1.0",
@@ -46,6 +112,24 @@
       },
       "peerDependencies": {
         "mutative": "^1.3.0",
+        "typescript": "^5",
+      },
+    },
+    "packages/orchestrator": {
+      "name": "@moora/orchestrator",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/moorex": "0.1.0",
+        "mutative": "^1.3.0",
+        "zod": "^4.0.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@vitest/coverage-v8": "^4.0.12",
+        "@vitest/ui": "4.0.12",
+        "vitest": "^4.0.12",
+      },
+      "peerDependencies": {
         "typescript": "^5",
       },
     },
@@ -150,9 +234,19 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
+    "@moora/agent-core-app-controller": ["@moora/agent-core-app-controller@workspace:packages/agent-core-app-controller"],
+
+    "@moora/agent-core-fastify": ["@moora/agent-core-fastify@workspace:packages/agent-core-fastify"],
+
+    "@moora/agent-core-state-machine": ["@moora/agent-core-state-machine@workspace:packages/agent-core-state-machine"],
+
+    "@moora/agent-webui-protocol": ["@moora/agent-webui-protocol@workspace:packages/agent-webui-protocol"],
+
     "@moora/moorex": ["@moora/moorex@workspace:packages/moorex"],
 
     "@moora/moorex-fastify": ["@moora/moorex-fastify@workspace:packages/moorex-fastify"],
+
+    "@moora/orchestrator": ["@moora/orchestrator@workspace:packages/orchestrator"],
 
     "@moora/task-runner": ["@moora/task-runner@workspace:packages/task-runner"],
 
