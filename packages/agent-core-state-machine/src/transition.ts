@@ -4,7 +4,16 @@
 
 import { create } from "mutative";
 import type { AgentState } from "./state";
-import type { AgentInput } from "./input";
+import type {
+  AgentInput,
+  UserMessageInput,
+  LlmChunkInput,
+  LlmMessageCompleteInput,
+  ToolCallStartedInput,
+  ToolCallResultInput,
+  ExpandContextWindowInput,
+  AddToolCallsToContextInput,
+} from "./input";
 
 /**
  * 处理用户消息输入
@@ -12,9 +21,8 @@ import type { AgentInput } from "./input";
  * @internal
  */
 const handleUserMessage = (
-  input: Extract<AgentInput, { type: "user-message" }>,
-  state: AgentState,
-  expandContextWindowSize: number
+  input: UserMessageInput,
+  state: AgentState
 ): AgentState => {
   // 检查消息 ID 是否已存在
   const existingIndex = state.messages.findIndex(
@@ -52,13 +60,8 @@ const handleUserMessage = (
     draft.messages.push(newMessage);
 
     // 自动扩展 context window 以确保新消息包含在上下文中
-    // 如果当前 contextWindowSize 小于消息总数，扩展它
-    if (draft.reactContext.contextWindowSize < draft.messages.length) {
-      draft.reactContext.contextWindowSize = Math.min(
-        draft.reactContext.contextWindowSize + expandContextWindowSize,
-        draft.messages.length
-      );
-    }
+    // 将 contextWindowSize 加 1 以适应当前新增的 UserMessage
+    draft.reactContext.contextWindowSize += 1;
   });
 };
 
@@ -68,7 +71,7 @@ const handleUserMessage = (
  * @internal
  */
 const handleLlmChunk = (
-  input: Extract<AgentInput, { type: "llm-chunk" }>,
+  input: LlmChunkInput,
   state: AgentState
 ): AgentState => {
   return create(state, (draft) => {
@@ -117,7 +120,7 @@ const handleLlmChunk = (
  * @internal
  */
 const handleLlmMessageComplete = (
-  input: Extract<AgentInput, { type: "llm-message-complete" }>,
+  input: LlmMessageCompleteInput,
   state: AgentState
 ): AgentState => {
   return create(state, (draft) => {
@@ -144,7 +147,7 @@ const handleLlmMessageComplete = (
  * @internal
  */
 const handleToolCallStarted = (
-  input: Extract<AgentInput, { type: "tool-call-started" }>,
+  input: ToolCallStartedInput,
   state: AgentState
 ): AgentState => {
   return create(state, (draft) => {
@@ -169,7 +172,7 @@ const handleToolCallStarted = (
  * @internal
  */
 const handleToolCallResult = (
-  input: Extract<AgentInput, { type: "tool-call-result" }>,
+  input: ToolCallResultInput,
   state: AgentState
 ): AgentState => {
   return create(state, (draft) => {
@@ -191,7 +194,7 @@ const handleToolCallResult = (
  * @internal
  */
 const handleExpandContextWindow = (
-  input: Extract<AgentInput, { type: "expand-context-window" }>,
+  input: ExpandContextWindowInput,
   state: AgentState,
   expandContextWindowSize: number
 ): AgentState => {
@@ -212,7 +215,7 @@ const handleExpandContextWindow = (
  * @internal
  */
 const handleAddToolCallsToContext = (
-  input: Extract<AgentInput, { type: "add-tool-calls-to-context" }>,
+  input: AddToolCallsToContextInput,
   state: AgentState
 ): AgentState => {
   return create(state, (draft) => {
@@ -264,7 +267,7 @@ export function agentTransition(
   return (state: AgentState): AgentState => {
     switch (input.type) {
       case "user-message":
-        return handleUserMessage(input, state, expandContextWindowSize);
+        return handleUserMessage(input, state);
       case "llm-chunk":
         return handleLlmChunk(input, state);
       case "llm-message-complete":
