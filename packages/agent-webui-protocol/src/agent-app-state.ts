@@ -35,22 +35,24 @@ export type AgentTaskStatus = z.infer<typeof agentTaskStatusSchema>;
  * };
  * ```
  */
-export const agentTaskSchema = z.object({
-  /**
-   * Task 唯一标识符
-   */
-  id: z.string(),
+export const agentTaskSchema = z
+  .object({
+    /**
+     * Task 唯一标识符
+     */
+    id: z.string(),
 
-  /**
-   * Task 状态
-   */
-  status: agentTaskStatusSchema,
+    /**
+     * Task 状态
+     */
+    status: agentTaskStatusSchema,
 
-  /**
-   * Task 简介（一句话简介）
-   */
-  summary: z.string(),
-});
+    /**
+     * Task 简介（一句话简介）
+     */
+    summary: z.string(),
+  })
+  .readonly();
 
 export type AgentTask = z.infer<typeof agentTaskSchema>;
 
@@ -82,7 +84,7 @@ const baseMessageSchema = z.object({
    * 前端应用可根据 task filter 相关的消息
    * 如果没有关联的 task，则为空数组
    */
-  taskIds: z.array(z.string()),
+  taskIds: z.array(z.string()).readonly(),
 });
 
 /**
@@ -102,12 +104,14 @@ const baseMessageSchema = z.object({
  * };
  * ```
  */
-export const userMessageSchema = baseMessageSchema.extend({
-  /**
-   * 消息角色
-   */
-  role: z.literal("user"),
-});
+export const userMessageSchema = baseMessageSchema
+  .extend({
+    /**
+     * 消息角色
+     */
+    role: z.literal("user"),
+  })
+  .readonly();
 
 export type UserMessage = z.infer<typeof userMessageSchema>;
 
@@ -130,18 +134,20 @@ export type UserMessage = z.infer<typeof userMessageSchema>;
  * };
  * ```
  */
-export const assistantMessageSchema = baseMessageSchema.extend({
-  /**
-   * 消息角色
-   */
-  role: z.literal("assistant"),
+export const assistantMessageSchema = baseMessageSchema
+  .extend({
+    /**
+     * 消息角色
+     */
+    role: z.literal("assistant"),
 
-  /**
-   * 是否正在流式输出中
-   * 当 Agent 正在流式生成响应时，此字段为 `true`；否则为 `false`
-   */
-  streaming: z.boolean(),
-});
+    /**
+     * 是否正在流式输出中
+     * 当 Agent 正在流式生成响应时，此字段为 `true`；否则为 `false`
+     */
+    streaming: z.boolean(),
+  })
+  .readonly();
 
 export type AssistantMessage = z.infer<typeof assistantMessageSchema>;
 
@@ -201,20 +207,22 @@ export type AgentMessage = z.infer<typeof agentMessageSchema>;
  * };
  * ```
  */
-export const agentAppStateSchema = z.object({
-  /**
-   * 消息列表
-   * 包含用户和 Agent 之间的对话消息，按时间顺序排列
-   * 可以通过 messages 中的 streaming 字段判断是否有正在流式输出的消息
-   */
-  messages: z.array(agentMessageSchema),
+export const agentAppStateSchema = z
+  .object({
+    /**
+     * 消息列表
+     * 包含用户和 Agent 之间的对话消息，按时间顺序排列
+     * 可以通过 messages 中的 streaming 字段判断是否有正在流式输出的消息
+     */
+    messages: z.array(agentMessageSchema).readonly(),
 
-  /**
-   * Task 列表
-   * 包含所有 Agent 执行的任务
-   * 可以通过 tasks 的状态（running、pending 等）推断 Agent 的处理状态
-   */
-  tasks: z.array(agentTaskSchema),
-});
+    /**
+     * Task 列表
+     * 包含所有 Agent 执行的任务
+     * 可以通过 tasks 的状态（running、pending 等）推断 Agent 的处理状态
+     */
+    tasks: z.array(agentTaskSchema).readonly(),
+  })
+  .readonly();
 
 export type AgentAppState = z.infer<typeof agentAppStateSchema>;
