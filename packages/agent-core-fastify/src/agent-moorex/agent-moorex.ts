@@ -82,9 +82,15 @@ export const createAgentRunEffect = (options: AgentMoorexOptions) => (
 export const createAgentMoorexDefinition = (
   options: AgentMoorexOptions
 ): MoorexDefinition<AgentInput, AgentEffect, AgentState> => {
+  const { initialContextWindowSize, expandContextWindowSize } = options;
+
   return {
-    initial: initialAgentState,
-    transition: agentTransition,
+    initial: () => initialAgentState(initialContextWindowSize),
+    transition: (input: AgentInput) =>
+      agentTransition(input, {
+        initialContextWindowSize,
+        expandContextWindowSize,
+      }),
     effectsAt: agentEffectsAt,
     runEffect: createAgentRunEffect(options),
   };

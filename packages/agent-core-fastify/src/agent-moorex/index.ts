@@ -12,8 +12,9 @@ export type {
 } from "../types";
 
 export {
-  agentEffectsAt,
   createAgentRunEffect,
   createAgentMoorexDefinition,
 } from "./agent-moorex";
+
+export { agentEffectsAt } from "./effects-at";
 

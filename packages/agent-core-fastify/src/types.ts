@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
-import type { MoorexNode, HandlePost } from "@moora/moorex-fastify";
+import type { MoorexNode } from "@moora/moorex-fastify";
 
 // ============================================================================
 // Agent Effect 相关类型
@@ -62,9 +62,9 @@ export type CallToolEffect = {
    */
   toolName: string;
   /**
-   * Tool 参数
+   * Tool 参数（JSON 字符串）
    */
-  arguments: Record<string, unknown>;
+  parameter: string;
 };
 
 /**
@@ -118,6 +118,14 @@ export type AgentMoorexOptions = {
    * 可用的 Tools
    */
   tools?: Record<string, Tool>;
+  /**
+   * 初始上下文窗口大小，默认为 10
+   */
+  initialContextWindowSize?: number;
+  /**
+   * 每次扩展上下文窗口的增量，默认为 10
+   */
+  expandContextWindowSize?: number;
 };
 
 // ============================================================================
@@ -127,18 +135,7 @@ export type AgentMoorexOptions = {
 /**
  * 创建 Agent Fastify Node 的选项
  */
-export type CreateAgentFastifyNodeOptions = {
-  /**
-   * Agent Moorex 选项（LLM 调用函数和 Tools）
-   */
-  moorexOptions: AgentMoorexOptions;
-
-  /**
-   * 可选的 POST 请求处理函数
-   * 如果未提供，则使用默认处理（解析 JSON 并分发 Input 数组）
-   */
-  handlePost?: HandlePost<AgentInput>;
-};
+export type CreateAgentFastifyNodeOptions = AgentMoorexOptions;
 
 /**
  * Agent Fastify Node 实例

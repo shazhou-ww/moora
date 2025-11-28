@@ -54,7 +54,10 @@
       "name": "@moora/agent-core-state-machine",
       "version": "0.1.0",
       "dependencies": {
+        "@moora/agent-webui-protocol": "0.1.0",
         "@moora/moorex": "0.1.0",
+        "mutative": "^1.3.0",
+        "zod": "^4",
       },
       "devDependencies": {
         "@types/bun": "latest",

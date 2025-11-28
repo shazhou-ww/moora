@@ -26,17 +26,8 @@ export const createLLMEffectController = (
         return;
       }
 
-      // 先分发 LLM 调用开始事件，创建流式消息
-      dispatch({
-        type: "llm-call-started",
-        requestId: effect.requestId,
-        callId: effect.callId,
-        prompt: effect.prompt,
-      });
-
-      if (canceled) {
-        return;
-      }
+      // 生成消息 ID
+      const messageId = `msg-${effect.callId}`;
 
       try {
         // 调用 LLM
@@ -50,24 +41,46 @@ export const createLLMEffectController = (
           return;
         }
 
-        // 分发 LLM 响应
+        // 将响应作为单个 chunk 发送
+        // 注意：如果 LLM 支持流式输出，可以在这里逐字符或逐块发送
         dispatch({
-          type: "llm-response",
-          requestId: effect.requestId,
-          callId: effect.callId,
-          response,
+          type: "llm-chunk",
+          messageId,
+          chunk: response,
+        });
+
+        if (canceled) {
+          return;
+        }
+
+        // 标记消息完成
+        dispatch({
+          type: "llm-message-complete",
+          messageId,
         });
       } catch (error) {
         if (canceled) {
           return;
         }
 
-        // 分发错误
+        // 对于错误情况，我们通过发送一个包含错误信息的 chunk 来处理
+        // 然后标记为完成
+        const messageId = `msg-${effect.callId}`;
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
         dispatch({
-          type: "llm-error",
-          requestId: effect.requestId,
-          callId: effect.callId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          type: "llm-chunk",
+          messageId,
+          chunk: `Error: ${errorMessage}`,
+        });
+
+        if (canceled) {
+          return;
+        }
+
+        dispatch({
+          type: "llm-message-complete",
+          messageId,
         });
       }
     },
@@ -88,14 +101,24 @@ export const createToolEffectController = (
   let canceled = false;
 
   if (!tool) {
-    // Tool 不存在，立即分发错误
+    // Tool 不存在，立即分发错误结果
     return {
       start: async (dispatch: Dispatch<AgentInput>) => {
         dispatch({
-          type: "tool-error",
-          requestId: effect.requestId,
-          callId: effect.callId,
-          error: `Tool "${effect.toolName}" not found`,
+          type: "tool-call-started",
+          toolCallId: effect.callId,
+          name: effect.toolName,
+          parameters: effect.parameter,
+          timestamp: Date.now(),
+        });
+
+        dispatch({
+          type: "tool-call-result",
+          toolCallId: effect.callId,
+          result: {
+            isSuccess: false,
+            error: `Tool "${effect.toolName}" not found`,
+          },
         });
       },
       cancel: () => {
@@ -110,32 +133,50 @@ export const createToolEffectController = (
         return;
       }
 
+      // 分发 Tool Call 开始事件
+      dispatch({
+        type: "tool-call-started",
+        toolCallId: effect.callId,
+        name: effect.toolName,
+        parameters: effect.parameter,
+        timestamp: Date.now(),
+      });
+
+      if (canceled) {
+        return;
+      }
+
       try {
         // 执行 Tool
-        const result = await tool.execute(effect.arguments);
+        const args = JSON.parse(effect.parameter);
+        const result = await tool.execute(args);
 
         if (canceled) {
           return;
         }
 
-        // 分发 Tool 结果
+        // 分发 Tool 结果（成功）
         dispatch({
-          type: "tool-result",
-          requestId: effect.requestId,
-          callId: effect.callId,
-          result,
+          type: "tool-call-result",
+          toolCallId: effect.callId,
+          result: {
+            isSuccess: true,
+            content: typeof result === "string" ? result : JSON.stringify(result),
+          },
         });
       } catch (error) {
         if (canceled) {
           return;
         }
 
-        // 分发错误
+        // 分发错误结果
         dispatch({
-          type: "tool-error",
-          requestId: effect.requestId,
-          callId: effect.callId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          type: "tool-call-result",
+          toolCallId: effect.callId,
+          result: {
+            isSuccess: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
         });
       }
     },

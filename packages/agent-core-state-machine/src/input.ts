@@ -1,18 +1,18 @@
 // ============================================================================
-// Agent Input/Event 类型定义
+// Agent Input 类型定义
 // ============================================================================
 
 import { z } from "zod";
 import { toolCallResultSchema } from "./state";
 
 /**
- * 收到用户消息事件
+ * 收到用户消息输入
  *
  * 当用户发送消息时触发。
  */
-export const userMessageEventSchema = z.object({
+export const userMessageInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("user-message"),
 
@@ -32,16 +32,16 @@ export const userMessageEventSchema = z.object({
   timestamp: z.number(),
 });
 
-export type UserMessageEvent = z.infer<typeof userMessageEventSchema>;
+export type UserMessageInput = z.infer<typeof userMessageInputSchema>;
 
 /**
- * LLM 发送给 User 的 Chunk 事件
+ * LLM 发送给 User 的 Chunk 输入
  *
  * 当 LLM 流式输出时，每个 chunk 触发一次。
  */
-export const llmChunkEventSchema = z.object({
+export const llmChunkInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("llm-chunk"),
 
@@ -56,16 +56,16 @@ export const llmChunkEventSchema = z.object({
   chunk: z.string(),
 });
 
-export type LlmChunkEvent = z.infer<typeof llmChunkEventSchema>;
+export type LlmChunkInput = z.infer<typeof llmChunkInputSchema>;
 
 /**
- * LLM 发送给 User 的消息完成事件
+ * LLM 发送给 User 的消息完成输入
  *
  * 当 LLM 完成一条消息的流式输出时触发。
  */
-export const llmMessageCompleteEventSchema = z.object({
+export const llmMessageCompleteInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("llm-message-complete"),
 
@@ -75,18 +75,18 @@ export const llmMessageCompleteEventSchema = z.object({
   messageId: z.string(),
 });
 
-export type LlmMessageCompleteEvent = z.infer<
-  typeof llmMessageCompleteEventSchema
+export type LlmMessageCompleteInput = z.infer<
+  typeof llmMessageCompleteInputSchema
 >;
 
 /**
- * 发起 ToolCall（外部）事件
+ * 发起 ToolCall（外部）输入
  *
  * 当开始调用外部工具时触发。
  */
-export const toolCallStartedEventSchema = z.object({
+export const toolCallStartedInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("tool-call-started"),
 
@@ -111,16 +111,16 @@ export const toolCallStartedEventSchema = z.object({
   timestamp: z.number(),
 });
 
-export type ToolCallStartedEvent = z.infer<typeof toolCallStartedEventSchema>;
+export type ToolCallStartedInput = z.infer<typeof toolCallStartedInputSchema>;
 
 /**
- * 收到 ToolCall 结果（外部）事件
+ * 收到 ToolCall 结果（外部）输入
  *
  * 当外部工具调用完成时触发。
  */
-export const toolCallResultEventSchema = z.object({
+export const toolCallResultInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("tool-call-result"),
 
@@ -137,37 +137,32 @@ export const toolCallResultEventSchema = z.object({
   result: toolCallResultSchema,
 });
 
-export type ToolCallResultEvent = z.infer<typeof toolCallResultEventSchema>;
+export type ToolCallResultInput = z.infer<typeof toolCallResultInputSchema>;
 
 /**
- * 追加历史消息到当前 ReAct Loop 事件
+ * 扩展上下文窗口输入
  *
- * 当需要将历史消息添加到当前 ReAct Loop 上下文时触发。
+ * 当需要扩展当前 ReAct Loop 上下文窗口时触发。
  */
-export const addMessagesToContextEventSchema = z.object({
+export const expandContextWindowInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
-  type: z.literal("add-messages-to-context"),
-
-  /**
-   * 要添加的消息 ID 列表
-   */
-  messageIds: z.array(z.string()),
+  type: z.literal("expand-context-window"),
 });
 
-export type AddMessagesToContextEvent = z.infer<
-  typeof addMessagesToContextEventSchema
+export type ExpandContextWindowInput = z.infer<
+  typeof expandContextWindowInputSchema
 >;
 
 /**
- * 加载历史 ToolCall 结果到当前 ReAct Loop 事件
+ * 加载历史 ToolCall 结果到当前 ReAct Loop 输入
  *
  * 当需要将历史 Tool Call 添加到当前 ReAct Loop 上下文时触发。
  */
-export const addToolCallsToContextEventSchema = z.object({
+export const addToolCallsToContextInputSchema = z.object({
   /**
-   * 事件类型标识
+   * 输入类型标识
    */
   type: z.literal("add-tool-calls-to-context"),
 
@@ -177,33 +172,25 @@ export const addToolCallsToContextEventSchema = z.object({
   toolCallIds: z.array(z.string()),
 });
 
-export type AddToolCallsToContextEvent = z.infer<
-  typeof addToolCallsToContextEventSchema
+export type AddToolCallsToContextInput = z.infer<
+  typeof addToolCallsToContextInputSchema
 >;
-
-/**
- * Agent 事件
- *
- * Agent 状态机可以接收的所有事件类型。
- * 使用 Discriminated Union 类型，通过 `type` 字段区分。
- */
-export const agentEventSchema = z.discriminatedUnion("type", [
-  userMessageEventSchema,
-  llmChunkEventSchema,
-  llmMessageCompleteEventSchema,
-  toolCallStartedEventSchema,
-  toolCallResultEventSchema,
-  addMessagesToContextEventSchema,
-  addToolCallsToContextEventSchema,
-]);
-
-export type AgentEvent = z.infer<typeof agentEventSchema>;
 
 /**
  * Agent 输入信号
  *
- * Agent 状态机的输入信号类型，与 AgentEvent 相同。
- * 为了保持与 Moorex 命名规范的一致性，同时导出 AgentEvent 和 AgentInput。
+ * Agent 状态机可以接收的所有输入类型。
+ * 使用 Discriminated Union 类型，通过 `type` 字段区分。
  */
-export type AgentInput = AgentEvent;
+export const agentInputSchema = z.discriminatedUnion("type", [
+  userMessageInputSchema,
+  llmChunkInputSchema,
+  llmMessageCompleteInputSchema,
+  toolCallStartedInputSchema,
+  toolCallResultInputSchema,
+  expandContextWindowInputSchema,
+  addToolCallsToContextInputSchema,
+]);
+
+export type AgentInput = z.infer<typeof agentInputSchema>;
 

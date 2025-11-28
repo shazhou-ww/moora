@@ -14,14 +14,14 @@ import type { AgentEffect } from "../types";
  * @example
  * ```typescript
  * const state: AgentState = {
- *   phase: 'processing',
- *   currentRequestId: 'req-1',
- *   messages: [{ role: 'user', content: 'Hello', ... }],
- *   ...
+ *   messages: [{ id: 'msg-1', ... }],
+ *   tools: {},
+ *   toolCalls: {},
+ *   reactContext: { contextWindowSize: 10, toolCallIds: [] },
  * };
  * 
  * const effects = agentEffectsAt(state);
- * // { 'effect-llm-req-1': { type: 'call-llm', ... } }
+ * // { 'effect-llm-msg-1': { type: 'call-llm', ... } }
  * ```
  */
 export const agentEffectsAt = (
@@ -29,29 +29,42 @@ export const agentEffectsAt = (
 ): Record<string, AgentEffect> => {
   const effects: Record<string, AgentEffect> = {};
 
-  // 如果处于 processing 状态且有用户消息，需要调用 LLM
-  if (state.phase === "processing" && state.currentRequestId) {
-    const lastUserMessage = [...state.messages]
-      .reverse()
-      .find((msg) => msg.role === "user" && msg.id);
+  // 获取上下文窗口内的消息（最新的 N 条消息）
+  const contextMessages = state.messages.slice(
+    -state.reactContext.contextWindowSize
+  );
+
+  // 找到最新的用户消息
+  const contextUserMessages = contextMessages.filter(
+    (msg) => msg.role === "user"
+  );
+
+  if (contextUserMessages.length > 0) {
+    // 获取最新的用户消息
+    const lastUserMessage =
+      contextUserMessages[contextUserMessages.length - 1];
 
     if (lastUserMessage) {
-      // 检查是否已经有对应的 LLM 调用
-      const existingLLMCall = state.llmHistory.find(
-        (call) =>
-          call.requestId === state.currentRequestId &&
-          !call.response &&
-          !call.error
+      // 检查是否已经有对应的助手消息（在上下文窗口中）
+      const hasAssistantResponse = contextMessages.some(
+        (msg) => msg.role === "assistant"
       );
 
-      if (!existingLLMCall) {
-        // 创建新的 LLM 调用 Effect
+      // 如果还没有助手响应，需要调用 LLM
+      if (!hasAssistantResponse) {
         const callId = `llm-${Date.now()}-${Math.random()}`;
-        const effectId = `effect-llm-${state.currentRequestId}`;
+        const effectId = `effect-llm-${lastUserMessage.id}`;
 
         // 构建消息历史（用于上下文）
-        const messageHistory = state.messages
-          .filter((msg) => !msg.streaming)
+        // 使用上下文窗口内的消息，过滤掉正在流式输出的助手消息
+        const messageHistory = contextMessages
+          .filter((msg) => {
+            // 只过滤掉正在流式输出的助手消息
+            if (msg.role === "assistant" && msg.streaming) {
+              return false;
+            }
+            return true;
+          })
           .map((msg) => ({
             role: msg.role,
             content: msg.content,
@@ -60,7 +73,7 @@ export const agentEffectsAt = (
         effects[effectId] = {
           type: "call-llm",
           id: effectId,
-          requestId: state.currentRequestId,
+          requestId: lastUserMessage.id,
           callId,
           prompt: lastUserMessage.content,
           messageHistory: messageHistory.length > 0 ? messageHistory : undefined,

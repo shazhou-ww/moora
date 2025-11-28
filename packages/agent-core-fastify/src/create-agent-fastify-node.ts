@@ -22,10 +22,8 @@ import { createAgentMoorexDefinition } from "./agent-moorex";
  * @example
  * ```typescript
  * const agentNode = createAgentFastifyNode({
- *   moorexOptions: {
- *     callLLM: async ({ prompt }) => 'Response',
- *     tools: { search: { ... } },
- *   },
+ *   callLLM: async ({ prompt }) => 'Response',
+ *   tools: { search: { ... } },
  * });
  * 
  * // 注册到 Fastify
@@ -35,16 +33,17 @@ import { createAgentMoorexDefinition } from "./agent-moorex";
 export const createAgentFastifyNode = (
   options: CreateAgentFastifyNodeOptions
 ): AgentFastifyNode => {
-  const { moorexOptions, handlePost } = options;
-
   // 创建 Agent Moorex 定义
-  const definition = createAgentMoorexDefinition(moorexOptions);
+  const definition = createAgentMoorexDefinition(options);
 
   // 创建 Moorex 实例
   const moorex = createMoorex(definition);
 
-  // 创建默认的 handlePost（如果未提供）
-  const defaultHandlePost: HandlePost<AgentInput> = async (input, dispatch) => {
+  // 创建默认的 handlePost
+  const defaultHandlePost: HandlePost<AgentInput> = async (
+    input: string,
+    dispatch: (inputs: AgentInput[]) => void
+  ) => {
     try {
       const inputs: AgentInput[] = JSON.parse(input);
       dispatch(inputs);
@@ -66,7 +65,7 @@ export const createAgentFastifyNode = (
   // 创建 Moorex Node
   return createMoorexNode({
     moorex,
-    handlePost: handlePost || defaultHandlePost,
+    handlePost: defaultHandlePost,
   });
 };
 

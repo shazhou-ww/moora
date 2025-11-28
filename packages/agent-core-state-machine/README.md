@@ -47,8 +47,8 @@ Our Tools are divided into two categories: internal and external.
 The complete internal state of the Agent, including:
 
 1. **Historical Messages** (`messages`)
-   - Type: `Record<string /* messageId */, AgentMessage>`
-   - Contains all user and assistant messages
+   - Type: `AgentMessage[]`
+   - Array sorted by timestamp, containing all user and assistant messages
    - Reuses `AgentMessage` type from `@agent-webui-protocol`
 
 2. **External Tools** (`tools`)
@@ -70,14 +70,14 @@ The complete internal state of the Agent, including:
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
 
 4. **Current ReAct Loop Context** (`reactContext`)
-   - `messageIds`: `string[]` - Involved historical Messages (Message Id list)
+   - `contextWindowSize`: `number` - Context window size, indicating how many recent messages should be included
    - `toolCallIds`: `string[]` - Involved Tool Calls (Tool Call Id list)
 
-## Event Definition
+## Input Definition
 
-### AgentEvent
+### AgentInput
 
-Events that the Agent state machine can receive, using Discriminated Union type:
+Inputs that the Agent state machine can receive, using Discriminated Union type:
 
 1. **User Message Received** (`user-message`)
    - Triggered when user sends a message
@@ -99,9 +99,9 @@ Events that the Agent state machine can receive, using Discriminated Union type:
    - Triggered when external tool call completes
    - Contains success or failure result
 
-6. **Add Historical Messages to Current ReAct Loop** (`add-messages-to-context`)
-   - Triggered when historical messages need to be added to current ReAct Loop context
-   - Contains list of message IDs to add
+6. **Expand Context Window** (`expand-context-window`)
+   - Triggered when the current ReAct Loop context window needs to be expanded
+   - The expansion increment is defined by the `expandContextWindowSize` parameter of the `agentTransition` function
 
 7. **Load Historical Tool Call Results to Current ReAct Loop** (`add-tool-calls-to-context`)
    - Triggered when historical Tool Calls need to be added to current ReAct Loop context
@@ -227,16 +227,16 @@ const context = state.reactContext;
 - `ToolCallResult` - Tool Call result (success/failure)
 - `ReactContext` - ReAct Loop context
 
-#### Event Types
+#### Input Types
 
-- `AgentEvent` / `AgentInput` - Union type of all event types
-- `UserMessageEvent` - User message event
-- `LlmChunkEvent` - LLM chunk event
-- `LlmMessageCompleteEvent` - LLM message complete event
-- `ToolCallStartedEvent` - Tool Call started event
-- `ToolCallResultEvent` - Tool Call result event
-- `AddMessagesToContextEvent` - Add messages to context event
-- `AddToolCallsToContextEvent` - Add Tool Calls to context event
+- `AgentInput` - Union type of all input types
+- `UserMessageInput` - User message input
+- `LlmChunkInput` - LLM chunk input
+- `LlmMessageCompleteInput` - LLM message complete input
+- `ToolCallStartedInput` - Tool Call started input
+- `ToolCallResultInput` - Tool Call result input
+- `ExpandContextWindowInput` - Expand context window input
+- `AddToolCallsToContextInput` - Add Tool Calls to context input
 
 ### Schema Exports
 

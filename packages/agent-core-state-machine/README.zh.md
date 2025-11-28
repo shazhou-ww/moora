@@ -47,8 +47,8 @@ ReAct: Reason + Act，推理 + 行动的交替决策模式。
 Agent 的完整内部状态，包含：
 
 1. **历史消息** (`messages`)
-   - 类型：`Record<string /* messageId */, AgentMessage>`
-   - 包含所有用户和助手消息
+   - 类型：`AgentMessage[]`
+   - 按时间戳排序的数组，包含所有用户和助手消息
    - 复用 `@agent-webui-protocol` 的 `AgentMessage` 类型
 
 2. **外部工具** (`tools`)
@@ -70,14 +70,14 @@ Agent 的完整内部状态，包含：
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
 
 4. **当前 ReAct Loop 上下文** (`reactContext`)
-   - `messageIds`: `string[]` - 涉及到的历史 Messages（Message Id 列表）
+   - `contextWindowSize`: `number` - 上下文窗口大小，表示应该包含最近多少条消息
    - `toolCallIds`: `string[]` - 涉及到的 Tool Calls（Tool Call Id 列表）
 
-## 事件定义
+## 输入定义
 
-### AgentEvent
+### AgentInput
 
-Agent 状态机可以接收的事件，使用 Discriminated Union 类型：
+Agent 状态机可以接收的输入，使用 Discriminated Union 类型：
 
 1. **收到用户消息** (`user-message`)
    - 当用户发送消息时触发
@@ -99,9 +99,9 @@ Agent 状态机可以接收的事件，使用 Discriminated Union 类型：
    - 当外部工具调用完成时触发
    - 包含成功或失败的结果
 
-6. **追加历史消息到当前 ReAct Loop** (`add-messages-to-context`)
-   - 当需要将历史消息添加到当前 ReAct Loop 上下文时触发
-   - 包含要添加的消息 ID 列表
+6. **扩展上下文窗口** (`expand-context-window`)
+   - 当需要扩展当前 ReAct Loop 上下文窗口时触发
+   - 扩展的增量由 `agentTransition` 函数的 `expandContextWindowSize` 参数定义
 
 7. **加载历史 ToolCall 结果到当前 ReAct Loop** (`add-tool-calls-to-context`)
    - 当需要将历史 Tool Call 添加到当前 ReAct Loop 上下文时触发
@@ -227,16 +227,16 @@ const context = state.reactContext;
 - `ToolCallResult` - Tool Call 结果（成功/失败）
 - `ReactContext` - ReAct Loop 上下文
 
-#### Event 类型
+#### Input 类型
 
-- `AgentEvent` / `AgentInput` - 所有事件类型的联合类型
-- `UserMessageEvent` - 用户消息事件
-- `LlmChunkEvent` - LLM chunk 事件
-- `LlmMessageCompleteEvent` - LLM 消息完成事件
-- `ToolCallStartedEvent` - Tool Call 开始事件
-- `ToolCallResultEvent` - Tool Call 结果事件
-- `AddMessagesToContextEvent` - 追加消息到上下文事件
-- `AddToolCallsToContextEvent` - 追加 Tool Call 到上下文事件
+- `AgentInput` - 所有输入类型的联合类型
+- `UserMessageInput` - 用户消息输入
+- `LlmChunkInput` - LLM chunk 输入
+- `LlmMessageCompleteInput` - LLM 消息完成输入
+- `ToolCallStartedInput` - Tool Call 开始输入
+- `ToolCallResultInput` - Tool Call 结果输入
+- `ExpandContextWindowInput` - 扩展上下文窗口输入
+- `AddToolCallsToContextInput` - 追加 Tool Call 到上下文输入
 
 ### Schema 导出
 

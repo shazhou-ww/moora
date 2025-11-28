@@ -107,9 +107,11 @@ export type ToolCallRecord = z.infer<typeof toolCallRecordSchema>;
  */
 export const reactContextSchema = z.object({
   /**
-   * 涉及到的历史 Messages（Message Id 列表）
+   * 上下文窗口大小
+   *
+   * 表示当前 ReAct Loop 应该包含最近多少条消息。
    */
-  messageIds: z.array(z.string()),
+  contextWindowSize: z.number().int().positive(),
 
   /**
    * 涉及到的 Tool Calls（Tool Call Id 列表）
@@ -128,10 +130,9 @@ export const agentStateSchema = z.object({
   /**
    * 历史消息
    *
-   * 组织成 Record<string, AgentMessage> 的形式，key 为 messageId
-   * 包含所有用户和助手消息
+   * 按时间顺序排序的数组，包含所有用户和助手消息
    */
-  messages: z.record(z.string(), agentMessageSchema),
+  messages: z.array(agentMessageSchema),
 
   /**
    * 外部工具

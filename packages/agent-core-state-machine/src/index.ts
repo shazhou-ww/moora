@@ -7,7 +7,7 @@
  *
  * 提供 Agent 的状态机定义，包括：
  * - Agent State: 内部状态类型
- * - Agent Event/Input: 状态机输入信号类型
+ * - Agent Input: 状态机输入信号类型
  * - Agent State Machine: 状态机实现
  */
 
@@ -36,28 +36,27 @@ export {
   agentStateSchema,
 } from "./state";
 
-// Input/Event 相关类型
+// Input 相关类型
 export type {
-  UserMessageEvent,
-  LlmChunkEvent,
-  LlmMessageCompleteEvent,
-  ToolCallStartedEvent,
-  ToolCallResultEvent,
-  AddMessagesToContextEvent,
-  AddToolCallsToContextEvent,
-  AgentEvent,
+  UserMessageInput,
+  LlmChunkInput,
+  LlmMessageCompleteInput,
+  ToolCallStartedInput,
+  ToolCallResultInput,
+  ExpandContextWindowInput,
+  AddToolCallsToContextInput,
   AgentInput,
 } from "./input";
 
 export {
-  userMessageEventSchema,
-  llmChunkEventSchema,
-  llmMessageCompleteEventSchema,
-  toolCallStartedEventSchema,
-  toolCallResultEventSchema,
-  addMessagesToContextEventSchema,
-  addToolCallsToContextEventSchema,
-  agentEventSchema,
+  userMessageInputSchema,
+  llmChunkInputSchema,
+  llmMessageCompleteInputSchema,
+  toolCallStartedInputSchema,
+  toolCallResultInputSchema,
+  expandContextWindowInputSchema,
+  addToolCallsToContextInputSchema,
+  agentInputSchema,
 } from "./input";
 
 // ============================================================================

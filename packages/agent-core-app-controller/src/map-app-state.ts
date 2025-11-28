@@ -14,10 +14,10 @@ import type { AgentState } from "@moora/agent-core-state-machine";
  * @example
  * ```typescript
  * const agentState: AgentState = {
- *   messages: { "msg-1": { id: "msg-1", role: "user", content: "Hello", timestamp: Date.now(), taskIds: [] } },
+ *   messages: [{ id: "msg-1", role: "user", content: "Hello", timestamp: Date.now(), taskIds: [] }],
  *   tools: {},
  *   toolCalls: {},
- *   reactContext: { messageIds: [], toolCallIds: [] },
+ *   reactContext: { contextWindowSize: 10, toolCallIds: [] },
  * };
  *
  * const appState = mapAppState(agentState);
@@ -25,29 +25,27 @@ import type { AgentState } from "@moora/agent-core-state-machine";
  * ```
  */
 export function mapAppState(state: AgentState): AgentAppState {
-  // 转换消息格式：从 Record 转为数组，按时间戳排序
-  const messages = Object.values(state.messages)
-    .map((msg) => {
-      if (msg.role === "user") {
-        return {
-          id: msg.id,
-          role: "user" as const,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          taskIds: msg.taskIds,
-        };
-      } else {
-        return {
-          id: msg.id,
-          role: "assistant" as const,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          streaming: msg.streaming ?? false,
-          taskIds: msg.taskIds,
-        };
-      }
-    })
-    .sort((a, b) => a.timestamp - b.timestamp);
+  // 转换消息格式：messages 已经是按时间戳排序的数组
+  const messages = state.messages.map((msg) => {
+    if (msg.role === "user") {
+      return {
+        id: msg.id,
+        role: "user" as const,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        taskIds: msg.taskIds,
+      };
+    } else {
+      return {
+        id: msg.id,
+        role: "assistant" as const,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        streaming: msg.streaming ?? false,
+        taskIds: msg.taskIds,
+      };
+    }
+  });
 
   // TODO: task 相关的功能 agent-core-state-machine 暂时没支持
   // 从消息中提取所有 taskIds，然后构建 tasks
