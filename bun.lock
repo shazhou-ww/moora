@@ -71,6 +71,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@moora/moorex": "0.1.0",
+        "zod": "^4",
       },
       "devDependencies": {
         "@types/bun": "latest",

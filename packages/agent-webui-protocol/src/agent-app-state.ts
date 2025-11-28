@@ -2,6 +2,8 @@
 // Agent App State 类型定义
 // ============================================================================
 
+import { z } from "zod";
+
 /**
  * Task 状态类型
  * 
@@ -10,11 +12,14 @@
  * - `cancelled`: task 被取消
  * - `completed`: task 完成
  */
-export type AgentTaskStatus =
-  | "running"
-  | "pending"
-  | "cancelled"
-  | "completed";
+export const agentTaskStatusSchema = z.enum([
+  "running",
+  "pending",
+  "cancelled",
+  "completed",
+]);
+
+export type AgentTaskStatus = z.infer<typeof agentTaskStatusSchema>;
 
 /**
  * Agent Task
@@ -30,61 +35,24 @@ export type AgentTaskStatus =
  * };
  * ```
  */
-export type AgentTask = {
+export const agentTaskSchema = z.object({
   /**
    * Task 唯一标识符
    */
-  id: string;
+  id: z.string(),
 
   /**
    * Task 状态
    */
-  status: AgentTaskStatus;
+  status: agentTaskStatusSchema,
 
   /**
    * Task 简介（一句话简介）
    */
-  summary: string;
-};
+  summary: z.string(),
+});
 
-/**
- * Agent 应用状态 - 用户可见的 Agent 状态
- * 
- * 这个类型定义了前端 UI 可以显示的所有 Agent 状态信息。
- * 它应该是一个只读的、用户友好的状态表示，不包含内部实现细节。
- * 
- * 注意：
- * - Agent 的处理状态可以从 `tasks` 的状态以及 `messages` 中的 `streaming` 字段推断
- * - Agent 的错误信息应该通过 Agent 向用户发送消息的方式告知，而不是通过单独的 error 字段
- * - 如果是网络连接等前端错误，导致无法正常和 Agent 沟通，应该在 AgentAppState 之外用其他的状态标识
- * 
- * @example
- * ```typescript
- * const state: AgentAppState = {
- *   messages: [
- *     { id: '1', role: 'user', content: 'Hello', timestamp: Date.now(), taskIds: [] },
- *   ],
- *   tasks: [
- *     { id: 'task-1', status: 'running', summary: '搜索相关信息' },
- *   ],
- * };
- * ```
- */
-export type AgentAppState = {
-  /**
-   * 消息列表
-   * 包含用户和 Agent 之间的对话消息，按时间顺序排列
-   * 可以通过 messages 中的 streaming 字段判断是否有正在流式输出的消息
-   */
-  messages: AgentMessage[];
-
-  /**
-   * Task 列表
-   * 包含所有 Agent 执行的任务
-   * 可以通过 tasks 的状态（running、pending 等）推断 Agent 的处理状态
-   */
-  tasks: AgentTask[];
-};
+export type AgentTask = z.infer<typeof agentTaskSchema>;
 
 /**
  * 基础消息类型
@@ -93,29 +61,29 @@ export type AgentAppState = {
  * 
  * @internal
  */
-export type BaseMessage = {
+const baseMessageSchema = z.object({
   /**
    * 消息唯一标识符
    */
-  id: string;
+  id: z.string(),
 
   /**
    * 消息文本内容
    */
-  content: string;
+  content: z.string(),
 
   /**
    * 消息时间戳（Unix 时间戳，毫秒）
    */
-  timestamp: number;
+  timestamp: z.number(),
 
   /**
    * 关联的 Task ID 列表
    * 前端应用可根据 task filter 相关的消息
    * 如果没有关联的 task，则为空数组
    */
-  taskIds: string[];
-};
+  taskIds: z.array(z.string()),
+});
 
 /**
  * 用户消息
@@ -134,12 +102,14 @@ export type BaseMessage = {
  * };
  * ```
  */
-export type UserMessage = BaseMessage & {
+export const userMessageSchema = baseMessageSchema.extend({
   /**
    * 消息角色
    */
-  role: "user";
-};
+  role: z.literal("user"),
+});
+
+export type UserMessage = z.infer<typeof userMessageSchema>;
 
 /**
  * 助手消息
@@ -160,18 +130,20 @@ export type UserMessage = BaseMessage & {
  * };
  * ```
  */
-export type AssistantMessage = BaseMessage & {
+export const assistantMessageSchema = baseMessageSchema.extend({
   /**
    * 消息角色
    */
-  role: "assistant";
+  role: z.literal("assistant"),
 
   /**
    * 是否正在流式输出中
    * 当 Agent 正在流式生成响应时，此字段为 `true`；否则为 `false`
    */
-  streaming: boolean;
-};
+  streaming: z.boolean(),
+});
+
+export type AssistantMessage = z.infer<typeof assistantMessageSchema>;
 
 /**
  * Agent 消息
@@ -199,5 +171,50 @@ export type AssistantMessage = BaseMessage & {
  * };
  * ```
  */
-export type AgentMessage = UserMessage | AssistantMessage;
+export const agentMessageSchema = z.discriminatedUnion("role", [
+  userMessageSchema,
+  assistantMessageSchema,
+]);
 
+export type AgentMessage = z.infer<typeof agentMessageSchema>;
+
+/**
+ * Agent 应用状态 - 用户可见的 Agent 状态
+ * 
+ * 这个类型定义了前端 UI 可以显示的所有 Agent 状态信息。
+ * 它应该是一个只读的、用户友好的状态表示，不包含内部实现细节。
+ * 
+ * 注意：
+ * - Agent 的处理状态可以从 `tasks` 的状态以及 `messages` 中的 `streaming` 字段推断
+ * - Agent 的错误信息应该通过 Agent 向用户发送消息的方式告知，而不是通过单独的 error 字段
+ * - 如果是网络连接等前端错误，导致无法正常和 Agent 沟通，应该在 AgentAppState 之外用其他的状态标识
+ * 
+ * @example
+ * ```typescript
+ * const state: AgentAppState = {
+ *   messages: [
+ *     { id: '1', role: 'user', content: 'Hello', timestamp: Date.now(), taskIds: [] },
+ *   ],
+ *   tasks: [
+ *     { id: 'task-1', status: 'running', summary: '搜索相关信息' },
+ *   ],
+ * };
+ * ```
+ */
+export const agentAppStateSchema = z.object({
+  /**
+   * 消息列表
+   * 包含用户和 Agent 之间的对话消息，按时间顺序排列
+   * 可以通过 messages 中的 streaming 字段判断是否有正在流式输出的消息
+   */
+  messages: z.array(agentMessageSchema),
+
+  /**
+   * Task 列表
+   * 包含所有 Agent 执行的任务
+   * 可以通过 tasks 的状态（running、pending 等）推断 Agent 的处理状态
+   */
+  tasks: z.array(agentTaskSchema),
+});
+
+export type AgentAppState = z.infer<typeof agentAppStateSchema>;

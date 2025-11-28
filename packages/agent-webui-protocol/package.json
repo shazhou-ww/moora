@@ -24,7 +24,8 @@
     "url": "https://github.com/shazhou-ww/moora/issues"
   },
   "dependencies": {
-    "@moora/moorex": "0.1.0"
+    "@moora/moorex": "0.1.0",
+    "zod": "^4"
   },
   "devDependencies": {
     "@types/bun": "latest",
