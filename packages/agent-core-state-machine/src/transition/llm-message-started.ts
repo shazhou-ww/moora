@@ -9,8 +9,10 @@ import type { LlmMessageStarted } from "../input";
 /**
  * 处理 LLM 消息开始输入
  *
- * 当 LLM 开始 streaming 时，创建一个 content 为空字符串的 assistant message。
- * 在 streaming 过程中，content 保持为空，直到 llm-message-completed 事件触发。
+ * 当 LLM 开始向用户发送消息时，意味着当前 react-loop 结束：
+ * - assistant-message（此时 content 为空）加入历史消息列表
+ * - 把当前 reactContext 置空
+ * - 时间戳以开始事件为准
  *
  * @internal
  */
@@ -33,6 +35,7 @@ export const handleLlmMessageStarted = (
 
   return create(state, (draft) => {
     // 创建新的助手消息，content 为空字符串
+    // 时间戳以开始事件为准
     const newMessage = {
       id: input.messageId,
       role: "assistant" as const,
@@ -51,6 +54,9 @@ export const handleLlmMessageStarted = (
     } else {
       draft.messages.push(newMessage);
     }
+
+    // 结束 react-loop：把当前 reactContext 置空
+    draft.reactContext = null;
 
     // 更新状态时间戳
     draft.timestamp = input.timestamp;

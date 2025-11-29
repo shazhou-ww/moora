@@ -29,6 +29,11 @@ export const agentEffectsAt = (
 ): Record<string, AgentEffect> => {
   const effects: Record<string, AgentEffect> = {};
 
+  // 如果没有 reactContext，说明当前没有需要处理的 react-loop
+  if (!state.reactContext) {
+    return effects;
+  }
+
   // 获取上下文窗口内的消息（最新的 N 条消息）
   const contextMessages = state.messages.slice(
     -state.reactContext.contextWindowSize

@@ -12,8 +12,6 @@ import { handleToolCallStarted } from "./tool-call-started";
 import { handleToolCallCompleted } from "./tool-call-completed";
 import { handleContextWindowExpanded } from "./context-window-expanded";
 import { handleHistoryToolCallsAdded } from "./history-tool-calls-added";
-import { handleReactLoopStarted } from "./react-loop-started";
-import { handleReactLoopCompleted } from "./react-loop-completed";
 
 /**
  * Agent 状态转换选项
@@ -69,7 +67,7 @@ export function createAgentTransition(
 
     switch (input.type) {
       case "user-message-received":
-        return handleUserMessage(input, state);
+        return handleUserMessage(input, state, initialContextWindowSize);
       case "llm-message-started":
         return handleLlmMessageStarted(input, state);
       case "llm-message-completed":
@@ -82,10 +80,6 @@ export function createAgentTransition(
         return handleContextWindowExpanded(input, state, expandContextWindowSize);
       case "history-tool-calls-added":
         return handleHistoryToolCallsAdded(input, state);
-      case "react-loop-started":
-        return handleReactLoopStarted(input, state, initialContextWindowSize);
-      case "react-loop-completed":
-        return handleReactLoopCompleted(input, state);
       default:
         // 确保所有 case 都被处理
         const _exhaustive: never = input;

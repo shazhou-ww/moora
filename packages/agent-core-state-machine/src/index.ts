@@ -45,8 +45,6 @@ export type {
   ToolCallCompleted,
   ContextWindowExpanded,
   HistoryToolCallsAdded,
-  ReactLoopStarted,
-  ReactLoopCompleted,
   AgentInput,
 } from "./input";
 
@@ -58,8 +56,6 @@ export {
   toolCallCompletedSchema,
   contextWindowExpandedSchema,
   historyToolCallsAddedSchema,
-  reactLoopStartedSchema,
-  reactLoopCompletedSchema,
   agentInputSchema,
 } from "./input";
 

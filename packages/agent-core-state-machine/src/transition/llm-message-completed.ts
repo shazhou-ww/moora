@@ -9,8 +9,9 @@ import type { LlmMessageCompleted } from "../input";
 /**
  * 处理 LLM 消息完成输入
  *
- * 在 streaming 过程中，assistant message 的 content 保持为空字符串，
- * 只有在此事件触发时才更新为完整的 content。
+ * 当 LLM 完成消息流式输出时：
+ * - 只修改 content，不修改时间戳
+ * - 确保历史消息列表按事件排序（时间戳以开始事件为准）
  *
  * @internal
  */
@@ -26,7 +27,8 @@ export const handleLlmMessageCompleted = (
     if (existingIndex >= 0) {
       const existingMessage = draft.messages[existingIndex];
       if (existingMessage && existingMessage.role === "assistant") {
-        // 更新消息内容为完整内容，并标记不再流式输出
+        // 只更新消息内容为完整内容，并标记不再流式输出
+        // 不修改时间戳，保持以开始事件为准
         draft.messages[existingIndex] = {
           ...existingMessage,
           content: input.content,
@@ -35,6 +37,10 @@ export const handleLlmMessageCompleted = (
       }
     } else {
       // 如果消息不存在，创建新的助手消息
+      // 这种情况不应该发生，因为应该在 llm-message-started 时已创建
+      console.warn(
+        `[AgentStateMachine] llm-message-completed received for non-existent message: ${input.messageId}`
+      );
       const newMessage = {
         id: input.messageId,
         role: "assistant" as const,

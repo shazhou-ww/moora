@@ -26,10 +26,6 @@ export const getInputTimestamp = (input: AgentInput): number => {
       return input.timestamp;
     case "history-tool-calls-added":
       return input.timestamp;
-    case "react-loop-started":
-      return input.timestamp;
-    case "react-loop-completed":
-      return input.timestamp;
     default:
       const _exhaustive: never = input;
       return Date.now();

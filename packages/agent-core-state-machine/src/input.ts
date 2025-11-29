@@ -202,47 +202,6 @@ export type HistoryToolCallsAdded = z.infer<
 >;
 
 /**
- * ReAct Loop 已开始
- *
- * 当开始一个新的 ReAct Loop 时触发。
- * 此事件会创建或重置 react context 为初始状态。
- */
-export const reactLoopStartedSchema = z.object({
-  /**
-   * 输入类型标识
-   */
-  type: z.literal("react-loop-started"),
-
-  /**
-   * 时间戳（Unix 时间戳，毫秒）
-   * 用于初始化 react context 的 startedAt 字段
-   */
-  timestamp: z.number(),
-});
-
-export type ReactLoopStarted = z.infer<typeof reactLoopStartedSchema>;
-
-/**
- * ReAct Loop 已完成
- *
- * 当完成一个 ReAct Loop 时触发。
- * 此事件会将 react context 设置为 null。
- */
-export const reactLoopCompletedSchema = z.object({
-  /**
-   * 输入类型标识
-   */
-  type: z.literal("react-loop-completed"),
-
-  /**
-   * 时间戳（Unix 时间戳，毫秒）
-   */
-  timestamp: z.number(),
-});
-
-export type ReactLoopCompleted = z.infer<typeof reactLoopCompletedSchema>;
-
-/**
  * Agent 输入信号
  *
  * Agent 状态机可以接收的所有输入类型。
@@ -256,8 +215,6 @@ export const agentInputSchema = z.discriminatedUnion("type", [
   toolCallCompletedSchema,
   contextWindowExpandedSchema,
   historyToolCallsAddedSchema,
-  reactLoopStartedSchema,
-  reactLoopCompletedSchema,
 ]);
 
 export type AgentInput = z.infer<typeof agentInputSchema>;
