@@ -4,7 +4,7 @@
 
 import type { Dispatch, EffectController } from "@moora/moorex";
 import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
-import type { CallLlmEffect, CallToolEffect, Tool } from "../types";
+import type { CallLlmEffect, CallLlmFn, CallToolEffect, Tool } from "../types";
 
 /**
  * 创建 LLM 调用的 Effect 控制器
@@ -13,11 +13,7 @@ import type { CallLlmEffect, CallToolEffect, Tool } from "../types";
 export const createLLMEffectController = (
   effect: CallLlmEffect,
   state: AgentState,
-  callLLM: (options: {
-    prompt: string;
-    systemPrompt?: string;
-    messageHistory?: Array<{ role: "user" | "assistant"; content: string }>;
-  }) => Promise<string>
+  callLLM: CallLlmFn
 ): EffectController<AgentInput> => {
   let canceled = false;
 
@@ -68,26 +64,13 @@ export const createLLMEffectController = (
         return;
       }
 
-      // 构建消息历史（用于上下文）
-      // 使用上下文窗口内的消息，过滤掉正在流式输出的助手消息
-      const messageHistory = contextMessages
-        .filter((msg) => {
-          // 只过滤掉正在流式输出的助手消息
-          if (msg.role === "assistant" && msg.streaming) {
-            return false;
-          }
-          return true;
-        })
-        .map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }));
-
       try {
         // 调用 LLM
         const response = await callLLM({
           prompt: lastUserMessage.content,
-          messageHistory: messageHistory.length > 0 ? messageHistory : undefined,
+          messages: state.messages,
+          toolCalls: state.toolCalls,
+          tools: state.tools,
         });
 
         if (canceled) {

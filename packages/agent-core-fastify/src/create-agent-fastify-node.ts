@@ -22,7 +22,9 @@ import { createAgentMoorexDefinition } from "./agent-moorex";
  * @example
  * ```typescript
  * const agentNode = createAgentFastifyNode({
- *   callLLM: async ({ prompt }) => 'Response',
+ *   callLLM: async ({ prompt, messages, toolCalls, tools }) => {
+ *     return 'Response';
+ *   },
  *   tools: { search: { ... } },
  * });
  * 

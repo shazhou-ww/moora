@@ -31,7 +31,10 @@ import { agentEffectsAt } from "./effects-at";
  * @example
  * ```typescript
  * const runEffect = createAgentRunEffect({
- *   callLLM: async ({ prompt }) => 'Response',
+ *   callLLM: async ({ prompt, messages, toolCalls, tools }) => {
+ *     // 使用完整的 AgentState 上下文来决定回复
+ *     return 'Response';
+ *   },
  *   tools: { search: { ... } },
  * });
  * 
@@ -76,7 +79,9 @@ export const createAgentRunEffect = (options: AgentMoorexOptions) => (
  * @example
  * ```typescript
  * const definition = createAgentMoorexDefinition({
- *   callLLM: async ({ prompt }) => 'Response',
+ *   callLLM: async ({ prompt, messages, toolCalls, tools }) => {
+ *     return 'Response';
+ *   },
  *   tools: { search: { ... } },
  * });
  * 

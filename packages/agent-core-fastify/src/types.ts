@@ -46,10 +46,11 @@ export type AgentEffect = CallLlmEffect | CallToolEffect;
 /**
  * LLM 调用函数类型
  */
-export type LLMCallFn = (options: {
+export type CallLlmFn = (options: {
   prompt: string;
-  systemPrompt?: string;
-  messageHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+  messages: AgentState["messages"];
+  toolCalls: AgentState["toolCalls"];
+  tools: AgentState["tools"];
 }) => Promise<string>;
 
 /**
@@ -81,7 +82,7 @@ export type AgentMoorexOptions = {
   /**
    * LLM 调用函数
    */
-  callLLM: LLMCallFn;
+  callLLM: CallLlmFn;
   /**
    * 可用的 Tools
    */

@@ -237,8 +237,8 @@ import { createAgentFastifyNode } from '@moora/agent-core-fastify';
 // 创建 Agent Fastify 节点
 const agentNode = createAgentFastifyNode({
   moorexOptions: {
-    callLLM: async ({ prompt }) => {
-      // 调用 LLM API
+    callLLM: async ({ prompt, messages, toolCalls, tools }) => {
+      // 调用 LLM API，可使用完整的 AgentState 上下文
       return 'Response';
     },
     tools: {

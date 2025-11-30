@@ -6,7 +6,7 @@ export type {
   AgentEffect,
   CallLlmEffect,
   CallToolEffect,
-  LLMCallFn,
+  CallLlmFn,
   Tool,
   AgentMoorexOptions,
 } from "../types";
