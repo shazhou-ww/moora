@@ -17,11 +17,16 @@ import type { AgentEffect } from "../types";
  *   messages: [{ id: 'msg-1', ... }],
  *   tools: {},
  *   toolCalls: {},
- *   reactContext: { contextWindowSize: 10, toolCallIds: [] },
+ *   reactContext: { 
+ *     contextWindowSize: 10, 
+ *     toolCallIds: [],
+ *     updatedAt: 1234567890,
+ *     startedAt: 1234567890,
+ *   },
  * };
  * 
  * const effects = agentEffectsAt(state);
- * // { 'effect-llm-msg-1': { type: 'call-llm', ... } }
+ * // { 'call-llm-1234567890': { type: 'call-llm', contextUpdatedAt: 1234567890 } }
  * ```
  */
 export const agentEffectsAt = (
@@ -34,9 +39,11 @@ export const agentEffectsAt = (
     return effects;
   }
 
+  const { reactContext } = state;
+
   // 获取上下文窗口内的消息（最新的 N 条消息）
   const contextMessages = state.messages.slice(
-    -state.reactContext.contextWindowSize
+    -reactContext.contextWindowSize
   );
 
   // 找到最新的用户消息
@@ -57,38 +64,31 @@ export const agentEffectsAt = (
 
       // 如果还没有助手响应，需要调用 LLM
       if (!hasAssistantResponse) {
-        const callId = `llm-${Date.now()}-${Math.random()}`;
-        const effectId = `effect-llm-${lastUserMessage.id}`;
+        const key = `call-llm-${reactContext.updatedAt}`;
 
-        // 构建消息历史（用于上下文）
-        // 使用上下文窗口内的消息，过滤掉正在流式输出的助手消息
-        const messageHistory = contextMessages
-          .filter((msg) => {
-            // 只过滤掉正在流式输出的助手消息
-            if (msg.role === "assistant" && msg.streaming) {
-              return false;
-            }
-            return true;
-          })
-          .map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          }));
-
-        effects[effectId] = {
+        effects[key] = {
           type: "call-llm",
-          id: effectId,
-          requestId: lastUserMessage.id,
-          callId,
-          prompt: lastUserMessage.content,
-          messageHistory: messageHistory.length > 0 ? messageHistory : undefined,
+          contextUpdatedAt: reactContext.updatedAt,
         };
       }
     }
   }
 
-  // TODO: 根据状态决定是否需要调用 Tool
-  // 这通常需要从 LLM 响应中解析出 Tool 调用请求
+  // 根据 reactContext.toolCallIds 生成 Tool 调用 Effects
+  // 只处理那些还没有完成的 Tool Calls（在 toolCalls 中不存在或 result 为 null）
+  for (const toolCallId of reactContext.toolCallIds) {
+    const toolCall = state.toolCalls[toolCallId];
+    
+    // 如果 Tool Call 不存在或未完成（result 为 null），需要调用
+    if (!toolCall || toolCall.result === null) {
+      const key = `call-tool-${toolCallId}`;
+
+      effects[key] = {
+        type: "call-tool",
+        toolCallId,
+      };
+    }
+  }
 
   return effects;
 };

@@ -12,32 +12,14 @@ import type { MoorexNode } from "@moora/moorex-fastify";
 /**
  * LLM 调用 Effect
  */
-export type CallLLMEffect = {
+export type CallLlmEffect = {
   type: "call-llm";
   /**
-   * Effect ID（用于 reconciliation）
+   * ReAct Context 更新时间戳
+   * 
+   * 从 reactContext.updatedAt 获取，用于标识当前 ReAct Loop 的上下文版本。
    */
-  id: string;
-  /**
-   * 请求 ID
-   */
-  requestId: string;
-  /**
-   * LLM 调用 ID
-   */
-  callId: string;
-  /**
-   * 提示词
-   */
-  prompt: string;
-  /**
-   * 系统提示词（可选）
-   */
-  systemPrompt?: string;
-  /**
-   * 消息历史（用于上下文）
-   */
-  messageHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+  contextUpdatedAt: number;
 };
 
 /**
@@ -46,25 +28,11 @@ export type CallLLMEffect = {
 export type CallToolEffect = {
   type: "call-tool";
   /**
-   * Effect ID（用于 reconciliation）
-   */
-  id: string;
-  /**
-   * 请求 ID
-   */
-  requestId: string;
-  /**
    * Tool 调用 ID
+   * 
+   * 用于标识需要调用的 Tool Call。
    */
-  callId: string;
-  /**
-   * Tool 名称
-   */
-  toolName: string;
-  /**
-   * Tool 参数（JSON 字符串）
-   */
-  parameter: string;
+  toolCallId: string;
 };
 
 /**
@@ -73,7 +41,7 @@ export type CallToolEffect = {
  * 描述 Agent 可能触发的副作用行为。
  * 注意：这里的 Effects 不包含向用户发送消息，因为前端是通过同步 AgentState 来获取消息的。
  */
-export type AgentEffect = CallLLMEffect | CallToolEffect;
+export type AgentEffect = CallLlmEffect | CallToolEffect;
 
 /**
  * LLM 调用函数类型

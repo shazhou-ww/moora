@@ -3,15 +3,16 @@
 // ============================================================================
 
 import type { Dispatch, EffectController } from "@moora/moorex";
-import type { AgentInput } from "@moora/agent-core-state-machine";
-import type { CallLLMEffect, CallToolEffect, Tool } from "../types";
+import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
+import type { CallLlmEffect, CallToolEffect, Tool } from "../types";
 
 /**
  * 创建 LLM 调用的 Effect 控制器
  * @internal
  */
 export const createLLMEffectController = (
-  effect: CallLLMEffect,
+  effect: CallLlmEffect,
+  state: AgentState,
   callLLM: (options: {
     prompt: string;
     systemPrompt?: string;
@@ -26,8 +27,36 @@ export const createLLMEffectController = (
         return;
       }
 
+      // 从 state 中获取 reactContext
+      if (!state.reactContext) {
+        return;
+      }
+
+      const { reactContext } = state;
+
+      // 获取上下文窗口内的消息（最新的 N 条消息）
+      const contextMessages = state.messages.slice(
+        -reactContext.contextWindowSize
+      );
+
+      // 找到最新的用户消息
+      const contextUserMessages = contextMessages.filter(
+        (msg) => msg.role === "user"
+      );
+
+      if (contextUserMessages.length === 0) {
+        return;
+      }
+
+      const lastUserMessage =
+        contextUserMessages[contextUserMessages.length - 1];
+
+      if (!lastUserMessage) {
+        return;
+      }
+
       // 生成消息 ID
-      const messageId = `msg-${effect.callId}`;
+      const messageId = `msg-${reactContext.updatedAt}`;
 
       // 发送 LLM 消息开始事件
       dispatch({
@@ -39,12 +68,26 @@ export const createLLMEffectController = (
         return;
       }
 
+      // 构建消息历史（用于上下文）
+      // 使用上下文窗口内的消息，过滤掉正在流式输出的助手消息
+      const messageHistory = contextMessages
+        .filter((msg) => {
+          // 只过滤掉正在流式输出的助手消息
+          if (msg.role === "assistant" && msg.streaming) {
+            return false;
+          }
+          return true;
+        })
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+
       try {
         // 调用 LLM
         const response = await callLLM({
-          prompt: effect.prompt,
-          systemPrompt: effect.systemPrompt,
-          messageHistory: effect.messageHistory,
+          prompt: lastUserMessage.content,
+          messageHistory: messageHistory.length > 0 ? messageHistory : undefined,
         });
 
         if (canceled) {
@@ -84,36 +127,10 @@ export const createLLMEffectController = (
  */
 export const createToolEffectController = (
   effect: CallToolEffect,
-  tool: Tool | undefined
+  state: AgentState,
+  tools: Record<string, Tool>
 ): EffectController<AgentInput> => {
   let canceled = false;
-
-  if (!tool) {
-    // Tool 不存在，立即分发错误结果
-    return {
-      start: async (dispatch: Dispatch<AgentInput>) => {
-        dispatch({
-          type: "tool-call-started",
-          toolCallId: effect.callId,
-          name: effect.toolName,
-          parameters: effect.parameter,
-          timestamp: Date.now(),
-        });
-
-        dispatch({
-          type: "tool-call-completed",
-          toolCallId: effect.callId,
-          result: {
-            isSuccess: false,
-            error: `Tool "${effect.toolName}" not found`,
-          },
-        });
-      },
-      cancel: () => {
-        canceled = true;
-      },
-    };
-  }
 
   return {
     start: async (dispatch: Dispatch<AgentInput>) => {
@@ -121,12 +138,54 @@ export const createToolEffectController = (
         return;
       }
 
+      // 从 state 中获取 toolCall 信息
+      const toolCall = state.toolCalls[effect.toolCallId];
+
+      if (!toolCall) {
+        // Tool Call 记录不存在，分发错误结果
+        dispatch({
+          type: "tool-call-completed",
+          toolCallId: effect.toolCallId,
+          result: {
+            isSuccess: false,
+            error: `Tool call "${effect.toolCallId}" not found in state`,
+            receivedAt: Date.now(),
+          },
+        });
+        return;
+      }
+
+      // 获取对应的 Tool
+      const tool = tools[toolCall.name];
+
+      if (!tool) {
+        // Tool 不存在，立即分发错误结果
+        dispatch({
+          type: "tool-call-started",
+          toolCallId: effect.toolCallId,
+          name: toolCall.name,
+          parameters: toolCall.parameters,
+          timestamp: Date.now(),
+        });
+
+        dispatch({
+          type: "tool-call-completed",
+          toolCallId: effect.toolCallId,
+          result: {
+            isSuccess: false,
+            error: `Tool "${toolCall.name}" not found`,
+            receivedAt: Date.now(),
+          },
+        });
+        return;
+      }
+
       // 分发 Tool Call 开始事件
       dispatch({
         type: "tool-call-started",
-        toolCallId: effect.callId,
-        name: effect.toolName,
-        parameters: effect.parameter,
+        toolCallId: effect.toolCallId,
+        name: toolCall.name,
+        parameters: toolCall.parameters,
         timestamp: Date.now(),
       });
 
@@ -136,7 +195,7 @@ export const createToolEffectController = (
 
       try {
         // 执行 Tool
-        const args = JSON.parse(effect.parameter);
+        const args = JSON.parse(toolCall.parameters);
         const result = await tool.execute(args);
 
         if (canceled) {
@@ -146,10 +205,11 @@ export const createToolEffectController = (
         // 分发 Tool 结果（成功）
         dispatch({
           type: "tool-call-completed",
-          toolCallId: effect.callId,
+          toolCallId: effect.toolCallId,
           result: {
             isSuccess: true,
             content: typeof result === "string" ? result : JSON.stringify(result),
+            receivedAt: Date.now(),
           },
         });
       } catch (error) {
@@ -160,10 +220,11 @@ export const createToolEffectController = (
         // 分发错误结果
         dispatch({
           type: "tool-call-completed",
-          toolCallId: effect.callId,
+          toolCallId: effect.toolCallId,
           result: {
             isSuccess: false,
             error: error instanceof Error ? error.message : "Unknown error",
+            receivedAt: Date.now(),
           },
         });
       }

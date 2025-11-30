@@ -4,7 +4,7 @@
 
 export type {
   AgentEffect,
-  CallLLMEffect,
+  CallLlmEffect,
   CallToolEffect,
   LLMCallFn,
   Tool,

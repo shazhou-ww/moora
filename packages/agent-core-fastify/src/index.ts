@@ -16,7 +16,7 @@
 export type {
   // Agent Effect 相关
   AgentEffect,
-  CallLLMEffect,
+  CallLlmEffect,
   CallToolEffect,
   LLMCallFn,
   Tool,

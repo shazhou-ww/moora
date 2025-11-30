@@ -48,9 +48,9 @@ export const createAgentRunEffect = (options: AgentMoorexOptions) => (
 
   switch (effect.type) {
     case "call-llm":
-      return createLLMEffectController(effect, callLLM);
+      return createLLMEffectController(effect, state, callLLM);
     case "call-tool":
-      return createToolEffectController(effect, tools[effect.toolName]);
+      return createToolEffectController(effect, state, tools);
     default:
       // 未知的 Effect 类型
       return {

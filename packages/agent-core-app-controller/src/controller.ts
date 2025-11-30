@@ -49,6 +49,7 @@ export function createAgentController(
 
   // 当前状态
   let currentState: AgentAppState = {
+    updatedAt: Date.now(),
     messages: [],
     tasks: [],
   };
