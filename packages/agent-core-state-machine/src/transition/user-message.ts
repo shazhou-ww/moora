@@ -64,6 +64,7 @@ export const handleUserMessage = (
     ...state,
     messages,
     reActContext,
+    lastUserMessageReceivedAt: timestamp,
     // 更新状态时间戳
     updatedAt: timestamp,
   };

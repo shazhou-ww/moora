@@ -214,6 +214,20 @@ export const agentStateSchema = z
     calledLlmAt: z.number(),
 
     /**
+     * 最后一次接收用户消息的时间戳（Unix 时间戳，毫秒）
+     *
+     * 用于快速判断是否有新的用户消息需要处理，避免遍历消息列表。
+     */
+    lastUserMessageReceivedAt: z.number(),
+
+    /**
+     * 最后一次接收工具调用结果的时间戳（Unix 时间戳，毫秒）
+     *
+     * 用于快速判断是否有新的工具调用结果需要处理，避免遍历工具调用记录。
+     */
+    lastToolCallResultReceivedAt: z.number(),
+
+    /**
      * 当前 ReAct Loop 上下文
      *
      * 包含当前 ReAct Loop 涉及到的历史消息和 Tool Call。

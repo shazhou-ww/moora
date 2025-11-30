@@ -39,6 +39,10 @@ export const handleToolCallCompleted = (
   return {
     ...state,
     toolCalls,
+    lastToolCallResultReceivedAt: Math.max(
+      state.lastToolCallResultReceivedAt,
+      timestamp
+    ),
     // 更新状态时间戳
     updatedAt: timestamp,
   };

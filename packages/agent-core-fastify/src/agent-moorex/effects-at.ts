@@ -57,6 +57,11 @@ export const agentEffectsAt = (
 /**
  * 计算需要触发的 call-llm 副作用
  *
+ * call-llm effect 有效的条件：
+ * 1. 当前有 ReActContext（已在 agentEffectsAt 中检查）
+ * 2. 在当前 ReActContext 中，所有关注的 tool-call 都已经返回了
+ * 3. 存在尚未发送给 LLM 的 user message 或 tool-call result
+ *
  * @internal
  * @param state - Agent 状态
  * @param reActContext - 当前 re-act 上下文
@@ -66,6 +71,12 @@ const createCallLlmEffects = (
   state: AgentState,
   reActContext: ReActContext
 ): Record<string, AgentEffect> => {
+  // 检查条件 2: 所有关注的 tool-call 都已经返回了
+  if (!areAllToolCallsCompleted(state, reActContext)) {
+    return {};
+  }
+
+  // 检查条件 3: 存在尚未发送给 LLM 的 user message 或 tool-call result
   if (!hasPendingSignal(state)) {
     return {};
   }
@@ -111,37 +122,41 @@ const createCallToolEffects = (
 };
 
 /**
- * 判断是否存在需要 LLM 处理的新信号
+ * 检查当前 ReActContext 中所有关注的 tool-call 是否都已经返回了
  *
  * @internal
+ * @param state - Agent 状态
+ * @param reActContext - 当前 re-act 上下文
+ * @returns 如果所有 tool-call 都有结果，返回 true
+ */
+const areAllToolCallsCompleted = (
+  state: AgentState,
+  reActContext: ReActContext
+): boolean => {
+  for (const toolCallId of reActContext.toolCallIds) {
+    const toolCall = state.toolCalls[toolCallId];
+
+    // 如果 tool call 不存在或者没有结果，则说明还有未完成的
+    if (!toolCall || toolCall.result === null) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
+ * 判断是否存在尚未发送给 LLM 的 user message 或 tool-call result
+ *
+ * @internal
+ * @param state - Agent 状态
+ * @returns 如果存在新信号，返回 true
  */
 const hasPendingSignal = (state: AgentState): boolean => {
-  const latestUserMessageAt = getLatestUserMessageTimestamp(state);
-  if (latestUserMessageAt > state.calledLlmAt) {
+  if (state.lastUserMessageReceivedAt > state.calledLlmAt) {
     return true;
   }
 
-  const latestToolResultAt = getLatestToolCallResultTimestamp(state);
-  return latestToolResultAt > state.calledLlmAt;
-};
-
-const getLatestUserMessageTimestamp = (state: AgentState): number => {
-  for (let index = state.messages.length - 1; index >= 0; index -= 1) {
-    const message = state.messages[index];
-    if (message && message.role === "user") {
-      return message.receivedAt;
-    }
-  }
-  return 0;
-};
-
-const getLatestToolCallResultTimestamp = (state: AgentState): number => {
-  let latest = 0;
-  for (const record of Object.values(state.toolCalls)) {
-    if (record && record.result) {
-      latest = Math.max(latest, record.result.receivedAt);
-    }
-  }
-  return latest;
+  return state.lastToolCallResultReceivedAt > state.calledLlmAt;
 };
 
