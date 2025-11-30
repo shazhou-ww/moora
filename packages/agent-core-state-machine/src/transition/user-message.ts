@@ -12,8 +12,8 @@ import { messageIdExists } from "./utils";
  *
  * 当收到用户消息时：
  * - 将消息加入消息列表
- * - 如果有 reactContext，则把 context window + 1
- * - 否则，按照 initialContextWindowSize 创建一个 reactContext
+ * - 如果有 reActContext，则把 context window + 1
+ * - 否则，按照 initialContextWindowSize 创建一个 reActContext
  *
  * @internal
  */
@@ -42,17 +42,17 @@ export const handleUserMessage = (
   // 在消息列表末尾加入 newMessage
   const messages = [...state.messages, newMessage];
 
-  const currentReactContext = state.reactContext;
+  const currentReActContext = state.reActContext;
 
-  // 判断是否有 reactContext
-  const reactContext = currentReactContext
-    ? // 如果有 reactContext，则把 context window + 1
+  // 判断是否有 reActContext
+  const reActContext = currentReActContext
+    ? // 如果有 reActContext，则把 context window + 1
       {
-        ...currentReactContext,
-        contextWindowSize: currentReactContext.contextWindowSize + 1,
+        ...currentReActContext,
+        contextWindowSize: currentReActContext.contextWindowSize + 1,
         updatedAt: timestamp,
       }
-    : // 如果没有 reactContext，则创建新的 reactContext
+    : // 如果没有 reActContext，则创建新的 reActContext
       {
         contextWindowSize: initialContextWindowSize,
         toolCallIds: [],
@@ -63,7 +63,7 @@ export const handleUserMessage = (
   return {
     ...state,
     messages,
-    reactContext,
+    reActContext,
     // 更新状态时间戳
     updatedAt: timestamp,
   };

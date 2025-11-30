@@ -22,12 +22,12 @@ export const handleToolCallStarted = (
     return state;
   }
 
-  const currentReactContext = state.reactContext;
+  const currentReActContext = state.reActContext;
 
-  // 检查 reactContext 是否存在，ToolCallStarted 必须发生在 ReAct Loop 中
-  if (!currentReactContext) {
+  // 检查 reActContext 是否存在，ToolCallStarted 必须发生在 ReAct Loop 中
+  if (!currentReActContext) {
     console.warn(
-      `[AgentStateMachine] tool-call-started received without react context`
+      `[AgentStateMachine] tool-call-started received without ReAct context`
     );
     return state;
   }
@@ -44,11 +44,11 @@ export const handleToolCallStarted = (
   };
 
   // 更新 toolCallIds
-  const toolCallIdSet = new Set([...currentReactContext.toolCallIds, toolCallId]);
+  const toolCallIdSet = new Set([...currentReActContext.toolCallIds, toolCallId]);
 
-  // 更新 reactContext
-  const reactContext = {
-    ...currentReactContext,
+  // 更新 reActContext
+  const reActContext = {
+    ...currentReActContext,
     toolCallIds: Array.from(toolCallIdSet),
     updatedAt: timestamp,
   };
@@ -57,7 +57,7 @@ export const handleToolCallStarted = (
   return {
     ...state,
     toolCalls,
-    reactContext,
+    reActContext,
     // 更新状态时间戳
     updatedAt: timestamp,
   };

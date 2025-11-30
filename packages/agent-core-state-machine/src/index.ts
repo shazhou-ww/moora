@@ -22,7 +22,7 @@ export type {
   ToolCallFailed,
   ToolCallResult,
   ToolCallRecord,
-  ReactContext,
+  ReActContext,
   AgentState,
 } from "./state";
 
@@ -32,7 +32,7 @@ export {
   toolCallFailedSchema,
   toolCallResultSchema,
   toolCallRecordSchema,
-  reactContextSchema,
+  reActContextSchema,
   agentStateSchema,
 } from "./state";
 

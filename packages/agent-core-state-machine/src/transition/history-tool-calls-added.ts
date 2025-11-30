@@ -14,30 +14,30 @@ export const handleHistoryToolCallsAdded = (
   { toolCallIds, timestamp }: HistoryToolCallsAdded,
   state: AgentState
 ): AgentState => {
-  const { reactContext } = state;
+  const { reActContext } = state;
 
-  // 检查 reactContext 是否存在
-  if (!reactContext) {
+  // 检查 reActContext 是否存在
+  if (!reActContext) {
     console.warn(
-      `[AgentStateMachine] Ignoring history tool calls added without react context`
+      `[AgentStateMachine] Ignoring history tool calls added without ReAct context`
     );
     return state;
   }
 
   return {
     ...state,
-    reactContext: {
-      ...reactContext,
+    reActContext: {
+      ...reActContext,
 
-      // 把 input.toolCallIds 添加到 reactContext.toolCallIds 中，去重
+      // 把 input.toolCallIds 添加到 reActContext.toolCallIds 中，去重
       toolCallIds: [
         ...new Set([
-          ...reactContext.toolCallIds,
+          ...reActContext.toolCallIds,
           ...toolCallIds,
         ]),
       ],
 
-      // 更新 reactContext 时间戳
+      // 更新 reActContext 时间戳
       updatedAt: timestamp,
     },
 

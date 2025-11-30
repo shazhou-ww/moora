@@ -17,7 +17,7 @@ export type CallLlmEffect = {
   /**
    * ReAct Context 更新时间戳
    * 
-   * 从 reactContext.updatedAt 获取，用于标识当前 ReAct Loop 的上下文版本。
+   * 从 reActContext.updatedAt 获取，用于标识当前 ReAct Loop 的上下文版本。
    */
   contextUpdatedAt: number;
 };

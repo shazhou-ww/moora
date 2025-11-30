@@ -69,7 +69,7 @@ Agent 的完整内部状态，包含：
        - `ToolCallSuccess`: `{ isSuccess: true, content: string }`
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
 
-4. **当前 ReAct Loop 上下文** (`reactContext`)
+4. **当前 ReAct Loop 上下文** (`reActContext`)
    - `contextWindowSize`: `number` - 上下文窗口大小，表示应该包含最近多少条消息
    - `toolCallIds`: `string[]` - 涉及到的 Tool Calls（Tool Call Id 列表）
 
@@ -212,7 +212,7 @@ const tools = state.tools;
 const toolCalls = state.toolCalls;
 
 // 访问当前 ReAct Loop 上下文
-const context = state.reactContext;
+const context = state.reActContext;
 ```
 
 ## API 参考
@@ -225,7 +225,7 @@ const context = state.reactContext;
 - `ToolDefinition` - 工具定义
 - `ToolCallRecord` - Tool Call 记录
 - `ToolCallResult` - Tool Call 结果（成功/失败）
-- `ReactContext` - ReAct Loop 上下文
+- `ReActContext` - ReAct Loop 上下文
 
 #### Input 类型
 
@@ -246,7 +246,7 @@ const context = state.reactContext;
 - `agentEventSchema` - Agent 事件 schema
 - `toolDefinitionSchema` - 工具定义 schema
 - `toolCallRecordSchema` - Tool Call 记录 schema
-- `reactContextSchema` - ReAct Loop 上下文 schema
+- `reActContextSchema` - ReAct Loop 上下文 schema
 - 等等...
 
 ### 函数导出

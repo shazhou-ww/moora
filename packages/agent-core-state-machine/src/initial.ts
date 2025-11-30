@@ -29,7 +29,7 @@ import type { AgentState, ToolDefinition } from "./state";
  * //   messages: [],
  * //   tools: { search: { ... } },
  * //   toolCalls: {},
- * //   reactContext: null
+ * //   reActContext: null
  * // }
  * ```
  */
@@ -42,7 +42,7 @@ export function initializeAgentState(options?: {
     messages: [],
     tools: options?.tools ?? {},
     toolCalls: {},
-    reactContext: null,
+    reActContext: null,
   };
 }
 

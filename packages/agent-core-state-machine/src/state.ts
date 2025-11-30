@@ -127,7 +127,7 @@ export type ToolCallRecord = z.infer<typeof toolCallRecordSchema>;
  *
  * 当前 ReAct Loop 涉及到的历史消息和 Tool Call。
  */
-export const reactContextSchema = z
+export const reActContextSchema = z
   .object({
     /**
      * 上下文窗口大小
@@ -149,13 +149,13 @@ export const reactContextSchema = z
     /**
      * ReAct Loop 最后更新时间戳（Unix 时间戳，毫秒）
      *
-     * 表示最后一次更新 reactContext 的时间。
+     * 表示最后一次更新 reActContext 的时间。
      */
     updatedAt: z.number(),
   })
   .readonly();
 
-export type ReactContext = z.infer<typeof reactContextSchema>;
+export type ReActContext = z.infer<typeof reActContextSchema>;
 
 /**
  * Agent 状态
@@ -200,7 +200,7 @@ export const agentStateSchema = z
      * 包含当前 ReAct Loop 涉及到的历史消息和 Tool Call。
      * 当没有消息需要响应时为 null。
      */
-    reactContext: reactContextSchema.nullable(),
+    reActContext: reActContextSchema.nullable(),
   })
   .readonly();
 

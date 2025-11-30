@@ -17,7 +17,7 @@ import type { AgentState } from "@moora/agent-core-state-machine";
  *   messages: [{ id: "msg-1", role: "user", content: "Hello", receivedAt: Date.now(), taskIds: [] }],
  *   tools: {},
  *   toolCalls: {},
- *   reactContext: { contextWindowSize: 10, toolCallIds: [], startedAt: Date.now(), updatedAt: Date.now() },
+ *   reActContext: { contextWindowSize: 10, toolCallIds: [], startedAt: Date.now(), updatedAt: Date.now() },
  * };
  *
  * const appState = mapAppState(agentState);

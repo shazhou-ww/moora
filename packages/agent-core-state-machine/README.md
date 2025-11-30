@@ -69,7 +69,7 @@ The complete internal state of the Agent, including:
        - `ToolCallSuccess`: `{ isSuccess: true, content: string }`
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
 
-4. **Current ReAct Loop Context** (`reactContext`)
+4. **Current ReAct Loop Context** (`reActContext`)
    - `contextWindowSize`: `number` - Context window size, indicating how many recent messages should be included
    - `toolCallIds`: `string[]` - Involved Tool Calls (Tool Call Id list)
 
@@ -212,7 +212,7 @@ const tools = state.tools;
 const toolCalls = state.toolCalls;
 
 // Access current ReAct Loop context
-const context = state.reactContext;
+const context = state.reActContext;
 ```
 
 ## API Reference
@@ -225,7 +225,7 @@ const context = state.reactContext;
 - `ToolDefinition` - Tool definition
 - `ToolCallRecord` - Tool Call record
 - `ToolCallResult` - Tool Call result (success/failure)
-- `ReactContext` - ReAct Loop context
+- `ReActContext` - ReAct Loop context
 
 #### Input Types
 
@@ -246,7 +246,7 @@ All types have corresponding Zod schemas for runtime validation:
 - `agentEventSchema` - Agent event schema
 - `toolDefinitionSchema` - Tool definition schema
 - `toolCallRecordSchema` - Tool Call record schema
-- `reactContextSchema` - ReAct Loop context schema
+- `reActContextSchema` - ReAct Loop context schema
 - And more...
 
 ### Function Exports

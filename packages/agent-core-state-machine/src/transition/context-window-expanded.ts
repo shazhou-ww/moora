@@ -15,28 +15,28 @@ export const handleContextWindowExpanded = (
   state: AgentState,
   expandContextWindowSize: number
 ): AgentState => {
-  const { reactContext } = state;
+  const { reActContext } = state;
 
-  // 检查 reactContext 是否存在
-  if (!reactContext) {
+  // 检查 reActContext 是否存在
+  if (!reActContext) {
     console.warn(
-      `[AgentStateMachine] Ignoring context window expanded without react context`
+      `[AgentStateMachine] Ignoring context window expanded without ReAct context`
     );
     return state;
   }
 
   return {
     ...state,
-    reactContext: {
-      ...reactContext,
+    reActContext: {
+      ...reActContext,
 
       // 扩展上下文窗口大小，但不超过消息列表长度
       contextWindowSize: Math.min(
-        reactContext.contextWindowSize + expandContextWindowSize,
+        reActContext.contextWindowSize + expandContextWindowSize,
         state.messages.length
       ),
 
-      // 更新 reactContext 时间戳
+      // 更新 reActContext 时间戳
       updatedAt: timestamp,
     },
 

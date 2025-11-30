@@ -5,6 +5,7 @@
 import type { Dispatch, EffectController } from "@moora/moorex";
 import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
 import type { CallLlmEffect, CallLlmFn, CallToolEffect, Tool } from "../types";
+import { findPendingUserMessageIndex } from "./message-selectors";
 
 /**
  * 创建 LLM 调用的 Effect 控制器
@@ -23,41 +24,28 @@ export const createLLMEffectController = (
         return;
       }
 
-      // 从 state 中获取 reactContext
-      if (!state.reactContext) {
+      // 从 state 中获取 reActContext
+      if (!state.reActContext) {
         return;
       }
 
-      const { reactContext } = state;
+      const { reActContext } = state;
+      const pendingUserIndex = findPendingUserMessageIndex(state.messages);
+      const pendingUserMessage =
+        pendingUserIndex === -1 ? null : state.messages[pendingUserIndex];
 
-      // 获取上下文窗口内的消息（最新的 N 条消息）
-      const contextMessages = state.messages.slice(
-        -reactContext.contextWindowSize
-      );
-
-      // 找到最新的用户消息
-      const contextUserMessages = contextMessages.filter(
-        (msg) => msg.role === "user"
-      );
-
-      if (contextUserMessages.length === 0) {
-        return;
-      }
-
-      const lastUserMessage =
-        contextUserMessages[contextUserMessages.length - 1];
-
-      if (!lastUserMessage) {
+      if (!pendingUserMessage) {
         return;
       }
 
       // 生成消息 ID
-      const messageId = `msg-${reactContext.updatedAt}`;
+      const messageId = `msg-${reActContext.updatedAt}`;
 
       // 发送 LLM 消息开始事件
       dispatch({
         type: "llm-message-started",
         messageId,
+        timestamp: Date.now(),
       });
 
       if (canceled) {
@@ -67,7 +55,7 @@ export const createLLMEffectController = (
       try {
         // 调用 LLM
         const response = await callLLM({
-          prompt: lastUserMessage.content,
+          prompt: pendingUserMessage.content,
           messages: state.messages,
           toolCalls: state.toolCalls,
           tools: state.tools,
@@ -82,6 +70,7 @@ export const createLLMEffectController = (
           type: "llm-message-completed",
           messageId,
           content: response,
+          timestamp: Date.now(),
         });
       } catch (error) {
         if (canceled) {
@@ -95,6 +84,7 @@ export const createLLMEffectController = (
           type: "llm-message-completed",
           messageId,
           content: `Error: ${errorMessage}`,
+          timestamp: Date.now(),
         });
       }
     },
@@ -134,6 +124,7 @@ export const createToolEffectController = (
             error: `Tool call "${effect.toolCallId}" not found in state`,
             receivedAt: Date.now(),
           },
+          timestamp: Date.now(),
         });
         return;
       }
@@ -159,6 +150,7 @@ export const createToolEffectController = (
             error: `Tool "${toolCall.name}" not found`,
             receivedAt: Date.now(),
           },
+          timestamp: Date.now(),
         });
         return;
       }
@@ -194,6 +186,7 @@ export const createToolEffectController = (
             content: typeof result === "string" ? result : JSON.stringify(result),
             receivedAt: Date.now(),
           },
+          timestamp: Date.now(),
         });
       } catch (error) {
         if (canceled) {
@@ -209,6 +202,7 @@ export const createToolEffectController = (
             error: error instanceof Error ? error.message : "Unknown error",
             receivedAt: Date.now(),
           },
+          timestamp: Date.now(),
         });
       }
     },
