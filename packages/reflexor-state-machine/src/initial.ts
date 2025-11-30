@@ -17,10 +17,11 @@ import type { ReflexorState } from "./state";
  * const initialState = initializeReflexorState();
  * // {
  * //   updatedAt: Date.now(),
- * //   messages: [],
- * //   toolCalls: {},
- * //   lastUserMessageReceivedAt: 0,
- * //   lastToolCallResultReceivedAt: 0,
+ * //   userMessages: [],
+ * //   assistantMessages: [],
+ * //   assistantMessageIndex: {},
+ * //   toolCallRecords: [],
+ * //   toolCallIndex: {},
  * //   calledBrainAt: 0,
  * //   isWaitingBrain: false,
  * //   pendingToolCallIds: [],
@@ -31,10 +32,11 @@ export function initializeReflexorState(): ReflexorState {
   const now = Date.now();
   return {
     updatedAt: now,
-    messages: [],
-    toolCalls: {},
-    lastUserMessageReceivedAt: 0,
-    lastToolCallResultReceivedAt: 0,
+    userMessages: [],
+    assistantMessages: [],
+    assistantMessageIndex: {},
+    toolCallRecords: [],
+    toolCallIndex: {},
     calledBrainAt: 0,
     isWaitingBrain: false,
     pendingToolCallIds: [],
@@ -63,4 +65,3 @@ export function createReflexorInitial(
 ): Initial<ReflexorState> {
   return () => initialState;
 }
-

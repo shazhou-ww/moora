@@ -3,6 +3,10 @@
 // ============================================================================
 
 import type { ReflexorState } from "@moora/reflexor-state-machine";
+import {
+  getLastUserMessageReceivedAt,
+  getLastToolCallResultReceivedAt,
+} from "@moora/reflexor-state-machine";
 import type { ReflexorEffect } from "./types";
 
 /**
@@ -14,10 +18,11 @@ import type { ReflexorEffect } from "./types";
  * @example
  * ```typescript
  * const state: ReflexorState = {
- *   messages: [{ kind: 'user', id: 'msg-1', ... }],
- *   toolCalls: {},
- *   lastUserMessageReceivedAt: 1234567890,
- *   lastToolCallResultReceivedAt: 0,
+ *   userMessages: [{ kind: 'user', id: 'msg-1', ... }],
+ *   assistantMessages: [],
+ *   assistantMessageIndex: {},
+ *   toolCallRecords: [],
+ *   toolCallIndex: {},
  *   calledBrainAt: 0,
  *   isWaitingBrain: false,
  *   pendingToolCallIds: [],
@@ -69,15 +74,19 @@ const createAskBrainEffects = (
     return {};
   }
 
+  // 获取时间戳
+  const lastUserMessageReceivedAt = getLastUserMessageReceivedAt(state);
+  const lastToolCallResultReceivedAt = getLastToolCallResultReceivedAt(state);
+
   // 检查条件 3: 存在尚未发送给 Brain 的 user message 或 tool-call result
-  if (!hasPendingSignal(state)) {
+  if (!hasPendingSignal(state, lastUserMessageReceivedAt, lastToolCallResultReceivedAt)) {
     return {};
   }
 
   // 计算信号截止时间戳：取最新的 user message 或 tool result 的时间戳
   const signalsCutAt = Math.max(
-    state.lastUserMessageReceivedAt,
-    state.lastToolCallResultReceivedAt
+    lastUserMessageReceivedAt,
+    lastToolCallResultReceivedAt
   );
 
   const key = `ask-brain-${signalsCutAt}`;
@@ -103,7 +112,10 @@ const createRequestToolkitEffects = (
   const effects: Record<string, ReflexorEffect> = {};
 
   for (const toolCallId of state.pendingToolCallIds) {
-    const toolCall = state.toolCalls[toolCallId];
+    const recordIndex = state.toolCallIndex[toolCallId];
+    const toolCall = recordIndex !== undefined
+      ? state.toolCallRecords[recordIndex]
+      : undefined;
 
     // 只有 result 为 null 的 tool call 才需要执行
     if (toolCall && toolCall.result === null) {
@@ -128,7 +140,10 @@ const createRequestToolkitEffects = (
  */
 const areAllPendingToolCallsCompleted = (state: ReflexorState): boolean => {
   for (const toolCallId of state.pendingToolCallIds) {
-    const toolCall = state.toolCalls[toolCallId];
+    const recordIndex = state.toolCallIndex[toolCallId];
+    const toolCall = recordIndex !== undefined
+      ? state.toolCallRecords[recordIndex]
+      : undefined;
 
     // 如果 tool call 不存在或者没有结果，则说明还有未完成的
     if (!toolCall || toolCall.result === null) {
@@ -144,13 +159,18 @@ const areAllPendingToolCallsCompleted = (state: ReflexorState): boolean => {
  *
  * @internal
  * @param state - Reflexor 状态
+ * @param lastUserMessageReceivedAt - 最后一个用户消息接收时间
+ * @param lastToolCallResultReceivedAt - 最后一个工具调用结果接收时间
  * @returns 如果存在新信号，返回 true
  */
-const hasPendingSignal = (state: ReflexorState): boolean => {
-  if (state.lastUserMessageReceivedAt > state.calledBrainAt) {
+const hasPendingSignal = (
+  state: ReflexorState,
+  lastUserMessageReceivedAt: number,
+  lastToolCallResultReceivedAt: number
+): boolean => {
+  if (lastUserMessageReceivedAt > state.calledBrainAt) {
     return true;
   }
 
-  return state.lastToolCallResultReceivedAt > state.calledBrainAt;
+  return lastToolCallResultReceivedAt > state.calledBrainAt;
 };
-

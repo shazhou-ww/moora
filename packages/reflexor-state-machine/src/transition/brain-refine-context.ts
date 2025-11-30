@@ -4,7 +4,11 @@
 
 import { create } from "mutative";
 import type { BrainRefineContext } from "../input";
-import type { ReflexorState } from "../state";
+import type {
+  ReflexorState,
+  UserMessage,
+  AssistantMessage,
+} from "../state";
 
 /**
  * 处理 Brain 优化上下文
@@ -48,6 +52,8 @@ function handleCompress(
 
 /**
  * 处理加载历史消息
+ *
+ * 将历史消息按类型分离添加到对应的数组前面，并更新索引。
  */
 function handleLoadHistory(
   input: BrainRefineContext,
@@ -57,11 +63,48 @@ function handleLoadHistory(
     return state;
   }
 
+  const { userMessages, assistantMessages } = separateMessages(
+    input.refinement.messages
+  );
+
+  // 重建 assistantMessageIndex
+  const newAssistantMessageIndex: Record<string, number> = {};
+  assistantMessages.forEach((msg, index) => {
+    newAssistantMessageIndex[msg.id] = index;
+  });
+  // 调整现有索引的偏移量
+  const offset = assistantMessages.length;
+  for (const [id, index] of Object.entries(state.assistantMessageIndex)) {
+    newAssistantMessageIndex[id] = index + offset;
+  }
+
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    // 将历史消息添加到消息列表前面
-    draft.messages = [...input.refinement.messages, ...state.messages];
+    draft.userMessages = [...userMessages, ...state.userMessages];
+    draft.assistantMessages = [...assistantMessages, ...state.assistantMessages];
+    draft.assistantMessageIndex = newAssistantMessageIndex;
   });
+}
+
+/**
+ * 分离混合消息数组为 user 和 assistant 消息
+ */
+function separateMessages(messages: readonly (UserMessage | AssistantMessage)[]): {
+  userMessages: UserMessage[];
+  assistantMessages: AssistantMessage[];
+} {
+  const userMessages: UserMessage[] = [];
+  const assistantMessages: AssistantMessage[] = [];
+
+  for (const msg of messages) {
+    if (msg.kind === "user") {
+      userMessages.push(msg);
+    } else {
+      assistantMessages.push(msg);
+    }
+  }
+
+  return { userMessages, assistantMessages };
 }
 
 /**
@@ -77,7 +120,6 @@ function handleLoadToolResults(
 
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    // Tool results 已经在 toolCalls 中，这里只需要更新时间戳
+    // Tool results 已经在 toolCallRecords 中，这里只需要更新时间戳
   });
 }
-

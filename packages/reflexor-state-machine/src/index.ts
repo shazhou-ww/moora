@@ -50,6 +50,14 @@ export {
   reflexorStateSchema,
 } from "./state";
 
+// State 工具函数
+export {
+  getMergedMessages,
+  getAllMessageIds,
+  getLastUserMessageReceivedAt,
+  getLastToolCallResultReceivedAt,
+} from "./state";
+
 // Input 相关类型
 export type {
   BaseInput,

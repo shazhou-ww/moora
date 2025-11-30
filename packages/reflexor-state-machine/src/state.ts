@@ -24,6 +24,10 @@ export type UserMessage = z.infer<typeof userMessageSchema>;
 
 /**
  * 助手消息
+ *
+ * 包含两个时间戳：
+ * - receivedAt: 消息开始接收的时间（streaming 开始）
+ * - updatedAt: 消息最后更新的时间（streaming 完成或内容更新）
  */
 export const assistantMessageSchema = z
   .object({
@@ -31,6 +35,7 @@ export const assistantMessageSchema = z
     id: z.string(),
     content: z.string(),
     receivedAt: z.number(),
+    updatedAt: z.number(),
   })
   .readonly();
 
@@ -101,9 +106,12 @@ export type ToolCallResult = z.infer<typeof toolCallResultSchema>;
 
 /**
  * Tool Call 记录
+ *
+ * 包含 id 字段，用于唯一标识每个 tool call。
  */
 export const toolCallRecordSchema = z
   .object({
+    id: z.string(),
     name: z.string(),
     parameters: z.string(),
     calledAt: z.number(),
@@ -174,6 +182,10 @@ export type ContextRefinement = z.infer<typeof contextRefinementSchema>;
  * Reflexor 状态
  *
  * Agent 的完整内部状态，包含历史消息和 Tool Call 记录。
+ *
+ * 数据组织方式：
+ * - userMessages, assistantMessages, toolCallRecords: 按生成时间顺序排序的数组
+ * - assistantMessageIndex, toolCallIndex: id 到数组序号的索引，方便快速定位修改
  */
 export const reflexorStateSchema = z
   .object({
@@ -185,32 +197,41 @@ export const reflexorStateSchema = z
     updatedAt: z.number(),
 
     /**
-     * 历史消息
+     * 用户消息列表
      *
-     * 按时间顺序排序的数组，包含所有用户和助手消息。
+     * 按 receivedAt 时间顺序排序的数组。
      */
-    messages: z.array(reflexorMessageSchema).readonly(),
+    userMessages: z.array(userMessageSchema).readonly(),
 
     /**
-     * 历史 Tool Call 记录
+     * 助手消息列表
      *
-     * 组织成 Record<string, ToolCallRecord> 的形式，key 为 toolCallId。
+     * 按 receivedAt 时间顺序排序的数组。
      */
-    toolCalls: z.record(z.string(), toolCallRecordSchema).readonly(),
+    assistantMessages: z.array(assistantMessageSchema).readonly(),
 
     /**
-     * 最后一次接收用户消息的时间戳（Unix 时间戳，毫秒）
+     * 助手消息索引
      *
-     * 用于快速判断是否有新的用户消息需要处理。
+     * 从 assistantMessage.id 到 assistantMessages 数组序号的映射，
+     * 方便快速定位和修改。
      */
-    lastUserMessageReceivedAt: z.number(),
+    assistantMessageIndex: z.record(z.string(), z.number()).readonly(),
 
     /**
-     * 最后一次接收工具调用结果的时间戳（Unix 时间戳，毫秒）
+     * Tool Call 记录列表
      *
-     * 用于快速判断是否有新的工具调用结果需要处理。
+     * 按 calledAt 时间顺序排序的数组。
      */
-    lastToolCallResultReceivedAt: z.number(),
+    toolCallRecords: z.array(toolCallRecordSchema).readonly(),
+
+    /**
+     * Tool Call 索引
+     *
+     * 从 toolCallRecord.id 到 toolCallRecords 数组序号的映射，
+     * 方便快速定位和修改。
+     */
+    toolCallIndex: z.record(z.string(), z.number()).readonly(),
 
     /**
      * 最近一次调用 LLM 的时间戳
@@ -235,3 +256,71 @@ export const reflexorStateSchema = z
   .readonly();
 
 export type ReflexorState = z.infer<typeof reflexorStateSchema>;
+
+// ============================================================================
+// 工具函数
+// ============================================================================
+
+/**
+ * 合并用户消息和助手消息，按 receivedAt 时间排序
+ *
+ * @param state - Reflexor 状态
+ * @returns 按时间顺序排序的消息数组
+ */
+export function getMergedMessages(state: ReflexorState): ReflexorMessage[] {
+  const allMessages: ReflexorMessage[] = [
+    ...state.userMessages,
+    ...state.assistantMessages,
+  ];
+
+  return allMessages.sort((a, b) => a.receivedAt - b.receivedAt);
+}
+
+/**
+ * 获取所有消息的 ID 集合
+ *
+ * @param state - Reflexor 状态
+ * @returns 所有消息 ID 的集合
+ */
+export function getAllMessageIds(state: ReflexorState): Set<string> {
+  const ids = new Set<string>();
+
+  for (const msg of state.userMessages) {
+    ids.add(msg.id);
+  }
+
+  for (const msg of state.assistantMessages) {
+    ids.add(msg.id);
+  }
+
+  return ids;
+}
+
+/**
+ * 获取最后一个用户消息的接收时间
+ *
+ * @param state - Reflexor 状态
+ * @returns 最后一个用户消息的 receivedAt，如果没有用户消息则返回 0
+ */
+export function getLastUserMessageReceivedAt(state: ReflexorState): number {
+  const lastMessage = state.userMessages[state.userMessages.length - 1];
+  return lastMessage?.receivedAt ?? 0;
+}
+
+/**
+ * 获取最后一个 Tool Call 结果的接收时间
+ *
+ * @param state - Reflexor 状态
+ * @returns 最后一个有结果的 tool call 的 result.receivedAt，如果没有则返回 0
+ */
+export function getLastToolCallResultReceivedAt(state: ReflexorState): number {
+  let lastReceivedAt = 0;
+
+  for (const toolCall of state.toolCallRecords) {
+    if (toolCall.result !== null) {
+      lastReceivedAt = Math.max(lastReceivedAt, toolCall.result.receivedAt);
+    }
+  }
+
+  return lastReceivedAt;
+}

@@ -27,11 +27,18 @@ export function handleBrainSendMessageStart(
     id: input.messageId,
     content: "", // 空内容，等待 streaming 完成
     receivedAt: input.timestamp,
+    updatedAt: input.timestamp,
   };
+
+  const newIndex = state.assistantMessages.length;
 
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    draft.messages = [...state.messages, assistantMessage];
+    draft.assistantMessages = [...state.assistantMessages, assistantMessage];
+    draft.assistantMessageIndex = {
+      ...state.assistantMessageIndex,
+      [input.messageId]: newIndex,
+    };
     draft.isWaitingBrain = true;
   });
 }
@@ -49,36 +56,62 @@ export function handleBrainSendMessageComplete(
   input: BrainSendMessageComplete,
   state: ReflexorState
 ): ReflexorState {
-  // 找到对应的 assistant message 并更新内容
-  const messageIndex = state.messages.findIndex(
-    (msg) => msg.kind === "assistant" && msg.id === input.messageId
-  );
+  const messageIndex = state.assistantMessageIndex[input.messageId];
 
-  if (messageIndex === -1) {
-    // 如果找不到消息，可能是乱序，直接创建
-    const assistantMessage: AssistantMessage = {
-      kind: "assistant",
-      id: input.messageId,
-      content: input.content,
-      receivedAt: input.timestamp,
-    };
-
-    return create(state, (draft) => {
-      draft.updatedAt = input.timestamp;
-      draft.messages = [...state.messages, assistantMessage];
-      draft.isWaitingBrain = false;
-      draft.calledBrainAt = input.timestamp;
-    });
+  // 如果找不到消息，可能是乱序，直接创建
+  if (messageIndex === undefined) {
+    return createNewAssistantMessage(input, state);
   }
 
   // 更新现有消息的内容
+  return updateExistingAssistantMessage(input, state, messageIndex);
+}
+
+/**
+ * 创建新的 assistant message（乱序情况）
+ */
+function createNewAssistantMessage(
+  input: BrainSendMessageComplete,
+  state: ReflexorState
+): ReflexorState {
+  const assistantMessage: AssistantMessage = {
+    kind: "assistant",
+    id: input.messageId,
+    content: input.content,
+    receivedAt: input.timestamp,
+    updatedAt: input.timestamp,
+  };
+
+  const newIndex = state.assistantMessages.length;
+
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    draft.messages = state.messages.map((msg, index) => {
-      if (index === messageIndex && msg.kind === "assistant") {
+    draft.assistantMessages = [...state.assistantMessages, assistantMessage];
+    draft.assistantMessageIndex = {
+      ...state.assistantMessageIndex,
+      [input.messageId]: newIndex,
+    };
+    draft.isWaitingBrain = false;
+    draft.calledBrainAt = input.timestamp;
+  });
+}
+
+/**
+ * 更新现有的 assistant message
+ */
+function updateExistingAssistantMessage(
+  input: BrainSendMessageComplete,
+  state: ReflexorState,
+  messageIndex: number
+): ReflexorState {
+  return create(state, (draft) => {
+    draft.updatedAt = input.timestamp;
+    draft.assistantMessages = state.assistantMessages.map((msg, index) => {
+      if (index === messageIndex) {
         return {
           ...msg,
           content: input.content,
+          updatedAt: input.timestamp,
         };
       }
       return msg;
@@ -87,4 +120,3 @@ export function handleBrainSendMessageComplete(
     draft.calledBrainAt = input.timestamp;
   });
 }
-

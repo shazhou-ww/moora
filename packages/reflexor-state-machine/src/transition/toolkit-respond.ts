@@ -17,8 +17,8 @@ export function handleToolkitRespond(
   input: ToolkitRespond,
   state: ReflexorState
 ): ReflexorState {
-  const toolCall = state.toolCalls[input.toolCallId];
-  if (!toolCall) {
+  const toolCallIndex = state.toolCallIndex[input.toolCallId];
+  if (toolCallIndex === undefined) {
     // Tool call 不存在，忽略
     return state;
   }
@@ -43,8 +43,8 @@ export function handleToolkitError(
   input: ToolkitError,
   state: ReflexorState
 ): ReflexorState {
-  const toolCall = state.toolCalls[input.toolCallId];
-  if (!toolCall) {
+  const toolCallIndex = state.toolCallIndex[input.toolCallId];
+  if (toolCallIndex === undefined) {
     // Tool call 不存在，忽略
     return state;
   }
@@ -73,25 +73,30 @@ function updateToolCallResult(
   timestamp: number,
   state: ReflexorState
 ): ReflexorState {
-  const toolCall = state.toolCalls[toolCallId];
-  if (!toolCall) {
+  const recordIndex = state.toolCallIndex[toolCallId];
+  if (recordIndex === undefined) {
+    return state;
+  }
+
+  const existingRecord = state.toolCallRecords[recordIndex];
+  if (!existingRecord) {
     return state;
   }
 
   return create(state, (draft) => {
     draft.updatedAt = timestamp;
-    draft.toolCalls = {
-      ...state.toolCalls,
-      [toolCallId]: {
-        ...toolCall,
-        result,
-      },
-    };
-    draft.lastToolCallResultReceivedAt = timestamp;
+    draft.toolCallRecords = state.toolCallRecords.map((record, index) => {
+      if (index === recordIndex) {
+        return {
+          ...record,
+          result,
+        };
+      }
+      return record;
+    });
     // 从 pending 列表中移除
     draft.pendingToolCallIds = state.pendingToolCallIds.filter(
       (id) => id !== toolCallId
     );
   });
 }
-

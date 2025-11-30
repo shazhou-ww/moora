@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { ReflexorState } from "@moora/reflexor-state-machine";
+import { getAllMessageIds } from "@moora/reflexor-state-machine";
 import type { OptimisticState, PendingMessage, Unsubscribe } from "./types";
 
 /**
@@ -174,9 +175,7 @@ export const createOptimisticStateManager = (
    * 根据 ReflexorState 同步乐观状态，移除已在状态中的消息。
    */
   const syncWithState = (reflexorState: ReflexorState): void => {
-    const messageIds = new Set(
-      reflexorState.messages.map((msg) => msg.id)
-    );
+    const messageIds = getAllMessageIds(reflexorState);
 
     // 移除已在状态中的消息
     const newPendingMessages = state.pendingMessages.filter(
@@ -218,4 +217,3 @@ export const createOptimisticStateManager = (
     subscribe,
   };
 };
-

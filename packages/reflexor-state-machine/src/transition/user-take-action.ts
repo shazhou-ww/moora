@@ -103,13 +103,13 @@ function handleClear(
 ): ReflexorState {
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    draft.messages = [];
-    draft.toolCalls = {};
-    draft.lastUserMessageReceivedAt = 0;
-    draft.lastToolCallResultReceivedAt = 0;
+    draft.userMessages = [];
+    draft.assistantMessages = [];
+    draft.assistantMessageIndex = {};
+    draft.toolCallRecords = [];
+    draft.toolCallIndex = {};
     draft.calledBrainAt = 0;
     draft.isWaitingBrain = false;
     draft.pendingToolCallIds = [];
   });
 }
-

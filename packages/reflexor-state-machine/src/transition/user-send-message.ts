@@ -26,8 +26,6 @@ export function handleUserSendMessage(
 
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    draft.messages = [...state.messages, userMessage];
-    draft.lastUserMessageReceivedAt = input.timestamp;
+    draft.userMessages = [...state.userMessages, userMessage];
   });
 }
-

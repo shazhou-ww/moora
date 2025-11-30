@@ -19,20 +19,28 @@ export function handleBrainCallTools(
 ): ReflexorState {
   const toolCallIds = Object.keys(input.toolCalls);
 
-  // 创建新的 tool call 记录
-  const newToolCalls: Record<string, ToolCallRecord> = {};
+  // 创建新的 tool call 记录数组
+  const newToolCallRecords: ToolCallRecord[] = [];
+  const newToolCallIndex: Record<string, number> = {};
+  let currentIndex = state.toolCallRecords.length;
+
   for (const [id, request] of Object.entries(input.toolCalls)) {
-    newToolCalls[id] = {
+    const record: ToolCallRecord = {
+      id,
       name: request.name,
       parameters: request.parameters,
       calledAt: request.calledAt,
       result: null,
     };
+    newToolCallRecords.push(record);
+    newToolCallIndex[id] = currentIndex;
+    currentIndex += 1;
   }
 
   return create(state, (draft) => {
     draft.updatedAt = input.timestamp;
-    draft.toolCalls = { ...state.toolCalls, ...newToolCalls };
+    draft.toolCallRecords = [...state.toolCallRecords, ...newToolCallRecords];
+    draft.toolCallIndex = { ...state.toolCallIndex, ...newToolCallIndex };
     draft.pendingToolCallIds = [
       ...state.pendingToolCallIds,
       ...toolCallIds,
@@ -40,4 +48,3 @@ export function handleBrainCallTools(
     draft.isWaitingBrain = false;
   });
 }
-

@@ -2,9 +2,10 @@
 // 消息列表组件
 // ============================================================================
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Box } from "@mui/material";
 import type { ReflexorState } from "@moora/reflexor-state-machine";
+import { getMergedMessages, getAllMessageIds } from "@moora/reflexor-state-machine";
 import type { OptimisticState } from "../types";
 import { MessageBubble, PendingMessageBubble } from "./MessageBubble";
 
@@ -32,10 +33,15 @@ export type MessageListProps = {
 export const MessageList = ({ state, optimisticState }: MessageListProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // 合并并排序消息
+  const messages = useMemo(() => {
+    return state ? getMergedMessages(state) : [];
+  }, [state]);
+
   // 收集已在状态中的消息 ID
-  const confirmedMessageIds = new Set(
-    state?.messages.map((msg) => msg.id) ?? []
-  );
+  const confirmedMessageIds = useMemo(() => {
+    return state ? getAllMessageIds(state) : new Set<string>();
+  }, [state]);
 
   // 过滤出尚未在状态中的待确认消息
   const pendingMessages = optimisticState.pendingMessages.filter(
@@ -43,14 +49,14 @@ export const MessageList = ({ state, optimisticState }: MessageListProps) => {
   );
 
   // 判断是否有正在流式输出的消息
-  const lastMessage = state?.messages[state.messages.length - 1];
+  const lastMessage = messages[messages.length - 1];
   const isStreaming =
     lastMessage?.kind === "assistant" && lastMessage.content === "";
 
   // 自动滚动到底部
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state?.messages.length, pendingMessages.length]);
+  }, [messages.length, pendingMessages.length]);
 
   return (
     <Box
@@ -63,12 +69,12 @@ export const MessageList = ({ state, optimisticState }: MessageListProps) => {
       }}
     >
       {/* 已确认的消息 */}
-      {state?.messages.map((message, index) => (
+      {messages.map((message, index) => (
         <MessageBubble
           key={message.id}
           message={message}
           isStreaming={
-            isStreaming && index === state.messages.length - 1
+            isStreaming && index === messages.length - 1
           }
         />
       ))}
@@ -87,4 +93,3 @@ export const MessageList = ({ state, optimisticState }: MessageListProps) => {
     </Box>
   );
 };
-
