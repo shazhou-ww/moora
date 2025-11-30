@@ -9,10 +9,10 @@ import { checkTimeIrreversibility } from "./utils";
 import { handleUserMessage } from "./user-message";
 import { handleLlmMessageStarted } from "./llm-message-started";
 import { handleLlmMessageCompleted } from "./llm-message-completed";
-import { handleToolCallStarted } from "./tool-call-started";
 import { handleToolCallCompleted } from "./tool-call-completed";
 import { handleContextWindowExpanded } from "./context-window-expanded";
 import { handleHistoryToolCallsAdded } from "./history-tool-calls-added";
+import { handleReActObserved } from "./re-act-observed";
 
 export const DEFAULT_INITIAL_CONTEXT_WINDOW_SIZE = 10 as const;
 export const DEFAULT_EXPAND_CONTEXT_WINDOW_SIZE = 10 as const;
@@ -66,10 +66,10 @@ export const createAgentTransition =
         return handleLlmMessageStarted(input, state);
       case "llm-message-completed":
         return handleLlmMessageCompleted(input, state);
-      case "tool-call-started":
-        return handleToolCallStarted(input, state);
       case "tool-call-completed":
         return handleToolCallCompleted(input, state);
+      case "re-act-observed":
+        return handleReActObserved(input, state);
       case "context-window-expanded":
         return handleContextWindowExpanded(
           input,

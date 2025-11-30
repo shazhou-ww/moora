@@ -19,6 +19,9 @@ export type {
   CallLlmEffect,
   CallToolEffect,
   CallLlmFn,
+  CallLlmResult,
+  CallLlmContinueResult,
+  CallLlmCompleteResult,
   Tool,
   AgentMoorexOptions,
   // Agent Fastify Node 相关

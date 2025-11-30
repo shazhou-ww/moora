@@ -239,7 +239,10 @@ const agentNode = createAgentFastifyNode({
   moorexOptions: {
     callLLM: async ({ prompt, messages, toolCalls, tools }) => {
       // 调用 LLM API，可使用完整的 AgentState 上下文
-      return 'Response';
+      return {
+        observation: { type: "complete-re-act" },
+        response: "Response",
+      };
     },
     tools: {
       search: {

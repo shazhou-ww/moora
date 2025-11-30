@@ -33,7 +33,10 @@ import { agentEffectsAt } from "./effects-at";
  * const runEffect = createAgentRunEffect({
  *   callLLM: async ({ prompt, messages, toolCalls, tools }) => {
  *     // 使用完整的 AgentState 上下文来决定回复
- *     return 'Response';
+ *     return {
+ *       observation: { type: "complete-re-act" },
+ *       response: "Response",
+ *     };
  *   },
  *   tools: { search: { ... } },
  * });
@@ -80,7 +83,10 @@ export const createAgentRunEffect = (options: AgentMoorexOptions) => (
  * ```typescript
  * const definition = createAgentMoorexDefinition({
  *   callLLM: async ({ prompt, messages, toolCalls, tools }) => {
- *     return 'Response';
+ *     return {
+ *       observation: { type: "complete-re-act" },
+ *       response: "Response",
+ *     };
  *   },
  *   tools: { search: { ... } },
  * });

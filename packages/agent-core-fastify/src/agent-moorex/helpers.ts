@@ -4,7 +4,14 @@
 
 import type { Dispatch, EffectController } from "@moora/moorex";
 import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
-import type { CallLlmEffect, CallLlmFn, CallToolEffect, Tool } from "../types";
+import type {
+  CallLlmEffect,
+  CallLlmFn,
+  CallToolEffect,
+  Tool,
+  CallLlmResult,
+  CallLlmCompleteResult,
+} from "../types";
 import { findPendingUserMessageIndex } from "./message-selectors";
 
 /**
@@ -38,23 +45,20 @@ export const createLLMEffectController = (
         return;
       }
 
-      // 生成消息 ID
-      const messageId = `msg-${reActContext.updatedAt}`;
-
-      // 发送 LLM 消息开始事件
-      dispatch({
-        type: "llm-message-started",
-        messageId,
-        timestamp: Date.now(),
-      });
-
-      if (canceled) {
-        return;
-      }
+      let lastTimestamp = state.updatedAt;
+      const nextTimestamp = () => {
+        const now = Date.now();
+        if (now <= lastTimestamp) {
+          lastTimestamp += 1;
+          return lastTimestamp;
+        }
+        lastTimestamp = now;
+        return lastTimestamp;
+      };
+      const calledLlmAt = nextTimestamp();
 
       try {
-        // 调用 LLM
-        const response = await callLLM({
+        const result = await callLLM({
           prompt: pendingUserMessage.content,
           messages: state.messages,
           toolCalls: state.toolCalls,
@@ -65,26 +69,24 @@ export const createLLMEffectController = (
           return;
         }
 
-        // 发送 LLM 消息完成事件，带上完整的 content
-        dispatch({
-          type: "llm-message-completed",
-          messageId,
-          content: response,
-          timestamp: Date.now(),
+        processCallLlmResult({
+          result,
+          dispatch,
+          nextTimestamp,
+          messageId: `msg-${reActContext.updatedAt}`,
+          calledLlmAt,
         });
       } catch (error) {
         if (canceled) {
           return;
         }
 
-        // 对于错误情况，发送包含错误信息的完成事件
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-        dispatch({
-          type: "llm-message-completed",
-          messageId,
-          content: `Error: ${errorMessage}`,
-          timestamp: Date.now(),
+        handleCallLlmError({
+          error,
+          dispatch,
+          nextTimestamp,
+          messageId: `msg-${reActContext.updatedAt}`,
+          calledLlmAt,
         });
       }
     },
@@ -93,6 +95,83 @@ export const createLLMEffectController = (
     },
   };
 };
+
+type DispatchDependencies = {
+  dispatch: Dispatch<AgentInput>;
+  nextTimestamp: () => number;
+  messageId: string;
+};
+
+const processCallLlmResult = ({
+  result,
+  dispatch,
+  nextTimestamp,
+  messageId,
+  calledLlmAt,
+}: {
+  result: CallLlmResult;
+  calledLlmAt: number;
+} & DispatchDependencies) => {
+  if (isCompleteReActResult(result)) {
+    dispatch({
+      type: "llm-message-started",
+      messageId,
+      timestamp: nextTimestamp(),
+    });
+
+    dispatch({
+      type: "llm-message-completed",
+      messageId,
+      content: result.response,
+      timestamp: nextTimestamp(),
+    });
+  }
+
+  dispatch({
+    type: "re-act-observed",
+    observation: result.observation,
+    calledLlmAt,
+    timestamp: nextTimestamp(),
+  });
+};
+
+const handleCallLlmError = ({
+  error,
+  dispatch,
+  nextTimestamp,
+  messageId,
+  calledLlmAt,
+}: DispatchDependencies & { error: unknown; calledLlmAt: number }) => {
+  const errorMessage =
+    error instanceof Error ? error.message : "Unknown error";
+
+  dispatch({
+    type: "llm-message-started",
+    messageId,
+    timestamp: nextTimestamp(),
+  });
+
+  dispatch({
+    type: "llm-message-completed",
+    messageId,
+    content: `Error: ${errorMessage}`,
+    timestamp: nextTimestamp(),
+  });
+
+  dispatch({
+    type: "re-act-observed",
+    observation: {
+      type: "complete-re-act",
+    },
+    calledLlmAt,
+    timestamp: nextTimestamp(),
+  });
+};
+
+const isCompleteReActResult = (
+  result: CallLlmResult
+): result is CallLlmCompleteResult =>
+  result.observation.type === "complete-re-act";
 
 /**
  * 创建 Tool 调用的 Effect 控制器
@@ -111,20 +190,32 @@ export const createToolEffectController = (
         return;
       }
 
+      let lastTimestamp = state.updatedAt;
+      const nextTimestamp = () => {
+        const now = Date.now();
+        if (now <= lastTimestamp) {
+          lastTimestamp += 1;
+          return lastTimestamp;
+        }
+        lastTimestamp = now;
+        return lastTimestamp;
+      };
+
       // 从 state 中获取 toolCall 信息
       const toolCall = state.toolCalls[effect.toolCallId];
 
       if (!toolCall) {
         // Tool Call 记录不存在，分发错误结果
+        const timestamp = nextTimestamp();
         dispatch({
           type: "tool-call-completed",
           toolCallId: effect.toolCallId,
           result: {
             isSuccess: false,
             error: `Tool call "${effect.toolCallId}" not found in state`,
-            receivedAt: Date.now(),
+            receivedAt: timestamp,
           },
-          timestamp: Date.now(),
+          timestamp,
         });
         return;
       }
@@ -134,35 +225,19 @@ export const createToolEffectController = (
 
       if (!tool) {
         // Tool 不存在，立即分发错误结果
-        dispatch({
-          type: "tool-call-started",
-          toolCallId: effect.toolCallId,
-          name: toolCall.name,
-          parameters: toolCall.parameters,
-          timestamp: Date.now(),
-        });
-
+        const timestamp = nextTimestamp();
         dispatch({
           type: "tool-call-completed",
           toolCallId: effect.toolCallId,
           result: {
             isSuccess: false,
             error: `Tool "${toolCall.name}" not found`,
-            receivedAt: Date.now(),
+            receivedAt: timestamp,
           },
-          timestamp: Date.now(),
+          timestamp,
         });
         return;
       }
-
-      // 分发 Tool Call 开始事件
-      dispatch({
-        type: "tool-call-started",
-        toolCallId: effect.toolCallId,
-        name: toolCall.name,
-        parameters: toolCall.parameters,
-        timestamp: Date.now(),
-      });
 
       if (canceled) {
         return;
@@ -178,15 +253,16 @@ export const createToolEffectController = (
         }
 
         // 分发 Tool 结果（成功）
+        const timestamp = nextTimestamp();
         dispatch({
           type: "tool-call-completed",
           toolCallId: effect.toolCallId,
           result: {
             isSuccess: true,
             content: typeof result === "string" ? result : JSON.stringify(result),
-            receivedAt: Date.now(),
+            receivedAt: timestamp,
           },
-          timestamp: Date.now(),
+          timestamp,
         });
       } catch (error) {
         if (canceled) {
@@ -194,15 +270,16 @@ export const createToolEffectController = (
         }
 
         // 分发错误结果
+        const timestamp = nextTimestamp();
         dispatch({
           type: "tool-call-completed",
           toolCallId: effect.toolCallId,
           result: {
             isSuccess: false,
             error: error instanceof Error ? error.message : "Unknown error",
-            receivedAt: Date.now(),
+            receivedAt: timestamp,
           },
-          timestamp: Date.now(),
+          timestamp,
         });
       }
     },

@@ -64,7 +64,7 @@ Agent 的完整内部状态，包含：
    - `ToolCallRecord` 包括：
      - `name`: `string` - 工具名称
      - `parameters`: `string` - 参数（序列化为 string）
-     - `timestamp`: `number` - 调用时间戳
+     - `calledAt`: `number` - 调用时间戳
      - `result`: `ToolCallSuccess | ToolCallFailed | null` - 调用结果
        - `ToolCallSuccess`: `{ isSuccess: true, content: string }`
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
@@ -73,37 +73,42 @@ Agent 的完整内部状态，包含：
    - `contextWindowSize`: `number` - 上下文窗口大小，表示应该包含最近多少条消息
    - `toolCallIds`: `string[]` - 涉及到的 Tool Calls（Tool Call Id 列表）
 
+5. **最近一次 LLM 调用时间** (`calledLlmAt`)
+   - `number` - 最近一次 ReAct Loop 观察完成的时间戳
+
 ## 输入定义
 
 ### AgentInput
 
 Agent 状态机可以接收的输入，使用 Discriminated Union 类型：
 
-1. **收到用户消息** (`user-message`)
+1. **收到用户消息** (`user-message-received`)
    - 当用户发送消息时触发
    - 包含消息内容
 
-2. **LLM 发送给 User 的 Chunk** (`llm-chunk`)
-   - 当 LLM 流式输出时，每个 chunk 触发一次
-   - 包含 chunk 内容
+2. **LLM 开始流式输出** (`llm-message-started`)
+   - 当 LLM 开始输出用户可见内容时触发
+   - 在 `messages` 中追加一条 content 为空字符串的 `assistant` 消息
 
-3. **LLM 发送给 User 的消息完成** (`llm-message-complete`)
-   - 当 LLM 完成一条消息的流式输出时触发
-   - 表示当前消息不再有更多 chunks
+3. **LLM 完成流式输出** (`llm-message-completed`)
+   - 当 LLM 完成当前消息的输出时触发
+   - 更新对应 `assistant` 消息的 content
 
-4. **发起 ToolCall（外部）** (`tool-call-started`)
-   - 当开始调用外部工具时触发
-   - 包含工具名称、参数等
+4. **ReAct 观察结果（外部）** (`re-act-observed`)
+   - 当 call-llm effect 完成时触发
+   - `calledLlmAt`: 表示对应 LLM 调用开始的时间戳
+   - `observation.type === "continue-re-act"`：包含需要发起的 Tool Call 请求（`Record<string, ToolCallRequest>`）
+   - `observation.type === "complete-re-act"`：表示当前 ReAct Loop 结束，并更新 `calledLlmAt`
 
-5. **收到 ToolCall 结果（外部）** (`tool-call-result`)
+5. **收到 ToolCall 结果（外部）** (`tool-call-completed`)
    - 当外部工具调用完成时触发
-   - 包含成功或失败的结果
+   - 包含成功或失败的结果（`ToolCallResult`）
 
-6. **扩展上下文窗口** (`expand-context-window`)
+6. **扩展上下文窗口** (`context-window-expanded`)
    - 当需要扩展当前 ReAct Loop 上下文窗口时触发
    - 扩展的增量由 `agentTransition` 函数的 `expandContextWindowSize` 参数定义
 
-7. **加载历史 ToolCall 结果到当前 ReAct Loop** (`add-tool-calls-to-context`)
+7. **加载历史 ToolCall 结果到当前 ReAct Loop** (`history-tool-calls-added`)
    - 当需要将历史 Tool Call 添加到当前 ReAct Loop 上下文时触发
    - 包含要添加的 Tool Call ID 列表
 
@@ -157,42 +162,54 @@ const moorex = createMoorex({
 ```typescript
 // 发送用户消息
 moorex.dispatch({
-  type: "user-message",
+  type: "user-message-received",
   messageId: "msg-1",
   content: "Hello, Agent!",
   timestamp: Date.now(),
 });
 
-// 发送 LLM chunk
+// LLM 开始发送消息
 moorex.dispatch({
-  type: "llm-chunk",
+  type: "llm-message-started",
   messageId: "msg-2",
-  chunk: "Hello, ",
+  timestamp: Date.now(),
 });
 
 // 发送 LLM 消息完成
 moorex.dispatch({
-  type: "llm-message-complete",
+  type: "llm-message-completed",
   messageId: "msg-2",
+  content: "Hello!",
+  timestamp: Date.now(),
 });
 
-// 发起 Tool Call
+// LLM 决定继续 ReAct，发起 Tool Call
 moorex.dispatch({
-  type: "tool-call-started",
-  toolCallId: "tool-1",
-  name: "search",
-  parameters: JSON.stringify({ query: "example" }),
+  type: "re-act-observed",
   timestamp: Date.now(),
+  calledLlmAt: Date.now(),
+  observation: {
+    type: "continue-re-act",
+    toolCalls: {
+      "tool-1": {
+        name: "search",
+        parameters: JSON.stringify({ query: "example" }),
+        calledAt: Date.now(),
+      },
+    },
+  },
 });
 
 // 收到 Tool Call 结果
 moorex.dispatch({
-  type: "tool-call-result",
+  type: "tool-call-completed",
   toolCallId: "tool-1",
   result: {
     isSuccess: true,
     content: "Search results...",
+    receivedAt: Date.now(),
   },
+  timestamp: Date.now(),
 });
 ```
 

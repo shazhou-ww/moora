@@ -10,9 +10,9 @@ import { messageIdExists } from "./utils";
 /**
  * 处理 LLM 消息开始输入
  *
- * 当 LLM 开始向用户发送消息时，意味着当前 ReAct Loop 结束：
+ * 当 LLM 开始向用户发送消息时：
  * - assistant-message（此时 content 为空）加入历史消息列表
- * - 把当前 reActContext 置空
+ * - 仅承担消息流式输出的起点标记，不影响 ReAct Loop 的生命周期
  * - 时间戳以开始事件为准
  *
  * @internal
@@ -47,8 +47,6 @@ export const handleLlmMessageStarted = (
   return {
     ...state,
     messages,
-    // 把 reActContext 置空，因为 Message Started 表示当前 ReAct Loop 结束
-    reActContext: null,
     // 更新状态时间戳
     updatedAt: timestamp,
   };

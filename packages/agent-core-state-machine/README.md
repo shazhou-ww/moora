@@ -64,7 +64,7 @@ The complete internal state of the Agent, including:
    - `ToolCallRecord` includes:
      - `name`: `string` - Tool name
      - `parameters`: `string` - Parameters (serialized as string)
-     - `timestamp`: `number` - Call timestamp
+     - `calledAt`: `number` - Call timestamp
      - `result`: `ToolCallSuccess | ToolCallFailed | null` - Call result
        - `ToolCallSuccess`: `{ isSuccess: true, content: string }`
        - `ToolCallFailed`: `{ isSuccess: false, error: string }`
@@ -73,37 +73,42 @@ The complete internal state of the Agent, including:
    - `contextWindowSize`: `number` - Context window size, indicating how many recent messages should be included
    - `toolCallIds`: `string[]` - Involved Tool Calls (Tool Call Id list)
 
+5. **Last LLM Invocation Timestamp** (`calledLlmAt`)
+   - `number` - Timestamp of the latest ReAct observation (call-llm effect completion)
+
 ## Input Definition
 
 ### AgentInput
 
 Inputs that the Agent state machine can receive, using Discriminated Union type:
 
-1. **User Message Received** (`user-message`)
+1. **User Message Received** (`user-message-received`)
    - Triggered when user sends a message
    - Contains message content
 
-2. **LLM Chunk to User** (`llm-chunk`)
-   - Triggered for each chunk when LLM streams output
-   - Contains chunk content
+2. **LLM Message Started** (`llm-message-started`)
+   - Triggered when LLM begins streaming a user-visible message
+   - Appends an `assistant` message with empty content
 
-3. **LLM Message Complete** (`llm-message-complete`)
-   - Triggered when LLM completes streaming output for a message
-   - Indicates no more chunks for current message
+3. **LLM Message Completed** (`llm-message-completed`)
+   - Triggered when LLM finishes streaming the message
+   - Updates the corresponding `assistant` message content
 
-4. **Tool Call Started (External)** (`tool-call-started`)
-   - Triggered when starting to call an external tool
-   - Contains tool name, parameters, etc.
+4. **ReAct Observation (External)** (`re-act-observed`)
+   - Triggered when the call-llm effect finishes
+   - `calledLlmAt`: timestamp indicating when the corresponding call-llm started
+   - `observation.type === "continue-re-act"`: carries tool calls to issue as `Record<string, ToolCallRequest>`
+   - `observation.type === "complete-re-act"`: indicates the current ReAct Loop is completed and updates `calledLlmAt`
 
-5. **Tool Call Result Received (External)** (`tool-call-result`)
-   - Triggered when external tool call completes
-   - Contains success or failure result
+5. **Tool Call Result Received (External)** (`tool-call-completed`)
+   - Triggered when an external tool call finishes
+   - Contains success or failure result (`ToolCallResult`)
 
-6. **Expand Context Window** (`expand-context-window`)
+6. **Expand Context Window** (`context-window-expanded`)
    - Triggered when the current ReAct Loop context window needs to be expanded
    - The expansion increment is defined by the `expandContextWindowSize` parameter of the `agentTransition` function
 
-7. **Load Historical Tool Call Results to Current ReAct Loop** (`add-tool-calls-to-context`)
+7. **Load Historical Tool Call Results to Current ReAct Loop** (`history-tool-calls-added`)
    - Triggered when historical Tool Calls need to be added to current ReAct Loop context
    - Contains list of Tool Call IDs to add
 
@@ -157,42 +162,54 @@ const moorex = createMoorex({
 ```typescript
 // Dispatch user message
 moorex.dispatch({
-  type: "user-message",
+  type: "user-message-received",
   messageId: "msg-1",
   content: "Hello, Agent!",
   timestamp: Date.now(),
 });
 
-// Dispatch LLM chunk
+// LLM starts streaming
 moorex.dispatch({
-  type: "llm-chunk",
+  type: "llm-message-started",
   messageId: "msg-2",
-  chunk: "Hello, ",
+  timestamp: Date.now(),
 });
 
 // Dispatch LLM message complete
 moorex.dispatch({
-  type: "llm-message-complete",
+  type: "llm-message-completed",
   messageId: "msg-2",
+  content: "Hello!",
+  timestamp: Date.now(),
 });
 
-// Start Tool Call
+// LLM decides to continue ReAct and issue Tool Calls
 moorex.dispatch({
-  type: "tool-call-started",
-  toolCallId: "tool-1",
-  name: "search",
-  parameters: JSON.stringify({ query: "example" }),
+  type: "re-act-observed",
   timestamp: Date.now(),
+  calledLlmAt: Date.now(),
+  observation: {
+    type: "continue-re-act",
+    toolCalls: {
+      "tool-1": {
+        name: "search",
+        parameters: JSON.stringify({ query: "example" }),
+        calledAt: Date.now(),
+      },
+    },
+  },
 });
 
 // Receive Tool Call result
 moorex.dispatch({
-  type: "tool-call-result",
+  type: "tool-call-completed",
   toolCallId: "tool-1",
   result: {
     isSuccess: true,
     content: "Search results...",
+    receivedAt: Date.now(),
   },
+  timestamp: Date.now(),
 });
 ```
 

@@ -4,7 +4,6 @@
 
 import type { AgentState } from "@moora/agent-core-state-machine";
 import type { AgentEffect } from "../types";
-import { hasPendingUserMessage } from "./message-selectors";
 
 /**
  * @internal
@@ -67,7 +66,7 @@ const createCallLlmEffects = (
   state: AgentState,
   reActContext: ReActContext
 ): Record<string, AgentEffect> => {
-  if (!hasPendingUserMessage(state.messages)) {
+  if (!hasPendingSignal(state)) {
     return {};
   }
 
@@ -109,5 +108,40 @@ const createCallToolEffects = (
   }
 
   return effects;
+};
+
+/**
+ * 判断是否存在需要 LLM 处理的新信号
+ *
+ * @internal
+ */
+const hasPendingSignal = (state: AgentState): boolean => {
+  const latestUserMessageAt = getLatestUserMessageTimestamp(state);
+  if (latestUserMessageAt > state.calledLlmAt) {
+    return true;
+  }
+
+  const latestToolResultAt = getLatestToolCallResultTimestamp(state);
+  return latestToolResultAt > state.calledLlmAt;
+};
+
+const getLatestUserMessageTimestamp = (state: AgentState): number => {
+  for (let index = state.messages.length - 1; index >= 0; index -= 1) {
+    const message = state.messages[index];
+    if (message && message.role === "user") {
+      return message.receivedAt;
+    }
+  }
+  return 0;
+};
+
+const getLatestToolCallResultTimestamp = (state: AgentState): number => {
+  let latest = 0;
+  for (const record of Object.values(state.toolCalls)) {
+    if (record && record.result) {
+      latest = Math.max(latest, record.result.receivedAt);
+    }
+  }
+  return latest;
 };
 

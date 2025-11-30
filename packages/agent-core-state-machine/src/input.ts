@@ -3,7 +3,10 @@
 // ============================================================================
 
 import { z } from "zod";
-import { toolCallResultSchema } from "./state";
+import {
+  toolCallRequestSchema,
+  toolCallResultSchema,
+} from "./state";
 
 /**
  * 基础 Agent 输入类型
@@ -91,35 +94,6 @@ export const llmMessageCompletedSchema = baseAgentInputSchema.extend({
 export type LlmMessageCompleted = z.infer<typeof llmMessageCompletedSchema>;
 
 /**
- * Tool Call 开始
- *
- * 当开始调用外部工具时触发。
- */
-export const toolCallStartedSchema = baseAgentInputSchema.extend({
-  /**
-   * 输入类型标识
-   */
-  type: z.literal("tool-call-started"),
-
-  /**
-   * Tool Call ID
-   */
-  toolCallId: z.string(),
-
-  /**
-   * 工具名称
-   */
-  name: z.string(),
-
-  /**
-   * 参数（序列化为 string）
-   */
-  parameters: z.string(),
-});
-
-export type ToolCallStarted = z.infer<typeof toolCallStartedSchema>;
-
-/**
  * Tool Call 完成
  *
  * 当外部工具调用完成时触发。
@@ -144,6 +118,58 @@ export const toolCallCompletedSchema = baseAgentInputSchema.extend({
 });
 
 export type ToolCallCompleted = z.infer<typeof toolCallCompletedSchema>;
+
+/**
+ * ReAct Loop 观察到的新结果
+ *
+ * 当 call-llm Effect 完成时触发，用于标记当前 ReAct Loop 的状态。
+ */
+const reActObservedContinueSchema = z.object({
+  /**
+   * 观察类型
+   */
+  type: z.literal("continue-re-act"),
+
+  /**
+   * 需要发起的 Tool Call 列表
+   */
+  toolCalls: z.record(z.string(), toolCallRequestSchema).readonly(),
+});
+
+const reActObservedCompleteSchema = z.object({
+  /**
+   * 观察类型
+   */
+  type: z.literal("complete-re-act"),
+});
+
+export const reActObservationSchema = z.discriminatedUnion("type", [
+  reActObservedContinueSchema,
+  reActObservedCompleteSchema,
+]);
+
+export type ReActObservation = z.infer<typeof reActObservationSchema>;
+
+export const reActObservedSchema = baseAgentInputSchema.extend({
+  /**
+   * 输入类型标识
+   */
+  type: z.literal("re-act-observed"),
+
+  /**
+   * call-llm 开始时间戳
+   *
+   * 用于表示这次 ReAct 观察对应的 LLM 调用何时开始。
+   */
+  calledLlmAt: z.number(),
+
+  /**
+   * 当前 ReAct Loop 观察结果
+   */
+  observation: reActObservationSchema,
+});
+
+export type ReActObserved = z.infer<typeof reActObservedSchema>;
 
 /**
  * 上下文窗口已扩展
@@ -190,8 +216,8 @@ export const agentInputSchema = z.discriminatedUnion("type", [
   userMessageReceivedSchema,
   llmMessageStartedSchema,
   llmMessageCompletedSchema,
-  toolCallStartedSchema,
   toolCallCompletedSchema,
+  reActObservedSchema,
   contextWindowExpandedSchema,
   historyToolCallsAddedSchema,
 ]);

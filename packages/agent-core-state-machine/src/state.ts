@@ -87,29 +87,41 @@ export const toolCallResultSchema = z.discriminatedUnion("isSuccess", [
 export type ToolCallResult = z.infer<typeof toolCallResultSchema>;
 
 /**
+ * Tool Call 请求
+ *
+ * 包含一次 Tool Call 发起所需的基础信息。
+ */
+const toolCallRequestShape = {
+  /**
+   * 工具名称
+   */
+  name: z.string(),
+
+  /**
+   * 参数（序列化为 string）
+   */
+  parameters: z.string(),
+
+  /**
+   * 调用时间戳（Unix 时间戳，毫秒）
+   */
+  calledAt: z.number(),
+} as const;
+
+export const toolCallRequestSchema = z
+  .object(toolCallRequestShape)
+  .readonly();
+
+export type ToolCallRequest = z.infer<typeof toolCallRequestSchema>;
+
+/**
  * Tool Call 记录
  *
  * 记录一次外部工具调用的完整信息。
  */
 export const toolCallRecordSchema = z
   .object({
-    /**
-     * 工具名称
-     */
-    name: z.string(),
-
-    /**
-     * 参数（序列化为 string）
-     */
-    parameters: z.string(),
-
-    /**
-     * 调用时间戳（Unix 时间戳，毫秒）
-     *
-     * 表示开始调用工具的时间。
-     */
-    calledAt: z.number(),
-
+    ...toolCallRequestShape,
     /**
      * 调用结果
      * - 成功：包含结果内容
@@ -193,6 +205,13 @@ export const agentStateSchema = z
      * 包含所有外部工具调用的历史记录
      */
     toolCalls: z.record(z.string(), toolCallRecordSchema).readonly(),
+
+    /**
+     * 最近一次调用 LLM 的时间戳
+     *
+     * 表示最近一次 ReAct 观察完成的时间，用于判断是否需要再次调用 LLM。
+     */
+    calledLlmAt: z.number(),
 
     /**
      * 当前 ReAct Loop 上下文

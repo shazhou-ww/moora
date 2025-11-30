@@ -2,7 +2,11 @@
 // Agent Core Fastify 类型定义
 // ============================================================================
 
-import type { AgentInput, AgentState } from "@moora/agent-core-state-machine";
+import type {
+  AgentInput,
+  AgentState,
+  ReActObservation,
+} from "@moora/agent-core-state-machine";
 import type { MoorexNode } from "@moora/moorex-fastify";
 
 // ============================================================================
@@ -43,6 +47,27 @@ export type CallToolEffect = {
  */
 export type AgentEffect = CallLlmEffect | CallToolEffect;
 
+type ContinueReActObservation = Extract<
+  ReActObservation,
+  { type: "continue-re-act" }
+>;
+
+type CompleteReActObservation = Extract<
+  ReActObservation,
+  { type: "complete-re-act" }
+>;
+
+export type CallLlmContinueResult = {
+  observation: ContinueReActObservation;
+};
+
+export type CallLlmCompleteResult = {
+  observation: CompleteReActObservation;
+  response: string;
+};
+
+export type CallLlmResult = CallLlmContinueResult | CallLlmCompleteResult;
+
 /**
  * LLM 调用函数类型
  */
@@ -51,7 +76,7 @@ export type CallLlmFn = (options: {
   messages: AgentState["messages"];
   toolCalls: AgentState["toolCalls"];
   tools: AgentState["tools"];
-}) => Promise<string>;
+}) => Promise<CallLlmResult>;
 
 /**
  * Tool 定义

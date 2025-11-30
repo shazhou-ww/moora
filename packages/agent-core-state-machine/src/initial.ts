@@ -42,6 +42,7 @@ export function initializeAgentState(options?: {
     messages: [],
     tools: options?.tools ?? {},
     toolCalls: {},
+    calledLlmAt: 0,
     reActContext: null,
   };
 }

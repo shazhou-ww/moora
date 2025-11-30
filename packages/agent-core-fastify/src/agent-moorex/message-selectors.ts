@@ -5,17 +5,6 @@
 import type { AgentState } from "@moora/agent-core-state-machine";
 
 /**
- * 判断是否存在待响应的用户消息
- *
- * @internal
- * @param messages - Agent 历史消息
- * @returns 是否存在尚未收到助手响应的最新用户消息
- */
-export const hasPendingUserMessage = (
-  messages: AgentState["messages"]
-): boolean => findPendingUserMessageIndex(messages) !== -1;
-
-/**
  * 找到需要响应的最新用户消息索引
  *
  * @internal
