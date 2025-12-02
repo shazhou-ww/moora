@@ -56,6 +56,7 @@
 - ✅ **用户确认后才能继续**：只有在用户明确表示"继续"、"下一步"或类似指令后，才能继续下一个步骤
 - 📋 **保持检查清单更新**：每完成一步，立即更新检查清单状态
 - 🔍 **展示关键输出**：每步完成后，清晰展示该步骤的关键输出和决策
+- ✅ **类型和 Lint 检查**：**每完成一个步骤后，必须使用 `read_lints` 工具验证是否有 TypeScript 类型错误或 Lint 错误，确保代码质量**
 
 ## 步骤详解
 
@@ -83,9 +84,10 @@ type Participants = typeof USER | typeof AGENT | typeof TOOLKIT;
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 1 为完成
-2. **暂停执行**，向用户展示识别的节点列表和职责描述
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 2
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 1 为完成
+3. **暂停执行**，向用户展示识别的节点列表和职责描述
+4. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 2
 
 ### 步骤 2：理 I/O
 
@@ -110,71 +112,19 @@ type Participants = typeof USER | typeof AGENT | typeof TOOLKIT;
 ```typescript
 import { z } from "zod";
 
-// User 节点的 I/O Schema
-const inputForUserSchema = z.object({
-  messages: z.array(z.object({
-    id: z.string(),
-    content: z.string(),
-    role: z.enum(["user", "assistant"]),
-  })),
-});
-
-const outputFromUserSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("sendMessage"),
-    message: z.string(),
-  }),
-  z.object({
-    type: z.literal("cancelStreaming"),
-    messageId: z.string(),
-  }),
-]);
-
+// 为每个 Participant 定义 InputFor 和 OutputFrom 的 Zod Schema
+// InputForUser: UI State（如 messages 列表）
+const inputForUserSchema = z.object({ /* ... */ });
 type InputForUser = z.infer<typeof inputForUserSchema>;
+
+// OutputFromUser: User Actions（如 sendMessage, cancelStreaming）
+const outputFromUserSchema = z.discriminatedUnion("type", [ /* ... */ ]);
 type OutputFromUser = z.infer<typeof outputFromUserSchema>;
 
-// Agent 节点的 I/O Schema
-const inputForAgentSchema = z.object({
-  userMessages: z.array(z.string()),
-  toolResults: z.array(z.object({
-    toolName: z.string(),
-    result: z.string(),
-  })),
-});
+// 类似地为其他 Participant 定义 I/O Schema
+// InputForAgent, OutputFromAgent, InputForToolkit, OutputFromToolkit...
 
-const outputFromAgentSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("callTool"),
-    toolName: z.string(),
-    args: z.record(z.unknown()),
-  }),
-  z.object({
-    type: z.literal("sendMessage"),
-    message: z.string(),
-  }),
-]);
-
-type InputForAgent = z.infer<typeof inputForAgentSchema>;
-type OutputFromAgent = z.infer<typeof outputFromAgentSchema>;
-
-// Toolkit 节点的 I/O Schema（示例）
-const inputForToolkitSchema = z.object({
-  pendingToolCalls: z.array(z.object({
-    toolName: z.string(),
-    args: z.record(z.unknown()),
-  })),
-});
-
-const outputFromToolkitSchema = z.object({
-  type: z.literal("toolResult"),
-  toolName: z.string(),
-  result: z.string(),
-});
-
-type InputForToolkit = z.infer<typeof inputForToolkitSchema>;
-type OutputFromToolkit = z.infer<typeof outputFromToolkitSchema>;
-
-// 工具类型
+// 工具类型：根据 Participant 类型推导对应的 Input/Output
 type InputFor<P extends Participants> = 
   P extends typeof USER ? InputForUser :
   P extends typeof AGENT ? InputForAgent :
@@ -186,16 +136,13 @@ type OutputFrom<P extends Participants> =
   P extends typeof AGENT ? OutputFromAgent :
   P extends typeof TOOLKIT ? OutputFromToolkit :
   never;
-
-type RunEffectFn<P extends Participants> = (
-  input: InputFor<P>
-) => Promise<OutputFrom<P>>;
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 2 为完成
-2. **暂停执行**，向用户展示所有节点的 I/O 类型定义
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 3
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 2 为完成
+3. **暂停执行**，向用户展示所有节点的 I/O 类型定义
+4. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 3
 
 ### 步骤 3：识别单向数据流
 
@@ -250,9 +197,10 @@ type Channel =
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 3 为完成
-2. **暂停执行**，向用户展示拓扑结构图和边的列表
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 4
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 3 为完成
+3. **暂停执行**，向用户展示拓扑结构图和边的列表
+4. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 4
 
 ### 步骤 4：聚焦通道关注点
 
@@ -272,70 +220,44 @@ type Channel =
 **示例**：
 ```typescript
 import { z } from "zod";
-import { create } from "mutative";
 
-// Channel USER -> AGENT 的 State Schema
+// 为每条 Channel 定义 State Schema（表示 Target 节点对 Source 节点状态的关注点）
 const stateUserAgentSchema = z.object({
   latestUserMessage: z.string(),
-  messageHistory: z.array(z.object({
-    id: z.string(),
-    content: z.string(),
-    timestamp: z.number(),
-  })),
+  messageHistory: z.array(/* ... */),
 });
-
 type StateUserAgent = z.infer<typeof stateUserAgentSchema>;
 
-// transition 函数：State 随 User 的 Output 变化
+const stateAgentToolkitSchema = z.object({
+  pendingToolCalls: z.array(/* ... */),
+});
+type StateAgentToolkit = z.infer<typeof stateAgentToolkitSchema>;
+
+// 为每条 Channel 定义 transition 函数（纯函数）
+// transition 函数描述 State 如何随 Source 节点的 Output 变化
 const transitionUserAgent = (
   output: OutputFromUser,
   state: StateUserAgent
 ): StateUserAgent => {
-  if (output.type === "sendMessage") {
-    return create(state, (draft) => {
-      draft.latestUserMessage = output.message;
-      draft.messageHistory.push({
-        id: crypto.randomUUID(),
-        content: output.message,
-        timestamp: Date.now(),
-      });
-    });
-  }
-  return state;
+  // 根据 output 的类型，使用 mutative 的 create() 进行不可变更新
+  // 例如：如果 output.type === "sendMessage"，更新 latestUserMessage 和 messageHistory
+  // 返回新的 State
 };
-
-// Channel AGENT -> TOOLKIT 的 State Schema
-const stateAgentToolkitSchema = z.object({
-  pendingToolCalls: z.array(z.object({
-    id: z.string(),
-    toolName: z.string(),
-    args: z.record(z.unknown()),
-  })),
-});
-
-type StateAgentToolkit = z.infer<typeof stateAgentToolkitSchema>;
 
 const transitionAgentToolkit = (
   output: OutputFromAgent,
   state: StateAgentToolkit
 ): StateAgentToolkit => {
-  if (output.type === "callTool") {
-    return create(state, (draft) => {
-      draft.pendingToolCalls.push({
-        id: crypto.randomUUID(),
-        toolName: output.toolName,
-        args: output.args,
-      });
-    });
-  }
-  return state;
+  // 根据 output 的类型更新对应的 State
+  // 例如：如果 output.type === "callTool"，添加到 pendingToolCalls
 };
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 4 为完成
-2. **暂停执行**，向用户展示每条边的 Observation 类型定义和关注点映射表
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 5
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 4 为完成
+3. **暂停执行**，向用户展示每条边的 Observation 类型定义和关注点映射表
+4. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 5
 
 ### 步骤 5：节点状态推着走
 
@@ -356,105 +278,62 @@ const transitionAgentToolkit = (
 ```typescript
 import type { Dispatch, EffectController } from "@moora/moorex";
 
-// User 节点的 Effect（极简，只包含必要信息）
+// 为每个 Participant 定义极简的 Effect 类型
+// Effect 只包含无法从状态中获取的信息
 type EffectOfUser = {
   kind: "updateUI";
   // 不需要包含 messages，因为可以从 state 中获取
 };
 
-// User 节点的 effectsAt：根据观察决定是否更新 UI
-const effectsAtForUser = (
-  state: StateUserAgent // 从 Channel USER -> AGENT 的 State 推导
-): EffectOfUser | null => {
-  // 如果有新消息，返回更新 UI 的 Effect
-  if (state.latestUserMessage) {
-    return { kind: "updateUI" };
-  }
-  return null;
-};
-
-// User 节点的 runEffect：调用 UI render callback
-const runEffectForUser = (
-  effect: EffectOfUser,
-  state: StateUserAgent,
-  dispatch: Dispatch<OutputFromUser>
-): EffectController<OutputFromUser> => {
-  return {
-    start: async () => {
-      // 调用 UI render callback，传递 state 和 dispatch
-      renderUI(state, dispatch);
-    },
-    cancel: () => {
-      // 清理 UI 资源
-    },
-  };
-};
-
-// Agent 节点的 Effect（极简）
 type EffectOfAgent = {
   kind: "callLLM" | "callTool";
   // 不需要包含完整的 context，因为可以从 state 中获取
 };
 
-// Agent 节点的 effectsAt
-const effectsAtForAgent = (
-  stateUserAgent: StateUserAgent, // 从 Channel USER -> AGENT 的 State
-  stateToolkitAgent: StateToolkitAgent // 从 Channel TOOLKIT -> AGENT 的 State
-): EffectOfAgent | null => {
-  // 如果有新的用户消息，调用 LLM
-  if (stateUserAgent.latestUserMessage) {
-    return { kind: "callLLM" };
-  }
-  // 如果有工具调用结果，继续处理
-  if (stateToolkitAgent.toolResults.length > 0) {
-    return { kind: "callLLM" };
-  }
-  return null;
+// effectsAt 函数：根据节点的"综合观察"（所有入边 Channel 的 State）推导出要触发的 Effect
+const effectsAtForUser = (
+  state: StateUserAgent
+): EffectOfUser | null => {
+  // 根据 state 判断是否需要触发 Effect
+  // 例如：如果有新消息，返回 { kind: "updateUI" }
+  // 否则返回 null
 };
 
-// Agent 节点的 runEffect：调用 LLM API
+const effectsAtForAgent = (
+  stateUserAgent: StateUserAgent,
+  stateToolkitAgent: StateToolkitAgent
+): EffectOfAgent | null => {
+  // 综合多个 Channel State，判断需要触发的 Effect
+  // 例如：如果有新的用户消息或工具调用结果，返回 { kind: "callLLM" }
+};
+
+// runEffect 函数：执行副作用，调用对应的异步 Actor
+const runEffectForUser = (
+  effect: EffectOfUser,
+  state: StateUserAgent,
+  dispatch: Dispatch<OutputFromUser>
+): EffectController<OutputFromUser> => {
+  // 返回 EffectController，包含 start 和 cancel 方法
+  // start: 调用 UI render callback，传递 state 和 dispatch
+  // cancel: 清理 UI 资源
+};
+
 const runEffectForAgent = (
   effect: EffectOfAgent,
   stateUserAgent: StateUserAgent,
   stateToolkitAgent: StateToolkitAgent,
   dispatch: Dispatch<OutputFromAgent>
 ): EffectController<OutputFromAgent> => {
-  return {
-    start: async () => {
-      // 从 state 中获取完整信息
-      const context = {
-        userMessages: stateUserAgent.messageHistory,
-        toolResults: stateToolkitAgent.toolResults,
-      };
-      
-      // 调用 LLM API
-      const response = await callLLM(context);
-      
-      // 根据响应 dispatch 相应的 Output
-      if (response.requiresToolCall) {
-        dispatch({
-          type: "callTool",
-          toolName: response.toolName,
-          args: response.args,
-        });
-      } else {
-        dispatch({
-          type: "sendMessage",
-          message: response.message,
-        });
-      }
-    },
-    cancel: () => {
-      // 取消 LLM 调用
-    },
-  };
+  // start: 从 state 中获取完整信息，调用 LLM API，根据响应 dispatch 相应的 Output
+  // cancel: 取消 LLM 调用
 };
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 5 为完成
-2. **暂停执行**，向用户展示每个节点的 Observation/State/Signal/Effect 类型定义和函数实现
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 6
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 5 为完成
+3. **暂停执行**，向用户展示每个节点的 Observation/State/Signal/Effect 类型定义和函数实现
+4. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 6
 
 ### 步骤 6：最后统合去冗余
 
@@ -467,29 +346,55 @@ const runEffectForAgent = (
 - Effect 是各个 Participant Effect 的 union
 - 定义从全局 State 推导每个 Channel State 的函数
 - 统合所有 transition、effectsAt、runEffect 函数
+- **重要**：统合后的 `initial`、`transition`、`effectsAt`、`runEffect` 函数必须符合 `@moora/moorex` 的 `MoorexDefinition<Input, Effect, State>` 类型定义：
+  ```typescript
+  type MoorexDefinition<Input, Effect, State> = {
+    /** 初始化函数，返回初始状态 */
+    initial: () => State;
+    /** 
+     * 状态转换函数。
+     * 接收一个 Immutable 信号，返回一个函数，该函数接收 Immutable 状态并返回新的 Immutable 状态。
+     */
+    transition: (input: Input) => (state: State) => State;
+    /** 
+     * 根据当前状态计算应该运行的 effects。
+     * 接收 Immutable 状态，返回 Effect Record，key 作为 Effect 的标识用于 reconciliation。
+     */
+    effectsAt: (state: State) => Record<string, Effect>;
+    /** 
+     * 运行一个 effect。
+     * 接收 Immutable effect、Immutable state 和 effect 的 key，返回一个初始化器，包含 `start` 和 `cancel` 方法。
+     */
+    runEffect: (
+      effect: Effect,
+      state: State,
+      key: string,
+    ) => EffectController<Input>;
+  };
+  ```
+- **重要**：`runEffect` 函数往往需要注入依赖（如 LLM client、tool executor、UI render callback 等），这些依赖应该通过柯里化的方式传入。定义 `makeRunEffectForXxx` 函数，接收一个 options 对象，返回符合 `MoorexDefinition` 要求的 `runEffect` 函数
 
 **输出**：
 - 统一的 `State` 类型（所有 Channel State 的合并）
 - 统一的 `Signal` 类型（各个 Participant Output 的 union）
 - 统一的 `Effect` 类型（各个 Participant Effect 的 union）
-- `initial` 函数：返回初始 State
-- `transition` 函数：处理 Signal，更新 State
-- `effectsAt` 函数：从 State 推导 Effect
-- `runEffect` 函数：执行 Effect
+- `initial` 函数：返回初始 State（符合 `() => State` 类型）
+- `transition` 函数：处理 Signal，更新 State（符合 `(input: Signal) => (state: State) => State` 类型）
+- `effectsAt` 函数：从 State 推导 Effect（符合 `(state: State) => Record<string, Effect>` 类型）
+- `makeRunEffect` 函数：柯里化函数，接收 options，返回 `runEffect` 函数（符合 `(effect: Effect, state: State, key: string) => EffectController<Signal>` 类型）
 - 从 State 推导每个 Channel State 的函数：`getStateForChannel<C extends Channel>(state: State): StateForChannel<C>`
 
 **示例**：
 ```typescript
+import type { MoorexDefinition, EffectController } from "@moora/moorex";
+
 // 统合后的全局 State（所有 Channel State 的合并）
 type State = {
-  // Channel USER -> AGENT 的 State
   userAgent: StateUserAgent;
-  // Channel AGENT -> TOOLKIT 的 State
   agentToolkit: StateAgentToolkit;
-  // Channel TOOLKIT -> AGENT 的 State
   toolkitAgent: StateToolkitAgent;
-  // Channel AGENT -> USER 的 State
   agentUser: StateAgentUser;
+  // ... 其他 Channel State
 };
 
 // Signal 是各个 Participant Output 的 union
@@ -503,125 +408,67 @@ const getStateForChannel = <C extends Channel>(
   state: State,
   channel: C
 ): StateForChannel<C> => {
-  if (channel === Channel_USER_AGENT) {
-    return state.userAgent as StateForChannel<C>;
-  }
-  if (channel === Channel_AGENT_TOOLKIT) {
-    return state.agentToolkit as StateForChannel<C>;
-  }
-  if (channel === Channel_TOOLKIT_AGENT) {
-    return state.toolkitAgent as StateForChannel<C>;
-  }
-  if (channel === Channel_AGENT_USER) {
-    return state.agentUser as StateForChannel<C>;
-  }
-  throw new Error(`Unknown channel: ${channel}`);
+  // 根据 channel 返回对应的 State 字段
 };
 
-// initial 函数
-const initial = (): State => ({
-  userAgent: {
-    latestUserMessage: "",
-    messageHistory: [],
-  },
-  agentToolkit: {
-    pendingToolCalls: [],
-  },
-  toolkitAgent: {
-    toolResults: [],
-  },
-  agentUser: {
-    latestAgentMessage: "",
-    messageHistory: [],
-  },
-});
-
-// transition 函数：根据 Signal 的来源，更新对应的 Channel State
-const transition = (signal: Signal, state: State): State => {
-  if (signal.type === "sendMessage" && "message" in signal) {
-    // 来自 User 的 Output，更新 USER -> AGENT Channel State
-    return create(state, (draft) => {
-      draft.userAgent = transitionUserAgent(
-        signal as OutputFromUser,
-        state.userAgent
-      );
-    });
-  }
-  if (signal.type === "callTool" || (signal.type === "sendMessage" && "toolName" in signal)) {
-    // 来自 Agent 的 Output，更新对应的 Channel State
-    return create(state, (draft) => {
-      if (signal.type === "callTool") {
-        draft.agentToolkit = transitionAgentToolkit(
-          signal as OutputFromAgent,
-          state.agentToolkit
-        );
-      } else {
-        draft.agentUser = transitionAgentUser(
-          signal as OutputFromAgent,
-          state.agentUser
-        );
-      }
-    });
-  }
-  // ... 处理其他 Signal
-  return state;
+// initial 函数：返回初始 State（符合 () => State 类型）
+const initial = (): State => {
+  // 返回所有 Channel State 的初始值
 };
 
-// effectsAt 函数：综合所有节点的 effectsAt 逻辑
+// transition 函数：处理 Signal，更新 State
+// 必须符合 (input: Signal) => (state: State) => State 类型（柯里化形式）
+const transition = (signal: Signal) => (state: State): State => {
+  // 根据 signal 的类型和来源，调用对应的 Channel transition 函数
+  // 使用 mutative 的 create() 进行不可变更新
+  // 例如：如果 signal 来自 User，调用 transitionUserAgent 更新 userAgent
+};
+
+// effectsAt 函数：从 State 推导 Effect（符合 (state: State) => Record<string, Effect> 类型）
 const effectsAt = (state: State): Record<string, Effect> => {
-  const effects: Record<string, Effect> = {};
-  
-  // User 节点的 effectsAt
-  const userEffect = effectsAtForUser(state.userAgent);
-  if (userEffect) {
-    effects["user"] = userEffect;
-  }
-  
-  // Agent 节点的 effectsAt
-  const agentEffect = effectsAtForAgent(state.userAgent, state.toolkitAgent);
-  if (agentEffect) {
-    effects["agent"] = agentEffect;
-  }
-  
-  // ... 其他节点的 effectsAt
-  
-  return effects;
+  // 调用各个节点的 effectsAtFor<P> 函数
+  // 收集所有非 null 的 Effect，以节点名作为 key
+  // 返回 Effect Record
 };
 
-// runEffect 函数：根据 Effect 的类型，调用对应的 runEffect
-const runEffect = (
-  effect: Effect,
-  state: State,
-  key: string
-): EffectController<Signal> => {
-  if (effect.kind === "updateUI") {
-    return runEffectForUser(
-      effect as EffectOfUser,
-      state.userAgent,
-      (signal) => {
-        // dispatch Signal
-      }
-    );
-  }
-  if (effect.kind === "callLLM" || effect.kind === "callTool") {
-    return runEffectForAgent(
-      effect as EffectOfAgent,
-      state.userAgent,
-      state.toolkitAgent,
-      (signal) => {
-        // dispatch Signal
-      }
-    );
-  }
-  // ... 处理其他 Effect
-  throw new Error(`Unknown effect: ${effect}`);
+// runEffect 的 options 类型定义（包含所有需要的依赖）
+type MakeRunEffectOptions = {
+  renderUI: (state: StateUserAgent, dispatch: Dispatch<OutputFromUser>) => void;
+  llmClient: { call: (context: LLMContext) => Promise<LLMResponse> };
+  toolExecutor: { execute: (toolName: string, args: Record<string, unknown>) => Promise<string> };
+  // ... 其他依赖
+};
+
+// makeRunEffect 函数：柯里化函数，接收 options，返回 runEffect 函数
+// 返回的函数必须符合 (effect: Effect, state: State, key: string) => EffectController<Signal> 类型
+const makeRunEffect = (
+  options: MakeRunEffectOptions
+): ((effect: Effect, state: State, key: string) => EffectController<Signal>) => {
+  // 从 options 中解构依赖（renderUI, llmClient, toolExecutor 等）
+  
+  // 返回 runEffect 函数
+  return (effect: Effect, state: State, key: string): EffectController<Signal> => {
+    // 根据 effect.kind 判断类型
+    // 调用对应的 runEffectFor<P> 函数，传递必要的 state 和 dispatch
+    // 返回 EffectController，包含 start 和 cancel 方法
+  };
+};
+
+// 类型验证：确保统合后的函数符合 MoorexDefinition 类型
+const _typeCheck: MoorexDefinition<Signal, Effect, State> = {
+  initial,
+  transition,
+  effectsAt,
+  runEffect: makeRunEffect({ /* 占位 options */ }),
 };
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 6 为完成
-2. **暂停执行**，向用户展示统合后的全局类型定义和函数实现
-3. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 7
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. **验证类型兼容性**：确保统合后的 `initial`、`transition`、`effectsAt`、`makeRunEffect` 返回的 `runEffect` 函数符合 `MoorexDefinition<Signal, Effect, State>` 类型定义。可以使用类型断言或直接赋值给 `MoorexDefinition` 类型的变量来验证
+3. 更新检查清单，标记步骤 6 为完成
+4. **暂停执行**，向用户展示统合后的全局类型定义和函数实现
+5. **等待用户审查和确认**，只有在用户明确确认后才能继续步骤 7
 
 ### 步骤 7：精巧模型便在手
 
@@ -648,110 +495,43 @@ import { createMoorex } from "@moora/moorex";
 import type { Moorex } from "@moora/moorex";
 
 type CreateXxxMoorexOptions = {
-  // UI render callback
   renderUI: (state: StateUserAgent, dispatch: Dispatch<OutputFromUser>) => void;
-  // LLM API client
-  llmClient: {
-    call: (context: LLMContext) => Promise<LLMResponse>;
-  };
-  // Tool executor
-  toolExecutor: {
-    execute: (toolName: string, args: Record<string, unknown>) => Promise<string>;
-  };
-  // 可选的初始状态（用于恢复）
-  initialState?: State;
+  llmClient: { call: (context: LLMContext) => Promise<LLMResponse> };
+  toolExecutor: { execute: (toolName: string, args: Record<string, unknown>) => Promise<string> };
+  initialState?: State; // 可选的初始状态（用于恢复）
 };
 
 export function createXxxMoorex(
   options: CreateXxxMoorexOptions
 ): Moorex<Signal, Effect, State> {
-  const { renderUI, llmClient, toolExecutor, initialState } = options;
+  // 使用 makeRunEffect 创建带依赖注入的 runEffect 函数
+  const runEffect = makeRunEffect({
+    renderUI: options.renderUI,
+    llmClient: options.llmClient,
+    toolExecutor: options.toolExecutor,
+  });
   
-  // 创建带上下文的 runEffect 函数
-  const runEffectWithContext = (
-    effect: Effect,
-    state: State,
-    key: string
-  ): EffectController<Signal> => {
-    if (effect.kind === "updateUI") {
-      return runEffectForUser(
-        effect as EffectOfUser,
-        state.userAgent,
-        (signal) => {
-          // dispatch Signal
-        }
-      );
-    }
-    if (effect.kind === "callLLM") {
-      return {
-        start: async (dispatch) => {
-          const context = {
-            userMessages: state.userAgent.messageHistory,
-            toolResults: state.toolkitAgent.toolResults,
-          };
-          const response = await llmClient.call(context);
-          // dispatch response
-        },
-        cancel: () => {},
-      };
-    }
-    if (effect.kind === "callTool") {
-      return {
-        start: async (dispatch) => {
-          const toolCall = state.agentToolkit.pendingToolCalls[0];
-          const result = await toolExecutor.execute(
-            toolCall.toolName,
-            toolCall.args
-          );
-          dispatch({
-            type: "toolResult",
-            toolName: toolCall.toolName,
-            result,
-          });
-        },
-        cancel: () => {},
-      };
-    }
-    throw new Error(`Unknown effect: ${effect}`);
-  };
-  
-  return createMoorex({
-    initial: initialState ? () => initialState : initial,
+  // 创建 Moorex 定义
+  const definition: MoorexDefinition<Signal, Effect, State> = {
+    initial: options.initialState ? () => options.initialState! : initial,
     transition,
     effectsAt,
-    runEffect: runEffectWithContext,
-  });
+    runEffect,
+  };
+  
+  // 返回 Moorex 实例
+  return createMoorex(definition);
 }
 
-// 使用示例
-const moorex = createXxxMoorex({
-  renderUI: (state, dispatch) => {
-    // 渲染 UI
-  },
-  llmClient: {
-    call: async (context) => {
-      // 调用 LLM API
-    },
-  },
-  toolExecutor: {
-    execute: async (toolName, args) => {
-      // 执行工具
-    },
-  },
-});
-
-// 状态机可以序列化和恢复
-const serializedState = JSON.stringify(moorex.current());
-const restoredMoorex = createXxxMoorex({
-  ...options,
-  initialState: JSON.parse(serializedState),
-});
+// 使用示例：创建 Moorex 实例，传递必要的依赖
+// 状态机可以序列化（moorex.current()）和恢复（通过 initialState 参数）
 ```
 
 **⚠️ 完成此步骤后，必须：**
-1. 更新检查清单，标记步骤 7 为完成
-2. **暂停执行**，向用户展示完整的 Moorex 定义和可运行的 Agent 服务
-3. **等待用户最终审查和确认**
+1. 使用 `read_lints` 工具验证是否有类型错误或 Lint 错误
+2. 更新检查清单，标记步骤 7 为完成
+3. **暂停执行**，向用户展示完整的 Moorex 定义和可运行的 Agent 服务
+4. **等待用户最终审查和确认**
 
 ## 建模检查清单
 
