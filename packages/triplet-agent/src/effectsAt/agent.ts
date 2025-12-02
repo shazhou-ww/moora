@@ -2,12 +2,7 @@
 // Agent 节点的 effectsAt 函数
 // ============================================================================
 
-import type {
-  StateUserAgent,
-  StateToolkitAgent,
-  StateAgentAgent,
-} from "../types/state";
-import type { EffectOfAgent } from "../types/effects";
+import type { StateForAgent, EffectOfAgent } from "../types/effects";
 
 /**
  * Agent 节点的 effectsAt 函数
@@ -17,22 +12,46 @@ import type { EffectOfAgent } from "../types/effects";
  * - Channel_USER_AGENT: StateUserAgent
  * - Channel_TOOLKIT_AGENT: StateToolkitAgent
  * - Channel_AGENT_AGENT (loopback): StateAgentAgent
+ * - Channel_AGENT_TOOLKIT: StateAgentToolkit（用于查找 tool call 请求信息）
  * 
  * 当有新的用户消息或工具执行结果时，需要调用 LLM。
+ * 通过检查 processingHistory 来判断哪些输入已经被处理过。
  */
 export function effectsAtForAgent(
-  stateUserAgent: StateUserAgent,
-  stateToolkitAgent: StateToolkitAgent,
-  stateAgentAgent: StateAgentAgent
+  state: StateForAgent
 ): Record<string, EffectOfAgent> {
-  // 如果有新的用户消息，需要调用 LLM
-  if (stateUserAgent.userMessages.length > 0) {
+  // 收集所有已处理的用户消息 ID 和工具结果 ID
+  const processedUserMessageIds = new Set<string>();
+  const processedToolResultIds = new Set<string>();
+  
+  for (const historyItem of state.agentAgent.processingHistory) {
+    if (historyItem.processedUserMessageIds) {
+      for (const id of historyItem.processedUserMessageIds) {
+        processedUserMessageIds.add(id);
+      }
+    }
+    if (historyItem.processedToolResultIds) {
+      for (const id of historyItem.processedToolResultIds) {
+        processedToolResultIds.add(id);
+      }
+    }
+  }
+
+  // 检查是否有未处理的用户消息
+  const hasUnprocessedUserMessages = state.userAgent.userMessages.some(
+    (msg) => !processedUserMessageIds.has(msg.id)
+  );
+
+  // 检查是否有未处理的工具结果
+  const hasUnprocessedToolResults = state.toolkitAgent.toolResults.some(
+    (result) => !processedToolResultIds.has(result.toolCallId)
+  );
+
+  // 如果有未处理的输入，需要调用 LLM
+  if (hasUnprocessedUserMessages || hasUnprocessedToolResults) {
     return { agent: { kind: "callLLM" } };
   }
-  // 如果有工具执行结果，需要继续调用 LLM 处理
-  if (stateToolkitAgent.toolResults.length > 0) {
-    return { agent: { kind: "callLLM" } };
-  }
+
   return {};
 }
 

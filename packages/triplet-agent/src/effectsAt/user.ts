@@ -2,8 +2,7 @@
 // User 节点的 effectsAt 函数
 // ============================================================================
 
-import type { StateAgentUser } from "../types/state";
-import type { EffectOfUser } from "../types/effects";
+import type { StateForUser, EffectOfUser } from "../types/effects";
 
 /**
  * User 节点的 effectsAt 函数
@@ -15,7 +14,7 @@ import type { EffectOfUser } from "../types/effects";
  * 无条件返回 updateUI effect，确保 UI 始终与状态同步。
  */
 export function effectsAtForUser(
-  stateAgentUser: StateAgentUser
+  state: StateForUser
 ): Record<string, EffectOfUser> {
   // 无条件返回 updateUI effect
   return { user: { kind: "updateUI" } };

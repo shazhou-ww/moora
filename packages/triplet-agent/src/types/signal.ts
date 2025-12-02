@@ -133,10 +133,18 @@ export const outputFromAgentSchema = z.discriminatedUnion("type", [
     type: z.literal("sendChunk"),
     messageId: z.string(),
     chunk: z.string(),
+    // 记录处理了哪些用户消息 ID（用于跟踪处理进度）
+    processedUserMessageIds: z.array(z.string()).optional(),
+    // 记录处理了哪些工具结果 ID（用于跟踪处理进度）
+    processedToolResultIds: z.array(z.string()).optional(),
   }),
   z.object({
     type: z.literal("completeMessage"),
     messageId: z.string(),
+    // 记录处理了哪些用户消息 ID（用于跟踪处理进度）
+    processedUserMessageIds: z.array(z.string()).optional(),
+    // 记录处理了哪些工具结果 ID（用于跟踪处理进度）
+    processedToolResultIds: z.array(z.string()).optional(),
   }),
 ]);
 

@@ -2,11 +2,7 @@
 // Toolkit 节点的 effectsAt 函数
 // ============================================================================
 
-import type {
-  StateAgentToolkit,
-  StateToolkitToolkit,
-} from "../types/state";
-import type { EffectOfToolkit } from "../types/effects";
+import type { StateForToolkit, EffectOfToolkit } from "../types/effects";
 
 /**
  * Toolkit 节点的 effectsAt 函数
@@ -19,13 +15,12 @@ import type { EffectOfToolkit } from "../types/effects";
  * 当有待执行的工具调用时，需要执行工具。
  */
 export function effectsAtForToolkit(
-  stateAgentToolkit: StateAgentToolkit,
-  stateToolkitToolkit: StateToolkitToolkit
+  state: StateForToolkit
 ): Record<string, EffectOfToolkit> {
   const effects: Record<string, EffectOfToolkit> = {};
 
   // 为每个待执行的工具调用创建 Effect
-  for (const toolCall of stateAgentToolkit.pendingToolCalls) {
+  for (const toolCall of state.agentToolkit.pendingToolCalls) {
     effects[`tool:${toolCall.toolCallId}`] = {
       kind: "executeTool",
       toolCallId: toolCall.toolCallId,

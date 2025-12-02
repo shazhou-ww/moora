@@ -96,6 +96,14 @@ export function makeRunEffectForAgent(
         // 调用 LLM API
         const response = await options.callLLM(options.prompt, tools, messages);
 
+        // 收集处理了哪些用户消息和工具结果（用于跟踪处理进度）
+        const processedUserMessageIds = state.userAgent.userMessages.map(
+          (msg) => msg.id
+        );
+        const processedToolResultIds = state.toolkitAgent.toolResults.map(
+          (result) => result.toolCallId
+        );
+
         // 根据响应 dispatch 相应的 Output
         if (response.type === "toolCall") {
           dispatch({
@@ -107,16 +115,34 @@ export function makeRunEffectForAgent(
         } else {
           // 流式输出消息
           const messageId = response.messageId;
+          let isFirstChunk = true;
           for await (const chunk of response.chunks) {
             dispatch({
               type: "sendChunk",
               messageId,
               chunk,
+              // 只在第一个 chunk 时记录处理信息，避免重复
+              processedUserMessageIds: isFirstChunk
+                ? processedUserMessageIds
+                : undefined,
+              processedToolResultIds: isFirstChunk
+                ? processedToolResultIds
+                : undefined,
             });
+            isFirstChunk = false;
           }
           dispatch({
             type: "completeMessage",
             messageId,
+            // 如果之前没有记录，在 completeMessage 时记录
+            processedUserMessageIds:
+              processedUserMessageIds.length > 0
+                ? processedUserMessageIds
+                : undefined,
+            processedToolResultIds:
+              processedToolResultIds.length > 0
+                ? processedToolResultIds
+                : undefined,
           });
         }
       },

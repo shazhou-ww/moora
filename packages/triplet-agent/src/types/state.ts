@@ -71,11 +71,17 @@ export type ToolResult = z.infer<typeof toolResultSchema>;
 
 /**
  * Agent 处理历史项 Schema（公共类型）
+ * 
+ * 记录 Agent 处理了哪些输入（用户消息、工具结果）以及产生的输出。
  */
 export const agentProcessingHistoryItemSchema = z.object({
   type: z.enum(["callTool", "sendChunk", "completeMessage"]),
   toolCallId: z.string().optional(),
   messageId: z.string().optional(),
+  // 记录处理了哪些用户消息 ID（用于判断是否有新的未处理消息）
+  processedUserMessageIds: z.array(z.string()).optional(),
+  // 记录处理了哪些工具结果 ID（用于判断是否有新的未处理结果）
+  processedToolResultIds: z.array(z.string()).optional(),
   timestamp: z.number(),
 });
 
