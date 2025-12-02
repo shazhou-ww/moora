@@ -63,7 +63,7 @@
 │   ├── transition.ts               # 统合的 transition 函数
 │   ├── effectsAt.ts                # 统合的 effectsAt 函数
 │   ├── runEffect.ts               # 统合的 runEffect 函数（makeRunEffect）
-│   └── state-for-channel.ts        # getStateForChannel 函数
+│   └── state-for-channel.ts        # stateForXxxYyy 函数（从统合 State 推导各 Channel State）
 └── create-xxx-moorex.ts            # 工厂函数（步骤 7 创建）
 ```
 
@@ -91,7 +91,7 @@
 | 步骤 3：识别单向数据流 | `types/topology.ts` | 在步骤 1 的基础上添加 Channel 定义 |
 | 步骤 4：聚焦通道关注点 | `types/state.ts`<br>`transition/*.ts`<br>`transition/index.ts` | 定义各 Channel 的 State 类型和 transition 函数 |
 | 步骤 5：节点状态推着走 | `types/effects.ts`<br>`effectsAt/*.ts`<br>`effectsAt/index.ts`<br>`runEffect/*.ts`<br>`runEffect/index.ts` | 定义 Effect 类型、effectsAt 和 runEffect 函数 |
-| 步骤 6：最后统合去冗余 | `types/unified.ts`<br>`unified/initial.ts`<br>`unified/transition.ts`<br>`unified/effectsAt.ts`<br>`unified/runEffect.ts`<br>`unified/state-for-channel.ts` | 统合全局类型和函数 |
+| 步骤 6：最后统合去冗余 | `types/unified.ts`<br>`unified/initial.ts`<br>`unified/transition.ts`<br>`unified/effectsAt.ts`<br>`unified/runEffect.ts`<br>`unified/state-for-channel.ts` | 统合全局类型和函数，State 去重，定义 stateForXxxYyy 函数 |
 | 步骤 7：精巧模型便在手 | `create-xxx-moorex.ts` | 创建工厂函数 |
 
 ## 实施流程
@@ -544,17 +544,16 @@ import type { EffectOfUser } from "../types/effects";
  * User 节点的 effectsAt 函数
  * 
  * 根据节点的"综合观察"（所有入边 Channel 的 State）推导出要触发的 Effect。
+ * 
+ * 实现逻辑：
+ * - 根据 state 判断是否需要触发 Effect
+ * - 例如：如果有新消息，添加 { kind: "updateUI" }
+ * - 返回 Effect Record，key 作为 Effect 的标识
  */
 export function effectsAtForUser(
   stateAgentUser: StateAgentUser,
   stateUserUser: StateUserUser
-): Record<string, EffectOfUser> {
-  const effects: Record<string, EffectOfUser> = {};
-  // 根据 state 判断是否需要触发 Effect
-  // 例如：如果有新消息，添加 { kind: "updateUI" }
-  // 返回 Effect Record，key 作为 Effect 的标识
-  return effects;
-}
+): Record<string, EffectOfUser>;
 
 
 // runEffect/user.ts
@@ -571,6 +570,12 @@ import type { OutputFromUser } from "../types/signal";
  * 
  * 柯里化函数，接收 options，返回符合 MoorexDefinition 要求的 runEffect 函数。
  * 
+ * 实现逻辑：
+ * - 返回一个函数，该函数接收 effect、state 和 key
+ * - 返回 EffectController，包含 start 和 cancel 方法
+ * - start 方法中调用 UI render callback，传递 state 和 dispatch
+ * - cancel 方法中清理 UI 资源（如果需要）
+ * 
  * @param options - 包含所有需要注入的依赖
  * @returns 符合 MoorexDefinition 要求的 runEffect 函数
  */
@@ -580,23 +585,7 @@ export function makeRunEffectForUser(
   effect: EffectOfUser,
   state: StateForUser,
   key: string
-) => EffectController<OutputFromUser> {
-  return (
-    effect: EffectOfUser,
-    state: StateForUser,
-    key: string
-  ): EffectController<OutputFromUser> => {
-    return {
-      start: async (dispatch: Dispatch<OutputFromUser>) => {
-        // 调用 UI render callback，传递 state 和 dispatch
-        options.updateUI(state.agentUser, dispatch);
-      },
-      cancel: () => {
-        // 清理 UI 资源
-      },
-    };
-  };
-}
+) => EffectController<OutputFromUser>;
 
 // runEffect/agent.ts
 import type { Dispatch, EffectController } from "@moora/moorex";
@@ -612,6 +601,12 @@ import type { OutputFromAgent } from "../types/signal";
  * 
  * 柯里化函数，接收 options，返回符合 MoorexDefinition 要求的 runEffect 函数。
  * 
+ * 实现逻辑：
+ * - 返回一个函数，该函数接收 effect、state 和 key
+ * - 返回 EffectController，包含 start 和 cancel 方法
+ * - start 方法中从 state 中获取完整信息，调用 LLM API，根据响应 dispatch 相应的 Output
+ * - cancel 方法中取消 LLM 调用（如果需要）
+ * 
  * @param options - 包含所有需要注入的依赖
  * @returns 符合 MoorexDefinition 要求的 runEffect 函数
  */
@@ -621,23 +616,7 @@ export function makeRunEffectForAgent(
   effect: EffectOfAgent,
   state: StateForAgent,
   key: string
-) => EffectController<OutputFromAgent> {
-  return (
-    effect: EffectOfAgent,
-    state: StateForAgent,
-    key: string
-  ): EffectController<OutputFromAgent> => {
-    return {
-      start: async (dispatch: Dispatch<OutputFromAgent>) => {
-        // 从 state 中获取完整信息，调用 LLM API，根据响应 dispatch 相应的 Output
-        // 实现逻辑...
-      },
-      cancel: () => {
-        // 取消 LLM 调用
-      },
-    };
-  };
-}
+) => EffectController<OutputFromAgent>;
 
 // runEffect/toolkit.ts
 import type { Dispatch, EffectController } from "@moora/moorex";
@@ -653,6 +632,12 @@ import type { OutputFromToolkit } from "../types/signal";
  * 
  * 柯里化函数，接收 options，返回符合 MoorexDefinition 要求的 runEffect 函数。
  * 
+ * 实现逻辑：
+ * - 返回一个函数，该函数接收 effect、state 和 key
+ * - 返回 EffectController，包含 start 和 cancel 方法
+ * - start 方法中从 state 中获取工具调用信息，执行工具，dispatch 结果
+ * - cancel 方法中取消工具执行（如果需要）
+ * 
  * @param options - 包含所有需要注入的依赖
  * @returns 符合 MoorexDefinition 要求的 runEffect 函数
  */
@@ -662,23 +647,7 @@ export function makeRunEffectForToolkit(
   effect: EffectOfToolkit,
   state: StateForToolkit,
   key: string
-) => EffectController<OutputFromToolkit> {
-  return (
-    effect: EffectOfToolkit,
-    state: StateForToolkit,
-    key: string
-  ): EffectController<OutputFromToolkit> => {
-    return {
-      start: async (dispatch: Dispatch<OutputFromToolkit>) => {
-        // 从 state 中获取工具调用信息，执行工具，dispatch 结果
-        // 实现逻辑...
-      },
-      cancel: () => {
-        // 取消工具执行
-      },
-    };
-  };
-}
+) => EffectController<OutputFromToolkit>;
 
 // effectsAt/index.ts
 export { effectsAtForUser } from "./user";
@@ -703,10 +672,14 @@ export { makeRunEffectForToolkit } from "./toolkit";
 
 **关键点**：
 - **关键洞察**：All Observation == All State（有向图的所有入边等于所有出边）
-- 合并所有 Channel 的 State 类型，形成全局 State
+- **重要：State 去重（Dedup）**：统合 State 不是简单地把各个 Channel 的 State 打包成一个对象，而是要：
+  1. 找出所有 Channel State 中的所有字段
+  2. 识别重复的字段（相同名称和类型的字段）
+  3. 去重后构建一个新的统一 State 类型
+  4. 这个统一 State 类型应该包含所有唯一的字段，避免冗余
 - Signal 是各个 Participant 的 Output 的 union（改名为 Signal，不再是 Input）
 - Effect 是各个 Participant Effect 的 union
-- 定义从全局 State 推导每个 Channel State 的函数
+- **重要**：为各个 Channel 定义 `stateForXxxYyy` 函数，用来从统合 State 推导出对应的 Channel State
 - 统合所有 transition、effectsAt、runEffect 函数
 - **重要**：统合后的 `initial`、`transition`、`effectsAt`、`runEffect` 函数必须符合 `@moora/moorex` 的 `MoorexDefinition<Input, Effect, State>` 类型定义：
 
@@ -747,30 +720,49 @@ export { makeRunEffectForToolkit } from "./toolkit";
 - **重要**：在步骤 5 中，每个 Participant 的 runEffect 已经使用 `makeRunEffectForXxx` 模式。在步骤 6 中，`makeRunEffect` 函数需要调用这些 `makeRunEffectForXxx` 函数，并传入对应的 options 和从全局 State 提取的 `StateForXxx`
 
 **输出**：
-- 统一的 `State` 类型（所有 Channel State 的合并）
+- 统一的 `State` 类型（所有 Channel State 字段去重后的合并）
 - 统一的 `Signal` 类型（各个 Participant Output 的 union）
 - 统一的 `Effect` 类型（各个 Participant Effect 的 union）
 - `initial` 函数：返回初始 State（符合 `() => State` 类型）
 - `transition` 函数：处理 Signal，更新 State（符合 `(input: Signal) => (state: State) => State` 类型）
 - `effectsAt` 函数：从 State 推导 Effect（符合 `(state: State) => Record<string, Effect>` 类型）
 - `makeRunEffect` 函数：柯里化函数，接收 options，返回 `runEffect` 函数（符合 `(effect: Effect, state: State, key: string) => EffectController<Signal>` 类型）
-- 从 State 推导每个 Channel State 的函数：`getStateForChannel<C extends Channel>(state: State): StateForChannel<C>`
+- 从统合 State 推导每个 Channel State 的函数：`stateForUserAgent(state: State): StateUserAgent`、`stateForAgentToolkit(state: State): StateAgentToolkit` 等
 
 **示例**：
 ```typescript
 // types/unified.ts
-import type { StateUserAgent, StateAgentToolkit, /* ... */ } from "./state";
+import type { StateUserAgent, StateAgentToolkit, StateToolkitAgent, StateAgentUser, /* ... */ } from "./state";
 import type { OutputFromUser, OutputFromAgent, OutputFromToolkit } from "./signal";
 import type { EffectOfUser, EffectOfAgent, EffectOfToolkit } from "./effects";
-import type { Channel } from "./topology";
 
-// 统合后的全局 State（所有 Channel State 的合并）
+// ============================================================================
+// 统合后的全局 State（所有 Channel State 字段去重后的合并）
+// ============================================================================
+// 
+// 注意：这不是简单地把各个 Channel State 打包，而是：
+// 1. 找出所有 Channel State 中的所有字段
+// 2. 识别重复的字段（相同名称和类型的字段）
+// 3. 去重后构建一个新的统一 State 类型
+// 
+// 例如：
+// - StateUserAgent 可能有字段：{ userMessages: ... }
+// - StateAgentUser 可能有字段：{ messages: ..., streamingChunks: ... }
+// - StateAgentToolkit 可能有字段：{ pendingToolCalls: ... }
+// - StateToolkitAgent 可能有字段：{ toolResults: ... }
+// 
+// 统合后的 State 应该包含所有这些唯一字段，例如：
+// {
+//   userMessages: ...,
+//   messages: ...,
+//   streamingChunks: ...,
+//   pendingToolCalls: ...,
+//   toolResults: ...,
+//   // ... 其他唯一字段
+// }
 export type State = {
-  userAgent: StateUserAgent;
-  agentToolkit: StateAgentToolkit;
-  toolkitAgent: StateToolkitAgent;
-  agentUser: StateAgentUser;
-  // ... 其他 Channel State
+  // 列出所有去重后的字段
+  // 字段名和类型应该来自各个 Channel State 的分析
 };
 
 // Signal 是各个 Participant Output 的 union
@@ -781,56 +773,104 @@ export type Effect = EffectOfUser | EffectOfAgent | EffectOfToolkit;
 
 // unified/state-for-channel.ts
 import type { State } from "../types/unified";
-import type { Channel, ChannelUserAgent, /* ... */ } from "../types/topology";
-import type { StateUserAgent, /* ... */ } from "../types/state";
+import type {
+  StateUserAgent,
+  StateAgentToolkit,
+  StateToolkitAgent,
+  StateAgentUser,
+  StateUserUser,
+  StateAgentAgent,
+  StateToolkitToolkit,
+} from "../types/state";
 
-export type StateForChannel<C extends Channel> = 
-  C extends ChannelUserAgent ? StateUserAgent :
-  // ... 其他 Channel 类型映射
-  never;
+/**
+ * 从统合 State 推导 Channel USER -> AGENT 的 State
+ * 
+ * 实现逻辑：
+ * - 从统合 State 中提取 Channel USER -> AGENT 需要的字段
+ * - 构建并返回 StateUserAgent 类型
+ */
+export function stateForUserAgent(state: State): StateUserAgent;
 
-export function getStateForChannel<C extends Channel>(
-  state: State,
-  channel: C
-): StateForChannel<C> {
-  // 根据 channel 返回对应的 State 字段
-}
+/**
+ * 从统合 State 推导 Channel AGENT -> TOOLKIT 的 State
+ */
+export function stateForAgentToolkit(state: State): StateAgentToolkit;
+
+/**
+ * 从统合 State 推导 Channel TOOLKIT -> AGENT 的 State
+ */
+export function stateForToolkitAgent(state: State): StateToolkitAgent;
+
+/**
+ * 从统合 State 推导 Channel AGENT -> USER 的 State
+ */
+export function stateForAgentUser(state: State): StateAgentUser;
+
+/**
+ * 从统合 State 推导 Channel USER -> USER (Loopback) 的 State
+ */
+export function stateForUserUser(state: State): StateUserUser;
+
+/**
+ * 从统合 State 推导 Channel AGENT -> AGENT (Loopback) 的 State
+ */
+export function stateForAgentAgent(state: State): StateAgentAgent;
+
+/**
+ * 从统合 State 推导 Channel TOOLKIT -> TOOLKIT (Loopback) 的 State
+ */
+export function stateForToolkitToolkit(state: State): StateToolkitToolkit;
 
 // unified/initial.ts
 import type { State } from "../types/unified";
 
-export function initial(): State {
-  // 返回所有 Channel State 的初始值
-}
+/**
+ * 初始化函数
+ * 
+ * 实现逻辑：
+ * - 返回所有去重后字段的初始值
+ * - 构建符合 State 类型的初始状态对象
+ */
+export function initial(): State;
 
 // unified/transition.ts
-import { create } from "mutative";
 import type { Signal, State } from "../types/unified";
-import { transitionUserAgent, /* ... */ } from "../transition";
+import { transitionUserAgent, transitionAgentToolkit, transitionToolkitAgent, transitionAgentUser, /* ... */ } from "../transition";
+import { stateForUserAgent, stateForAgentToolkit, /* ... */ } from "./state-for-channel";
 
-export function transition(signal: Signal): (state: State) => State {
-  return (state: State): State => {
-    // 根据 signal 的类型和来源，调用对应的 Channel transition 函数
-    // 使用 mutative 的 create() 进行不可变更新
-  };
-}
+/**
+ * 统合的 transition 函数
+ * 
+ * 实现逻辑：
+ * - 根据 signal 的类型和来源，确定需要更新的 Channel
+ * - 使用对应的 stateForXxxYyy 函数从统合 State 提取 Channel State
+ * - 调用对应的 Channel transition 函数
+ * - 使用 mutative 的 create() 进行不可变更新，更新统合 State 中对应的字段
+ * - 返回更新后的统合 State
+ */
+export function transition(signal: Signal): (state: State) => State;
 
 // unified/effectsAt.ts
 import type { State, Effect } from "../types/unified";
 import { effectsAtForUser, effectsAtForAgent, effectsAtForToolkit } from "../effectsAt";
+import { stateForAgentUser, stateForUserUser, stateForUserAgent, stateForToolkitAgent, stateForAgentAgent, stateForAgentToolkit, stateForToolkitToolkit } from "./state-for-channel";
 
-export function effectsAt(state: State): Record<string, Effect> {
-  // 调用各个节点的 effectsAtFor<P> 函数
-  // 收集所有 Effect，返回 Effect Record
-}
+/**
+ * 统合的 effectsAt 函数
+ * 
+ * 实现逻辑：
+ * - 使用对应的 stateForXxxYyy 函数从统合 State 提取各个 Channel State
+ * - 调用各个节点的 effectsAtFor<P> 函数，传入对应的 Channel State
+ * - 收集所有 Effect，合并为 Effect Record（注意 key 的唯一性）
+ * - 返回 Effect Record
+ */
+export function effectsAt(state: State): Record<string, Effect>;
 
 // unified/runEffect.ts
-import type { EffectController, Dispatch } from "@moora/moorex";
+import type { EffectController } from "@moora/moorex";
 import type { Effect, Signal, State } from "../types/unified";
 import type {
-  EffectOfUser,
-  EffectOfAgent,
-  EffectOfToolkit,
   MakeRunEffectForUserOptions,
   MakeRunEffectForAgentOptions,
   MakeRunEffectForToolkitOptions,
@@ -838,11 +878,7 @@ import type {
   StateForAgent,
   StateForToolkit,
 } from "../types/effects";
-import {
-  makeRunEffectForUser,
-  makeRunEffectForAgent,
-  makeRunEffectForToolkit,
-} from "../runEffect";
+import { stateForAgentUser, stateForUserUser, stateForUserAgent, stateForToolkitAgent, stateForAgentAgent, stateForAgentToolkit, stateForToolkitToolkit } from "./state-for-channel";
 
 /**
  * makeRunEffect 函数选项
@@ -859,65 +895,20 @@ export type MakeRunEffectOptions = MakeRunEffectForUserOptions &
  * 柯里化函数，接收 options，返回符合 MoorexDefinition 要求的 runEffect 函数。
  * 根据 Effect 的类型，调用对应的 makeRunEffectForXxx 函数。
  * 
+ * 实现逻辑：
+ * - 为每个 Participant 创建对应的 makeRunEffectForXxx 函数实例，传入对应的 options
+ * - 返回一个函数，该函数接收 effect、state 和 key
+ * - 根据 effect.kind 判断类型
+ * - 使用对应的 stateForXxxYyy 函数从统合 State 提取 StateForXxx
+ * - 调用对应的 makeRunEffectForXxx 返回的函数
+ * - 返回 EffectController
+ * 
  * @param options - 包含所有需要注入的依赖
  * @returns 符合 MoorexDefinition 要求的 runEffect 函数
  */
 export function makeRunEffect(
   options: MakeRunEffectOptions
-): (effect: Effect, state: State, key: string) => EffectController<Signal> {
-  // 为每个 Participant 创建对应的 makeRunEffectForXxx 函数实例
-  const runEffectForUser = makeRunEffectForUser({
-    updateUI: options.updateUI,
-  });
-
-  const runEffectForAgent = makeRunEffectForAgent({
-    callLLM: options.callLLM,
-    prompt: options.prompt,
-    getToolNames: options.getToolNames,
-    getToolDefinitions: options.getToolDefinitions,
-  });
-
-  const runEffectForToolkit = makeRunEffectForToolkit({
-    getToolNames: options.getToolNames,
-    getToolDefinitions: options.getToolDefinitions,
-  });
-
-  return (effect: Effect, state: State, key: string): EffectController<Signal> => {
-    if (effect.kind === "updateUI") {
-      // 从全局 State 提取 StateForUser
-      const stateForUser: StateForUser = {
-        agentUser: state.agentUser,
-        userUser: state.userUser,
-      };
-      // 调用 makeRunEffectForUser 返回的函数
-      return runEffectForUser(effect as EffectOfUser, stateForUser, key);
-    }
-
-    if (effect.kind === "callLLM") {
-      // 从全局 State 提取 StateForAgent
-      const stateForAgent: StateForAgent = {
-        userAgent: state.userAgent,
-        toolkitAgent: state.toolkitAgent,
-        agentAgent: state.agentAgent,
-        agentToolkit: state.agentToolkit,
-      };
-      // 调用 makeRunEffectForAgent 返回的函数
-      return runEffectForAgent(effect as EffectOfAgent, stateForAgent, key);
-    }
-
-    if (effect.kind === "executeTool") {
-      // 从全局 State 提取 StateForToolkit
-      const stateForToolkit: StateForToolkit = {
-        agentToolkit: state.agentToolkit,
-        toolkitToolkit: state.toolkitToolkit,
-      };
-      // 调用 makeRunEffectForToolkit 返回的函数
-      return runEffectForToolkit(effect as EffectOfToolkit, stateForToolkit, key);
-    }
-
-    throw new Error(`Unknown effect kind: ${(effect as Effect).kind}`);
-  };
-}
+): (effect: Effect, state: State, key: string) => EffectController<Signal>;
 ```
 
 **⚠️ 完成此步骤后，必须：**
