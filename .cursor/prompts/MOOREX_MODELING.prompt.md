@@ -378,11 +378,13 @@ export { transitionAgentToolkit } from "./agent-toolkit";
 **关键点**：
 - **Effect 极简化**：Effect 只包含无法从状态中获取的信息，可以从状态中获取的 properties 不需要进 Effect
 - **effectsAt 函数**：根据节点的"综合观察"（所有入边 Channel 的 State）推导出要触发的 Effect
+- **重要**：`effectsAtForXxx` 函数的参数必须是 `StateForXxx` 类型，不能把其他节点的 State 带进来
+  - 定义 `StateForXxx` 类型：打包该 Participant 需要的所有 Channel State（所有入边 Channel 的 State）
+  - 函数签名：`effectsAtForXxx: (state: StateForXxx) => Record<string, EffectOfXxx>`
 - **runEffect 函数**：执行副作用，调用对应的异步 Actor，传递 State 和 dispatch 方法
 - runEffect 是带自动机状态的，可以从状态中获取的 properties 不需要进 Effect
 - **重要**：Effect 的 IO 类型（InputFor 和 OutputFrom）也定义在 effects.ts 中
 - **重要**：每个 Participant 的 runEffect 必须使用 `makeRunEffectForXxx` 模式，柯里化注入 options
-  - 定义 `StateForXxx` 类型：打包该 Participant 需要的所有 Channel State（所有入边 Channel 的 State）
   - 定义 `MakeRunEffectForXxxOptions` 类型：包含该 Participant 需要的所有依赖注入
   - 函数签名：`makeRunEffectForXxx: (options: MakeRunEffectForXxxOptions) => (effect: EffectOfXxx, state: StateForXxx, key: string) => EffectController<OutputFromXxx>`
 
@@ -403,7 +405,7 @@ export { transitionAgentToolkit } from "./agent-toolkit";
 - 每个 Participant 的 Effect 类型定义
 - 每个 Participant 的 `StateForXxx` 类型：打包该 Participant 需要的所有 Channel State
 - 每个 Participant 的 `MakeRunEffectForXxxOptions` 类型：包含该 Participant 需要的所有依赖注入
-- 每个 Participant 的 `effectsAtFor<P>` 函数：返回 Record<string, Effect>（表示要更新 UI 或触发异步操作）
+- 每个 Participant 的 `effectsAtForXxx` 函数：接收 `StateForXxx` 参数，返回 Record<string, Effect>（表示要更新 UI 或触发异步操作）
 - 每个 Participant 的 `makeRunEffectForXxx` 函数：柯里化函数，接收 options，返回符合 MoorexDefinition 要求的 runEffect 函数
 
 **示例**：
@@ -413,7 +415,6 @@ import type { Dispatch, EffectController } from "@moora/moorex";
 import type { OutputFromUser, OutputFromAgent, OutputFromToolkit } from "./signal";
 import type {
   StateAgentUser,
-  StateUserUser,
   StateUserAgent,
   StateToolkitAgent,
   StateAgentAgent,
@@ -494,10 +495,9 @@ export type UpdateUIFn = (
 // ============================================================================
 
 // User 节点的 StateForUser 类型（打包 User 需要的所有 Channel State）
-// User 的入边：Channel_AGENT_USER, Channel_USER_USER (loopback)
+// User 的入边：Channel_AGENT_USER
 export type StateForUser = {
   agentUser: StateAgentUser;
-  userUser: StateUserUser;
 };
 
 // User 节点的 MakeRunEffectForUserOptions 类型
@@ -537,7 +537,7 @@ export type MakeRunEffectForToolkitOptions = {
 };
 
 // effectsAt/user.ts
-import type { StateAgentUser, StateUserUser } from "../types/state";
+import type { StateForUser } from "../types/effects";
 import type { EffectOfUser } from "../types/effects";
 
 /**
@@ -551,10 +551,44 @@ import type { EffectOfUser } from "../types/effects";
  * - 返回 Effect Record，key 作为 Effect 的标识
  */
 export function effectsAtForUser(
-  stateAgentUser: StateAgentUser,
-  stateUserUser: StateUserUser
+  state: StateForUser
 ): Record<string, EffectOfUser>;
 
+// effectsAt/agent.ts
+import type { StateForAgent } from "../types/effects";
+import type { EffectOfAgent } from "../types/effects";
+
+/**
+ * Agent 节点的 effectsAt 函数
+ * 
+ * 根据节点的"综合观察"（所有入边 Channel 的 State）推导出要触发的 Effect。
+ * 
+ * 实现逻辑：
+ * - 根据 state 判断是否需要触发 Effect
+ * - 例如：如果有新的用户消息或工具结果，添加 { kind: "callLLM" }
+ * - 返回 Effect Record，key 作为 Effect 的标识
+ */
+export function effectsAtForAgent(
+  state: StateForAgent
+): Record<string, EffectOfAgent>;
+
+// effectsAt/toolkit.ts
+import type { StateForToolkit } from "../types/effects";
+import type { EffectOfToolkit } from "../types/effects";
+
+/**
+ * Toolkit 节点的 effectsAt 函数
+ * 
+ * 根据节点的"综合观察"（所有入边 Channel 的 State）推导出要触发的 Effect。
+ * 
+ * 实现逻辑：
+ * - 根据 state 判断是否需要触发 Effect
+ * - 例如：如果有新的待执行工具调用，为每个工具调用添加 { kind: "executeTool", toolCallId: ... }
+ * - 返回 Effect Record，key 作为 Effect 的标识
+ */
+export function effectsAtForToolkit(
+  state: StateForToolkit
+): Record<string, EffectOfToolkit>;
 
 // runEffect/user.ts
 import type { Dispatch, EffectController } from "@moora/moorex";
@@ -950,15 +984,17 @@ export function transition(signal: Signal): (state: State) => State;
 
 // unified/effectsAt.ts
 import type { State, Effect } from "../types/unified";
+import type { StateForUser, StateForAgent, StateForToolkit } from "../types/effects";
 import { effectsAtForUser, effectsAtForAgent, effectsAtForToolkit } from "../effectsAt";
-import { stateForAgentUser, stateForUserUser, stateForUserAgent, stateForToolkitAgent, stateForAgentAgent, stateForAgentToolkit, stateForToolkitToolkit } from "./state-for-channel";
+import { stateForAgentUser, stateForUserAgent, stateForToolkitAgent, stateForAgentAgent, stateForAgentToolkit, stateForToolkitToolkit } from "./state-for-channel";
 
 /**
  * 统合的 effectsAt 函数
  * 
  * 实现逻辑：
  * - 使用对应的 stateForXxxYyy 函数从统合 State 提取各个 Channel State
- * - 调用各个节点的 effectsAtFor<P> 函数，传入对应的 Channel State
+ * - 构建各个节点的 StateForXxx 类型（打包该节点需要的所有入边 Channel State）
+ * - 调用各个节点的 effectsAtForXxx 函数，传入对应的 StateForXxx
  * - 收集所有 Effect，合并为 Effect Record（注意 key 的唯一性）
  * - 返回 Effect Record
  */
