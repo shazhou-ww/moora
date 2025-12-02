@@ -208,8 +208,11 @@ export function initial(): State {
  * 
  * 根据 Signal 的来源，更新对应的 Channel State。
  * 统合所有 Channel 的 transition 函数。
+ * 
+ * 注意：Moorex 的 Transition 类型是 (input) => (state) => State
  */
-export function transition(signal: Signal, state: State): State {
+export function transition(signal: Signal): (state: State) => State {
+  return (state: State): State => {
   // 来自 User 的 Output
   if (signal.type === "sendMessage" || signal.type === "cancelStreaming") {
     const userOutput = signal as OutputFromUser;
@@ -248,7 +251,8 @@ export function transition(signal: Signal, state: State): State {
     });
   }
   
-  return state;
+    return state;
+  };
 }
 
 // ============================================================================
@@ -290,9 +294,9 @@ export function effectsAt(state: State): Record<string, Effect> {
 // ============================================================================
 
 /**
- * runEffect 函数选项
+ * runEffect 函数选项（不包含 dispatch）
  * 
- * 包含所有需要注入的依赖。
+ * 包含所有需要注入的依赖（dispatch 在 EffectController.start 中提供）。
  */
 export type RunEffectOptions = {
   updateUI: UpdateUIFn;
@@ -300,7 +304,6 @@ export type RunEffectOptions = {
   prompt: string;
   getToolNames: GetToolNamesFn;
   getToolDefinitions: GetToolDefinitionsFn;
-  dispatch: Dispatch<Signal>;
 };
 
 /**
@@ -308,6 +311,9 @@ export type RunEffectOptions = {
  * 
  * 根据 Effect 的类型，调用对应的 runEffect。
  * 统合所有节点的 runEffect 函数。
+ * 
+ * 注意：返回的 EffectController.start 方法会接收 dispatch 参数，
+ * 然后在 start 中调用实际的 runEffect 函数，传入 dispatch。
  */
 export function runEffect(
   effect: Effect,
@@ -316,41 +322,88 @@ export function runEffect(
   options: RunEffectOptions
 ): EffectController<Signal> {
   if (effect.kind === "updateUI") {
-    return runEffectForUser(
+    // 返回包装的 EffectController，start 方法接收 dispatch
+    const userController = runEffectForUser(
       effect as EffectOfUser,
       state.agentUser,
       (signal) => {
-        options.dispatch(signal);
+        // 这个 dispatch 会在 start 中提供
+        throw new Error("Dispatch should be provided in start method");
       },
       options.updateUI
     );
+    
+    return {
+      start: async (dispatch: Dispatch<Signal>) => {
+        // 重新创建 controller，传入实际的 dispatch
+        const controller = runEffectForUser(
+          effect as EffectOfUser,
+          state.agentUser,
+          dispatch,
+          options.updateUI
+        );
+        await controller.start(dispatch);
+      },
+      cancel: userController.cancel,
+    };
   }
   
   if (effect.kind === "callLLM") {
-    return runEffectForAgent(
+    const agentController = runEffectForAgent(
       effect as EffectOfAgent,
       state.userAgent,
       state.toolkitAgent,
       (signal) => {
-        options.dispatch(signal);
+        throw new Error("Dispatch should be provided in start method");
       },
       options.callLLM,
       options.prompt,
       options.getToolNames,
       options.getToolDefinitions
     );
+    
+    return {
+      start: async (dispatch: Dispatch<Signal>) => {
+        const controller = runEffectForAgent(
+          effect as EffectOfAgent,
+          state.userAgent,
+          state.toolkitAgent,
+          dispatch,
+          options.callLLM,
+          options.prompt,
+          options.getToolNames,
+          options.getToolDefinitions
+        );
+        await controller.start(dispatch);
+      },
+      cancel: agentController.cancel,
+    };
   }
   
   if (effect.kind === "executeTool") {
-    return runEffectForToolkit(
+    const toolkitController = runEffectForToolkit(
       effect as EffectOfToolkit,
       state.agentToolkit,
       (signal) => {
-        options.dispatch(signal);
+        throw new Error("Dispatch should be provided in start method");
       },
       options.getToolNames,
       options.getToolDefinitions
     );
+    
+    return {
+      start: async (dispatch: Dispatch<Signal>) => {
+        const controller = runEffectForToolkit(
+          effect as EffectOfToolkit,
+          state.agentToolkit,
+          dispatch,
+          options.getToolNames,
+          options.getToolDefinitions
+        );
+        await controller.start(dispatch);
+      },
+      cancel: toolkitController.cancel,
+    };
   }
   
   throw new Error(`Unknown effect kind: ${(effect as Effect).kind}`);

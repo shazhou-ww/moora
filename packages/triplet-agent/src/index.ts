@@ -125,4 +125,10 @@ export {
   runEffect,
   getStateForChannel,
 } from "./unified";
+export {
+  createTripletAgentMoorex,
+} from "./create-triplet-agent-moorex";
+export type {
+  CreateTripletAgentMoorexOptions,
+} from "./create-triplet-agent-moorex";
 
