@@ -8,7 +8,6 @@ import type {
   State,
   Signal,
   Effect,
-  RunEffectOptions,
 } from "./unified";
 import {
   initial,

@@ -111,6 +111,24 @@
         "typescript": "^5",
       },
     },
+    "packages/triplet-agent": {
+      "name": "@moora/triplet-agent",
+      "version": "0.1.0",
+      "dependencies": {
+        "@moora/moorex": "0.1.0",
+        "mutative": "^1.3.0",
+        "zod": "^4",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@vitest/coverage-v8": "^4.0.12",
+        "@vitest/ui": "4.0.12",
+        "vitest": "^4.0.12",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
   },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.27.1", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.27.1", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg=="],
@@ -244,6 +262,8 @@
     "@moora/reflexor-state-machine": ["@moora/reflexor-state-machine@workspace:packages/reflexor-state-machine"],
 
     "@moora/reflexor-webui": ["@moora/reflexor-webui@workspace:packages/reflexor-webui"],
+
+    "@moora/triplet-agent": ["@moora/triplet-agent@workspace:packages/triplet-agent"],
 
     "@mui/core-downloads-tracker": ["@mui/core-downloads-tracker@7.3.5", "", {}, "sha512-kOLwlcDPnVz2QMhiBv0OQ8le8hTCqKM9cRXlfVPL91l3RGeOsxrIhNRsUt3Xb8wb+pTVUolW+JXKym93vRKxCw=="],
 
