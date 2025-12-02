@@ -17,7 +17,6 @@ import type {
   StateAgentAgent,
   StateToolkitToolkit,
 } from "./state";
-import { messageSchema } from "./io";
 
 // ============================================================================
 // Channel USER -> AGENT 的 transition 函数
@@ -132,6 +131,8 @@ export const transitionToolkitAgent = (
  * - sendChunk: 更新或创建消息，追加内容块，记录 chunk 到 streamingChunks
  * - completeMessage: 标记消息流式输出完成，清理 streamingChunks
  * - callTool: 不影响此 Channel 的 State
+ * 
+ * 注意：streamingChunks 的 keys 就是正在流式输出的消息 ID 列表
  */
 export const transitionAgentUser = (
   output: OutputFromAgent,
@@ -150,27 +151,19 @@ export const transitionAgentUser = (
           timestamp: Date.now(),
         };
         draft.messages.push(message);
-        draft.streamingMessageIds.push(output.messageId);
+        // 初始化 streamingChunks（key 的存在表示正在流式输出）
         draft.streamingChunks[output.messageId] = [];
       }
       // 追加内容块到消息
       message.content += output.chunk;
       message.timestamp = Date.now();
       // 记录 chunk 到 streamingChunks
-      if (!draft.streamingChunks[output.messageId]) {
-        draft.streamingChunks[output.messageId] = [];
-      }
       draft.streamingChunks[output.messageId].push(output.chunk);
     });
   }
   if (output.type === "completeMessage") {
     return create(state, (draft) => {
-      // 从流式输出列表中移除
-      const index = draft.streamingMessageIds.indexOf(output.messageId);
-      if (index !== -1) {
-        draft.streamingMessageIds.splice(index, 1);
-      }
-      // 清理 streamingChunks
+      // 清理 streamingChunks（删除 key 表示流式输出完成）
       delete draft.streamingChunks[output.messageId];
     });
   }

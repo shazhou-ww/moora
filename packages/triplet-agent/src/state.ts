@@ -113,12 +113,11 @@ export type StateToolkitAgent = z.infer<typeof stateToolkitAgentSchema>;
  * 
  * User 对 Agent 状态的关注点：
  * - 消息列表（用于显示）
- * - 正在流式输出的消息 ID 列表
  * - 正在流式输出的消息对应的 chunks（Record<messageId, chunks[]>）
+ *   注意：streamingChunks 的 keys 就是正在流式输出的消息 ID 列表
  */
 export const stateAgentUserSchema = z.object({
   messages: z.array(messageSchema),
-  streamingMessageIds: z.array(z.string()),
   streamingChunks: z.record(z.string(), z.array(z.string())),
 });
 
