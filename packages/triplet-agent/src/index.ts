@@ -50,10 +50,12 @@ export type {
   UpdateUIFn,
 } from "./effects";
 export type {
-  EffectOfUser,
-  EffectOfAgent,
-  EffectOfToolkit,
-} from "./effects";
+  State,
+  Signal,
+  Effect,
+  StateForChannel,
+  RunEffectOptions,
+} from "./unified";
 
 // ============================================================================
 // 导出常量
@@ -116,4 +118,11 @@ export {
   effectsAtForToolkit,
   runEffectForToolkit,
 } from "./effects";
+export {
+  initial,
+  transition,
+  effectsAt,
+  runEffect,
+  getStateForChannel,
+} from "./unified";
 
