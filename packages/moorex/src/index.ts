@@ -26,6 +26,8 @@ export type {
   Initial,
   Transition,
   Automata,
+  MealyOutputFn,
+  MooreOutputFn,
   MealyMachine,
   MooreMachine,
   UpdatePack,

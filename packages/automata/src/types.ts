@@ -89,34 +89,73 @@ export type StatefulTransferer<Input, Output, State> = Transferer<Input, Output>
 
 /**
  * 初始化函数，返回初始状态
+ *
+ * @template State - 状态类型
+ * @returns 初始状态
  */
-export type Initial<State> = () => State;
+export type InitialFn<State> = () => State;
 
 /**
  * 状态转换函数，接收输入并返回状态更新函数
+ *
+ * 这是一个柯里化函数：
+ * 1. 第一层接收输入信号，返回状态更新函数
+ * 2. 第二层接收当前状态，返回新状态
+ *
+ * @template Input - 输入信号类型
+ * @template State - 状态类型
+ * @param input - 输入信号
+ * @returns 状态更新函数，接收当前状态并返回新状态
  */
-export type Transition<Input, State> = (input: Input) => (state: State) => State;
+export type TransitionFn<Input, State> = (input: Input) => (state: State) => State;
 
 /**
  * 自动机定义
  */
 export type Automata<Input, State> = {
-  initial: Initial<State>;
-  transition: Transition<Input, State>;
+  initial: InitialFn<State>;
+  transition: TransitionFn<Input, State>;
 };
+
+/**
+ * Mealy 机输出函数
+ *
+ * Mealy 机的输出依赖于输入和状态转换信息。
+ * 函数接收完整的状态转换信息（前一个状态、输入、新状态），计算并返回输出。
+ *
+ * @template Input - 输入信号类型
+ * @template Output - 输出类型
+ * @template State - 状态类型
+ * @param update - 状态转换信息包，包含前一个状态、输入和新状态
+ * @returns 计算得到的输出
+ */
+export type MealyOutputFn<Input, Output, State> = (update: UpdatePack<Input, State>) => Output;
 
 /**
  * Mealy 机定义（输出依赖于输入和状态）
  */
 export type MealyMachine<Input, Output, State> = Automata<Input, State> & {
-  output: (update: UpdatePack<Input, State>) => Output;
+  output: MealyOutputFn<Input, Output, State>;
 };
+
+/**
+ * Moore 机输出函数
+ *
+ * Moore 机的输出仅依赖于当前状态，不依赖于输入。
+ * 函数接收当前状态，计算并返回输出。
+ *
+ * @template State - 状态类型
+ * @template Output - 输出类型
+ * @param state - 当前状态
+ * @returns 计算得到的输出
+ */
+export type MooreOutputFn<State, Output> = (state: State) => Output;
 
 /**
  * Moore 机定义（输出仅依赖于状态）
  */
 export type MooreMachine<Input, Output, State> = Automata<Input, State> & {
-  output: (state: State) => Output;
+  output: MooreOutputFn<State, Output>;
 };
 
 /**
