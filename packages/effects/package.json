@@ -1,13 +1,13 @@
 {
-  "name": "@moora/automata",
+  "name": "@moora/effects",
   "version": "0.1.0",
-  "description": "A generic automata library for building state machines (Mealy and Moore machines)",
+  "description": "A two-phase effect system for managing side effects in state machines",
   "keywords": [
-    "automata",
+    "effect",
+    "side-effect",
+    "async",
     "state-machine",
-    "mealy-machine",
-    "moore-machine",
-    "state-management"
+    "functional"
   ],
   "main": "src/index.ts",
   "module": "src/index.ts",
@@ -17,14 +17,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/shazhou-ww/moora.git",
-    "directory": "packages/automata"
+    "directory": "packages/effects"
   },
-  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/automata#readme",
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/effects#readme",
   "bugs": {
     "url": "https://github.com/shazhou-ww/moora/issues"
-  },
-  "dependencies": {
-    "@moora/effects": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

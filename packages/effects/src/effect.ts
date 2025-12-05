@@ -5,8 +5,9 @@
  * - noopEffect: 空 Effect，什么都不做
  * - synchronous: 无二阶段的简单 Effect
  * - asynchronous: 无一阶段的简单 Effect
- * - statefulEffect: 带状态的 Effect
+ * - stateful: 带状态的 Effect
  * - parallel: 并行执行多个 Effect
+ * - sequential: 串行执行多个 Effect
  */
 
 import type { Effect } from './types';
@@ -32,14 +33,14 @@ export function runEffect<T>(effect: Effect<T>, value: T): void {
  *
  * 用于需要返回 Effect 但不需要执行任何操作的场景。
  *
- * @template T - dispatch 的输入类型
+ * @template T - 异步阶段接收的值类型
  * @returns 空 Effect
  *
  * @example
  * ```typescript
  * const handler = (output) => {
  *   if (output.skip) return noopEffect();
- *   return syncEffect(() => console.log(output));
+ *   return synchronous(() => console.log(output));
  * };
  * ```
  */
@@ -51,9 +52,9 @@ export function noopEffect<T>(): Effect<T> {
  * 无二阶段的简单 Effect
  *
  * 仅在第一阶段同步执行函数，第二阶段不执行任何操作。
- * 适用于不需要异步操作也不需要 dispatch 的场景。
+ * 适用于不需要异步操作的场景。
  *
- * @template T - dispatch 的输入类型
+ * @template T - 异步阶段接收的值类型
  * @param fn - 同步执行的函数
  * @returns 仅有第一阶段的 Effect
  *
@@ -75,7 +76,7 @@ export function synchronous<T>(fn: () => void): Effect<T> {
  * 无一阶段的简单 Effect
  *
  * 第一阶段不执行任何操作，仅在第二阶段异步执行函数。
- * 适用于需要异步操作并可能需要 dispatch 的场景。
+ * 适用于需要异步操作的场景。
  *
  * @template T - 异步阶段接收的值类型
  * @param fn - 异步执行的函数，接收传入的值
@@ -111,7 +112,7 @@ export function asynchronous<T>(fn: (value: T) => Promise<void>): Effect<T> {
  * @example
  * ```typescript
  * // 统计调用次数
- * const handler = (output) => statefulEffect(0, (count) => [
+ * const handler = (output) => stateful(0, (count) => [
  *   count + 1,
  *   async (dispatch) => {
  *     console.log(`第 ${count + 1} 次调用`);
@@ -120,7 +121,7 @@ export function asynchronous<T>(fn: (value: T) => Promise<void>): Effect<T> {
  * ]);
  *
  * // 累积数据并批量处理
- * const batchHandler = (output) => statefulEffect([], (buffer) => {
+ * const batchHandler = (output) => stateful([], (buffer) => {
  *   const newBuffer = [...buffer, output];
  *   if (newBuffer.length >= 10) {
  *     return [[], async (dispatch) => {
@@ -131,7 +132,7 @@ export function asynchronous<T>(fn: (value: T) => Promise<void>): Effect<T> {
  * });
  * ```
  */
-export function statefulEffect<T, S>(
+export function stateful<T, S>(
   initial: S,
   fn: (state: S) => [S, (value: T) => Promise<void>]
 ): Effect<T> {
@@ -148,15 +149,56 @@ export function statefulEffect<T, S>(
  * 并行执行多个 Effect
  *
  * 将多个 Effect 合并为一个，执行时会并行执行所有 Effect。
+ * 第一阶段按顺序同步执行所有 Effect 的第一阶段，
+ * 第二阶段并行执行所有 Effect 的第二阶段。
  *
  * @param effects - Effect 函数数组
  * @returns 合并后的 Effect 函数
+ *
+ * @example
+ * ```typescript
+ * const handler = (output) => parallel([
+ *   synchronous(() => console.log('log1')),
+ *   asynchronous(async () => await saveToDb(output)),
+ *   asynchronous(async () => await sendNotification(output)),
+ * ]);
+ * ```
  */
 export function parallel<T>(effects: Effect<T>[]): Effect<T> {
   return () => {
     const asyncFns = effects.map((effect) => effect());
     return async (value: T) => {
       await Promise.all(asyncFns.map((fn) => fn(value)));
+    };
+  };
+}
+
+/**
+ * 串行执行多个 Effect
+ *
+ * 将多个 Effect 合并为一个，执行时会按顺序串行执行所有 Effect。
+ * 第一阶段按顺序同步执行所有 Effect 的第一阶段，
+ * 第二阶段按顺序串行执行所有 Effect 的第二阶段。
+ *
+ * @param effects - Effect 函数数组
+ * @returns 合并后的 Effect 函数
+ *
+ * @example
+ * ```typescript
+ * const handler = (output) => sequential([
+ *   asynchronous(async () => await step1(output)),
+ *   asynchronous(async () => await step2(output)),
+ *   asynchronous(async () => await step3(output)),
+ * ]);
+ * ```
+ */
+export function sequential<T>(effects: Effect<T>[]): Effect<T> {
+  return () => {
+    const asyncFns = effects.map((effect) => effect());
+    return async (value: T) => {
+      for (const fn of asyncFns) {
+        await fn(value);
+      }
     };
   };
 }

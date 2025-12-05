@@ -10,7 +10,7 @@ import type {
   UpdatePack,
 } from './types';
 import { createPubSub } from './pub-sub';
-import { runEffect } from './effect';
+import { runEffect } from '@moora/effects';
 
 /**
  * 运行输出处理器（两阶段副作用设计）

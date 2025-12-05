@@ -32,15 +32,16 @@ export type {
   UpdatePack,
 } from './types';
 
-// Effect 相关函数
+// Effect 相关类型和函数（从 @moora/effects 重新导出）
 export {
   runEffect,
   noopEffect,
   synchronous,
   asynchronous,
-  statefulEffect,
+  stateful,
   parallel,
-} from './effect';
+  sequential,
+} from '@moora/effects';
 
 // ============================================================================
 // 导出函数
