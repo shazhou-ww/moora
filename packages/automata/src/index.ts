@@ -17,7 +17,6 @@ export type {
   PubSub,
   // 自动机相关
   Dispatch,
-  Procedure,
   Effect,
   OutputHandler,
   Subscribe,
@@ -33,6 +32,9 @@ export type {
   UpdatePack,
 } from './types';
 
+// Effect 相关函数
+export { runEffect, parallel } from './effect';
+
 // ============================================================================
 // 导出函数
 // ============================================================================
@@ -42,4 +44,3 @@ export {
   mealy,
   moore,
 } from './automata';
-export { parallel } from './types';

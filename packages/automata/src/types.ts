@@ -44,52 +44,29 @@ export type PubSub<T> = {
 export type Dispatch<Input> = (input: Input) => void;
 
 /**
- * 过程函数，一个可以分发一个或多个输入的异步过程
- *
- * 这是两阶段副作用设计的第二阶段：异步副作用。
- * Procedure 函数在微任务队列中执行，接收 dispatch 方法，可以异步地产生新的输入。
- */
-export type Procedure<Input> = (dispatch: Dispatch<Input>) => void | Promise<void>;
-
-/**
  * 两阶段副作用函数
  *
  * Effect 是一个两阶段副作用函数：
- * - 第一阶段（同步）：调用 Effect 函数本身，返回一个 Procedure 函数
- * - 第二阶段（异步）：Procedure 函数在微任务队列中执行，接收 dispatch 方法
+ * - 第一阶段（同步）：调用 Effect 函数本身，返回一个异步副作用函数
+ * - 第二阶段（异步）：异步副作用函数在微任务队列中执行，接收 dispatch 方法
+ *
+ * @template T - dispatch 的输入类型
  */
-export type Effect<T> = () => Procedure<T>;
+export type Effect<T> = () => (dispatch: Dispatch<T>) => void | Promise<void>;
 
 /**
- * 并行执行多个 Effect
+ * 输出处理器，接收输出并返回一个 Effect 函数
  *
- * 将多个 Effect 合并为一个，执行时会并行执行所有 Effect。
- *
- * @param effects - Effect 函数数组
- * @returns 合并后的 Effect 函数
- */
-export function parallel<T>(effects: Effect<T>[]): Effect<T> {
-  return () => {
-    const procedures = effects.map((effect) => effect());
-    return async (dispatch: Dispatch<T>) => {
-      await Promise.all(procedures.map((p) => p(dispatch)));
-    };
-  };
-}
-
-/**
- * 输出处理器，接收输出并返回一个过程函数
- *
- * 这是两阶段副作用设计的第一阶段：同步处理。
- * 当有 output 时，handler 会立即同步执行，返回一个 Procedure 函数（异步副作用）。
- * Procedure 函数随后会在微任务队列中异步执行，接收 dispatch 方法。
+ * 这是两阶段副作用设计：
+ * - 第一阶段（同步）：handler 接收 output，返回一个 Effect 函数
+ * - 第二阶段（异步）：Effect 函数执行时返回的异步副作用在微任务队列中执行
  *
  * 这种设计允许：
  * - 同步部分可以立即处理 output（例如记录日志、更新 UI）
  * - 异步副作用在微任务中执行，不会阻塞当前执行栈
  * - 异步副作用可以通过 dispatch 产生新的输入，形成反馈循环
  */
-export type OutputHandler<Input, Output> = (output: Output) => Procedure<Input>;
+export type OutputHandler<Input, Output> = (output: Output) => Effect<Input>;
 
 /**
  * 订阅函数

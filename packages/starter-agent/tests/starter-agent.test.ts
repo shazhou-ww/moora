@@ -3,11 +3,18 @@
  */
 
 import { describe, test, expect } from "vitest";
-import { createStarterAgent } from "../src/index";
+import { createAgent } from "../src/index";
+import type { OutputFns } from "../src/index";
+
+// 创建一个简单的 mock outputFns
+const mockOutputFns: OutputFns = {
+  user: () => () => () => {},
+  llm: () => () => () => {},
+};
 
 describe("Starter Agent", () => {
   test("should create agent instance", () => {
-    const agent = createStarterAgent();
+    const agent = createAgent(mockOutputFns);
     expect(agent).toBeDefined();
     expect(agent.dispatch).toBeDefined();
     expect(agent.subscribe).toBeDefined();
@@ -15,7 +22,7 @@ describe("Starter Agent", () => {
   });
 
   test("should have initial state", () => {
-    const agent = createStarterAgent();
+    const agent = createAgent(mockOutputFns);
     const state = agent.current();
 
     expect(state.userMessages).toEqual([]);
@@ -23,7 +30,7 @@ describe("Starter Agent", () => {
   });
 
   test("should dispatch user message and update state", () => {
-    const agent = createStarterAgent();
+    const agent = createAgent(mockOutputFns);
     const timestamp = Date.now();
 
     agent.dispatch({
@@ -39,7 +46,7 @@ describe("Starter Agent", () => {
   });
 
   test("should dispatch assistant message and update state", () => {
-    const agent = createStarterAgent();
+    const agent = createAgent(mockOutputFns);
     const timestamp = Date.now();
 
     agent.dispatch({
@@ -55,12 +62,12 @@ describe("Starter Agent", () => {
   });
 
   test("should subscribe to output changes", async () => {
-    const agent = createStarterAgent();
+    const agent = createAgent(mockOutputFns);
     let outputReceived = false;
 
     agent.subscribe((output) => {
       outputReceived = true;
-      return async (dispatch) => {
+      return () => async () => {
         // Mock async effect
         await Promise.resolve();
       };

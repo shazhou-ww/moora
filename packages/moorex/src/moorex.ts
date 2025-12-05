@@ -1,14 +1,12 @@
+import type { Dispatch, OutputHandler } from "@moora/automata";
 import type {
-  Dispatch,
   EffectController,
   MoorexDefinition,
   MoorexEvent,
   Moorex,
-  OutputHandler,
   Unsubscribe,
 } from "./types";
-import { moore } from "@moora/automata";
-import { createPubSub } from "./pub-sub";
+import { moore, createPubSub } from "@moora/automata";
 
 /**
  * Effect 条目，包含控制器、key 和 effect 本身
@@ -105,7 +103,7 @@ export function createMoorex<Input, Effect, State>({
    * 比较新的 effects 和当前 effects，确定需要取消和启动的 effects
    * @internal
    * @param effects - 新的 effects Record
-   * @returns 返回一个函数，该函数接收 dispatch 并执行实际的取消/启动操作
+   * @returns 返回一个 Effect 函数，该函数接收 dispatch 并执行实际的取消/启动操作
    */
   const reconcileEffects: OutputHandler<Input, Record<string, Effect>> = (effects) => {
     // 找出需要取消的 effects（在新 effects 中不存在的）
@@ -122,8 +120,8 @@ export function createMoorex<Input, Effect, State>({
     currentEffects = effects;
     pubsub.pub({ type: "state-updated", state });
 
-    // 返回执行函数，在异步上下文中执行实际的取消/启动操作
-    return (dispatch: Dispatch<Input>) => {
+    // 返回 Effect 函数（两阶段副作用）
+    return () => (dispatch: Dispatch<Input>) => {
       // 取消不再需要的 effects
       for (const [key, { cancel, effect }] of effectsToCancel) {
         cancel();

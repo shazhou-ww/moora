@@ -14,23 +14,6 @@ export type {
   // 基础类型
   CancelFn,
   Unsubscribe,
-  // PubSub 相关
-  PubSub,
-  // 自动机相关（从 @moora/automata 重新导出）
-  Dispatch,
-  Procedure,
-  OutputHandler,
-  Subscribe,
-  Transferer,
-  StatefulTransferer,
-  Initial,
-  Transition,
-  Automata,
-  MealyOutputFn,
-  MooreOutputFn,
-  MealyMachine,
-  MooreMachine,
-  UpdatePack,
   // Moorex 相关
   EffectsAt,
   EffectController,
@@ -42,5 +25,4 @@ export type {
 // ============================================================================
 // 导出函数
 // ============================================================================
-export { createPubSub } from './pub-sub';
 export { createMoorex } from './moorex';

@@ -1,39 +1,7 @@
 // ============================================================================
 // 自动机相关类型（从 @moora/automata 导入并重新导出）
 // ============================================================================
-import type {
-  Dispatch,
-  Procedure,
-  OutputHandler,
-  Subscribe,
-  Transferer,
-  StatefulTransferer,
-  Initial,
-  Transition,
-  Automata,
-  MealyOutputFn,
-  MooreOutputFn,
-  MealyMachine,
-  MooreMachine,
-  UpdatePack,
-} from '@moora/automata';
-
-export type {
-  Dispatch,
-  Procedure,
-  OutputHandler,
-  Subscribe,
-  Transferer,
-  StatefulTransferer,
-  Initial,
-  Transition,
-  Automata,
-  MealyOutputFn,
-  MooreOutputFn,
-  MealyMachine,
-  MooreMachine,
-  UpdatePack,
-};
+import type { Dispatch, InitialFn, TransitionFn } from "@moora/automata";
 
 // ============================================================================
 // 基础类型
@@ -93,13 +61,13 @@ export type EffectController<Input> = {
  */
 export type MoorexDefinition<Input, Effect, State> = {
   /** 初始化函数，返回初始状态 */
-  initial: Initial<State>;
+  initial: InitialFn<State>;
   /**
    * 状态转换函数。
    * 接收一个 Immutable 信号，返回一个函数，该函数接收 Immutable 状态并返回新的 Immutable 状态。
    * 参数和返回值都是 Immutable 的，不允许修改。
    */
-  transition: Transition<Input, State>;
+  transition: TransitionFn<Input, State>;
   /**
    * 根据当前状态计算应该运行的 effects。
    * 接收 Immutable 状态，返回 Effect Record，key 作为 Effect 的标识用于 reconciliation。

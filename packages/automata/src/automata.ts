@@ -10,14 +10,14 @@ import type {
   UpdatePack,
 } from './types';
 import { createPubSub } from './pub-sub';
+import { runEffect } from './effect';
 
 /**
  * 运行输出处理器（两阶段副作用设计）
  *
  * 状态机的 handler 采用两阶段副作用设计：
- * 1. **第一阶段（同步）**：当有 output 时，立即同步执行 handler(output)，返回一个异步副作用（Procedure）
- * 2. **第二阶段（异步）**：通过 queueMicrotask 延迟执行这个异步副作用，它接收一个 dispatch 方法，
- *    可以异步地继续产生新的 input 给到 state machine
+ * 1. **第一阶段（同步）**：当有 output 时，立即同步执行 handler(output)，返回一个 Effect
+ * 2. **第二阶段（异步）**：通过 runEffect 执行 Effect 的两阶段副作用
  *
  * 这种设计确保了：
  * - handler 的同步部分可以立即处理 output（例如记录日志、更新 UI）
@@ -27,7 +27,7 @@ import { createPubSub } from './pub-sub';
  * @internal
  * @template Input - 输入类型
  * @template Output - 输出类型
- * @param handler - 输出处理器，接收 output 并返回一个 Procedure 函数
+ * @param handler - 输出处理器，接收 output 并返回一个 Effect 函数
  * @param dispatch - 分发函数，用于在异步副作用中产生新的输入
  * @returns 一个函数，接收输出并执行两阶段副作用处理
  */
@@ -35,11 +35,8 @@ const runHandler = <Input, Output>(
   handler: OutputHandler<Input, Output>,
   dispatch: Dispatch<Input>
 ) => (output: Output) => {
-  // 第一阶段：同步执行 handler，获取异步副作用（Procedure）
-  const proc = handler(output);
-  // 第二阶段：通过 queueMicrotask 延迟执行异步副作用
-  // Procedure 接收 dispatch 方法，可以异步产生新的 input
-  queueMicrotask(() => proc(dispatch));
+  const effect = handler(output);
+  runEffect(effect, dispatch);
 };
 
 /**
@@ -190,19 +187,14 @@ export function moore<Input, Output, State>({
   } = automata({ initial, transition }, ({ state }) => output(state));
 
   // Moore 机的订阅会立即发送当前状态的输出
-  // 采用两阶段副作用设计：
-  // 1. 第一阶段（同步）：立即执行 handler(out)，获取 Procedure
-  // 2. 第二阶段（异步）：通过 queueMicrotask 延迟执行 Procedure
+  // 采用两阶段副作用设计，通过 runEffect 执行
   const subscribe: Subscribe<Input, Output> = (handler) => {
     const unsub = sub(handler);
     // 订阅时立即使用当前状态计算输出
     const state = current();
     const out = output(state);
-    // 第一阶段：同步执行 handler，获取异步副作用（Procedure）
-    const proc = handler(out);
-    // 第二阶段：通过 queueMicrotask 延迟执行异步副作用
-    // Procedure 接收 dispatch 方法，可以异步产生新的 input
-    queueMicrotask(() => proc(dispatch));
+    // 执行 handler 返回的 Effect
+    runHandler(handler, dispatch)(out);
     return unsub;
   };
   return { dispatch, subscribe, current };
