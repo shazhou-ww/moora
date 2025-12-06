@@ -2,5 +2,12 @@
  * Streams 模块导出
  */
 
-export { StreamManager } from "./manager";
-export type { SSEConnection } from "./manager";
+// ============================================================================
+// 导出类型
+// ============================================================================
+export type { SSEConnection, StreamConnection, StreamManager } from "./types";
+
+// ============================================================================
+// 导出函数
+// ============================================================================
+export { createStreamManager } from "./create";

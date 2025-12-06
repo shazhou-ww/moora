@@ -24,11 +24,13 @@ export function createStreamSSEHandler(streamManager: StreamManager) {
       closed: false,
     };
 
-    try {
-      const subscribed = streamManager.subscribe(messageId, connection);
-      console.log("[createStreamSSEHandler] Subscribe result:", subscribed);
+    let unsubscribe: (() => void) | null = null;
 
-      if (!subscribed) {
+    try {
+      unsubscribe = streamManager.subscribe(messageId, connection);
+      console.log("[createStreamSSEHandler] Subscribe result:", unsubscribe !== null);
+
+      if (!unsubscribe) {
         console.log("[createStreamSSEHandler] Stream not found, returning error");
         yield sse(JSON.stringify({ type: "error", message: "Stream not found" }));
         return;
@@ -59,7 +61,9 @@ export function createStreamSSEHandler(streamManager: StreamManager) {
       throw error;
     } finally {
       connection.closed = true;
-      streamManager.unsubscribe(messageId, connection);
+      if (unsubscribe) {
+        unsubscribe();
+      }
     }
   };
 }

@@ -7,7 +7,7 @@ import { createAgent } from "@moora/agent";
 import { createPubSub } from "@moora/automata";
 import { createUserOutput } from "@/outputs/user";
 import { createLlmOutput } from "@/outputs/llm";
-import { StreamManager } from "@/streams";
+import { createStreamManager } from "@/streams";
 import type { CreateServiceOptions } from "./types";
 import {
   createAgentSSEHandler,
@@ -46,7 +46,7 @@ export function createService(options: CreateServiceOptions) {
   const patchPubSub = createPubSub<string>();
 
   // 创建 StreamManager 实例
-  const streamManager = new StreamManager();
+  const streamManager = createStreamManager();
 
   // 创建 agent 实例
   const agent = createAgent({
