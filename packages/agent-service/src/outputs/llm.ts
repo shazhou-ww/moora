@@ -1,8 +1,7 @@
 /**
  * LLM Output 函数实现
  *
- * 调用 OpenAI Streaming API，通过 StreamManager 分发 chunk，
- * 并通过 InputFromLlm 通知 Agent State 流式开始和结束
+ * 使用 stateful effect 模式协调消息构建、OpenAI API 调用和 Agent State 更新
  */
 
 import OpenAI from "openai";
@@ -14,44 +13,64 @@ import type {
   Output,
 } from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
-import type { StreamManager } from "@/streams";
+import type { CreateLlmOutputOptions } from "@/types";
+import { streamLlmCall } from "./openai";
+
+// ============================================================================
+// 类型定义
+// ============================================================================
 
 /**
- * 创建 LLM Output 函数的选项
+ * LLM Output 的状态
  */
-export type CreateLlmOutputOptions = {
+type LlmOutputState = {
   /**
-   * OpenAI 客户端配置
+   * 截止时间戳，表示截止到这个时间之前（包括这个时间）的 message 都已经发给 LLM 处理过了
    */
-  openai: {
-    /**
-     * API endpoint URL
-     */
-    endpoint: {
-      url: string;
-      key: string;
-    };
-    /**
-     * 模型名称
-     */
-    model: string;
-  };
-
-  /**
-   * System prompt
-   */
-  prompt: string;
-
-  /**
-   * StreamManager 实例
-   */
-  streamManager: StreamManager;
+  cutOff: number;
 };
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+/**
+ * 获取最新的用户消息时间戳
+ */
+function getLatestUserMessageTimestamp(
+  userMessages: Array<{ timestamp: number }>
+): number {
+  if (userMessages.length === 0) return 0;
+  return Math.max(...userMessages.map((msg) => msg.timestamp));
+}
+
+/**
+ * 检查是否有比 cutOff 更新的用户消息
+ */
+function hasNewerUserMessages(
+  userMessages: Array<{ timestamp: number }>,
+  cutOff: number
+): boolean {
+  return userMessages.some((msg) => msg.timestamp > cutOff);
+}
+
+/**
+ * 检查是否有正在流式生成的消息
+ */
+function hasStreamingMessage(
+  assiMessages: Array<{ streaming: boolean }>
+): boolean {
+  return assiMessages.some((msg) => msg.streaming === true);
+}
+
+// ============================================================================
+// 主要函数
+// ============================================================================
 
 /**
  * 创建 LLM Output 函数
  *
- * 当 ContextOfLlm 发生变化时，调用 OpenAI Streaming API 生成回复
+ * 使用 stateful effect 模式管理 cutOff 状态，当有比 cutOff 更新的用户消息时调用 LLM
  *
  * @param options - 创建选项
  * @returns LLM Output 函数
@@ -67,121 +86,122 @@ export function createLlmOutput(
     baseURL: openaiConfig.endpoint.url,
   });
 
+  // Stateful effect 状态
+  let state: LlmOutputState = { cutOff: 0 };
+
   return (context: ContextOfLlm) => {
-    return () => async (dispatch: Dispatch<AgentInput>) => {
-      // 检查是否有新的用户消息需要回复
+    // 返回 Effect：() => (dispatch) => Promise<void>
+    return () => {
+      // 第一阶段（同步）：检查是否需要执行，更新状态
       const { userMessages, assiMessages } = context;
 
-      // 计算已完成的助手消息数量（不包括流式中的消息）
-      const completedAssiMessagesCount = assiMessages.filter(
-        (msg) => msg.streaming === false
-      ).length;
+      const hasNewer = hasNewerUserMessages(userMessages, state.cutOff);
+      const isStreaming = hasStreamingMessage(assiMessages);
 
-      // 如果用户消息数量大于已完成的助手消息数量，说明有新消息需要回复
-      // 并且没有正在流式的消息
-      const hasStreamingMessage = assiMessages.some(
-        (msg) => msg.streaming === true
-      );
-
-      if (
-        userMessages.length > completedAssiMessagesCount &&
-        !hasStreamingMessage
-      ) {
-        // 生成消息 ID
-        const messageId = uuidv4();
-        const timestamp = Date.now();
-
-        // 先在 StreamManager 中创建流（确保前端连接时流已存在）
-        streamManager.startStream(messageId);
-        console.log("[createLlmOutput] Stream started for messageId:", messageId);
-
-        // 然后通知 Agent State 开始流式生成
-        const startInput: InputFromLlm = {
-          type: "start-assi-message-stream",
-          id: messageId,
-          timestamp,
-        };
-        dispatch(startInput);
-        console.log("[createLlmOutput] Start input dispatched for messageId:", messageId);
-
-        try {
-          // 构建消息列表
-          const messages: Array<{
-            role: "system" | "user" | "assistant";
-            content: string;
-          }> = [{ role: "system", content: prompt }];
-
-          // 添加历史消息（交替添加用户和助手消息）
-          const maxLength = Math.max(userMessages.length, assiMessages.length);
-          for (let i = 0; i < maxLength; i++) {
-            if (i < userMessages.length) {
-              messages.push({
-                role: "user",
-                content: userMessages[i]?.content ?? "",
-              });
-            }
-            if (i < assiMessages.length) {
-              const assiMsg = assiMessages[i];
-              // 只添加已完成的消息（有 content）
-              if (assiMsg && assiMsg.streaming === false) {
-                messages.push({
-                  role: "assistant",
-                  content: assiMsg.content,
-                });
-              }
-            }
-          }
-
-          // 调用 OpenAI Streaming API
-          const stream = await openai.chat.completions.create({
-            model: openaiConfig.model,
-            messages,
-            stream: true,
-          });
-
-          let fullContent = "";
-
-          // 处理流式响应
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content;
-
-            if (content) {
-              fullContent += content;
-              // 通过 StreamManager 分发 chunk
-              streamManager.appendChunk(messageId, content);
-            }
-          }
-
-          // 通知 Agent State 结束流式生成
-          const endInput: InputFromLlm = {
-            type: "end-assi-message-stream",
-            id: messageId,
-            content: fullContent,
-            timestamp: Date.now(),
-          };
-          dispatch(endInput);
-
-          // 在 StreamManager 中结束流式生成
-          streamManager.endStream(messageId, fullContent);
-        } catch (error) {
-          // 错误处理：直接结束 streaming
-          console.error("OpenAI API error:", error);
-
-          // 通知 Agent State 结束流式生成（使用空内容或错误消息）
-          const endInput: InputFromLlm = {
-            type: "end-assi-message-stream",
-            id: messageId,
-            content: "",
-            timestamp: Date.now(),
-          };
-          dispatch(endInput);
-
-          // 在 StreamManager 中结束流式生成（如果流还存在）
-          // 流可能已被清理（超时），所以这里静默处理
-          streamManager.endStream(messageId, "");
-        }
+      // 如果没有新消息，或者正在流式中，不做任何操作
+      if (!hasNewer || isStreaming) {
+        return async () => {};
       }
+
+      // 更新 cutOff 为最新的用户消息时间戳
+      const latestTimestamp = getLatestUserMessageTimestamp(userMessages);
+      state = { cutOff: latestTimestamp };
+
+      // 第二阶段（异步）：执行 LLM 调用
+      return async (dispatch: Dispatch<AgentInput>) => {
+        await executeLlmCall({
+          openai,
+          openaiConfig,
+          prompt,
+          streamManager,
+          context,
+          dispatch,
+        });
+      };
     };
   };
+}
+
+// ============================================================================
+// 内部函数
+// ============================================================================
+
+/**
+ * 执行 LLM 调用的参数
+ */
+type ExecuteLlmCallParams = {
+  openai: OpenAI;
+  openaiConfig: { model: string };
+  prompt: string;
+  streamManager: CreateLlmOutputOptions["streamManager"];
+  context: ContextOfLlm;
+  dispatch: Dispatch<AgentInput>;
+};
+
+/**
+ * 执行 LLM 调用
+ *
+ * @internal
+ */
+async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
+  const { openai, openaiConfig, prompt, streamManager, context, dispatch } = params;
+  const { userMessages, assiMessages } = context;
+
+  // 生成消息 ID
+  const messageId = uuidv4();
+  const timestamp = Date.now();
+
+  // 先在 StreamManager 中创建流（确保前端连接时流已存在）
+  streamManager.startStream(messageId);
+  console.log("[createLlmOutput] Stream started for messageId:", messageId);
+
+  // 然后通知 Agent State 开始流式生成
+  const startInput: InputFromLlm = {
+    type: "start-assi-message-stream",
+    id: messageId,
+    timestamp,
+  };
+  dispatch(startInput);
+  console.log("[createLlmOutput] Start input dispatched for messageId:", messageId);
+
+  try {
+    // 执行 Streaming LLM Call（内部会处理消息格式转换）
+    const fullContent = await streamLlmCall({
+      openai,
+      model: openaiConfig.model,
+      prompt,
+      userMessages,
+      assiMessages,
+      streamManager,
+      messageId,
+    });
+
+    // 通知 Agent State 结束流式生成
+    const endInput: InputFromLlm = {
+      type: "end-assi-message-stream",
+      id: messageId,
+      content: fullContent,
+      timestamp: Date.now(),
+    };
+    dispatch(endInput);
+
+    // 在 StreamManager 中结束流式生成
+    streamManager.endStream(messageId, fullContent);
+  } catch (error) {
+    // 错误处理：直接结束 streaming
+    console.error("OpenAI API error:", error);
+
+    // 通知 Agent State 结束流式生成（使用空内容或错误消息）
+    const endInput: InputFromLlm = {
+      type: "end-assi-message-stream",
+      id: messageId,
+      content: "",
+      timestamp: Date.now(),
+    };
+    dispatch(endInput);
+
+    // 在 StreamManager 中结束流式生成（如果流还存在）
+    streamManager.endStream(messageId, "");
+  }
 }
 

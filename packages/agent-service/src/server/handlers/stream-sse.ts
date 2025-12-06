@@ -5,7 +5,7 @@
  */
 
 import { sse } from "elysia";
-import type { StreamManager, SSEConnection } from "@/streams";
+import type { StreamManager, SSEConnection } from "@/types";
 
 /**
  * 创建 GET /streams/:messageId SSE handler

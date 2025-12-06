@@ -5,7 +5,7 @@
 // ============================================================================
 // 导出类型
 // ============================================================================
-export type { SSEConnection, StreamConnection, StreamManager } from "./types";
+export type { SSEConnection, StreamConnection, StreamManager } from "@/types";
 
 // ============================================================================
 // 导出函数

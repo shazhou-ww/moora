@@ -2,7 +2,7 @@
  * StreamManager 辅助函数
  */
 
-import type { SSEConnection } from "./types";
+import type { SSEConnection } from "@/types";
 
 /**
  * 发送消息到单个连接

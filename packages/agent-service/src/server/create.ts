@@ -8,7 +8,7 @@ import { createPubSub } from "@moora/automata";
 import { createUserOutput } from "@/outputs/user";
 import { createLlmOutput } from "@/outputs/llm";
 import { createStreamManager } from "@/streams";
-import type { CreateServiceOptions } from "./types";
+import type { CreateServiceOptions } from "@/types";
 import {
   createAgentSSEHandler,
   createPostSendHandler,

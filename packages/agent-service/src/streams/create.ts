@@ -4,7 +4,7 @@
 
 import { createPubSub } from "@moora/automata";
 import type { CancelFn } from "@moora/automata";
-import type { SSEConnection, StreamConnection, StreamManager } from "./types";
+import type { SSEConnection, StreamConnection, StreamManager } from "@/types";
 import { sendToConnection } from "./helpers";
 
 /**
