@@ -1,0 +1,56 @@
+{
+  "name": "@moora/agent-webui",
+  "version": "0.1.0",
+  "description": "Agent WebUI based on Vite, React and MUI",
+  "keywords": [
+    "agent",
+    "webui",
+    "react",
+    "mui",
+    "vite"
+  ],
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moora.git",
+    "directory": "packages/agent-webui"
+  },
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-webui#readme",
+  "bugs": {
+    "url": "https://github.com/shazhou-ww/moora/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^7.3.6",
+    "@mui/material": "^5.16.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "rfc6902": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "typescript": "^5",
+    "vite": "^5.4.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

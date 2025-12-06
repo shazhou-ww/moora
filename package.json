@@ -15,7 +15,9 @@
     "test:coverage": "bun run scripts/test-all.ts test:coverage",
     "test:ci": "bun run scripts/test-all.ts test:ci",
     "start:service": "bun run scripts/start-service.ts",
-    "dev:service": "bun run scripts/start-service.ts --watch"
+    "dev:service": "bun run scripts/start-service.ts --watch",
+    "start:webui": "bun run scripts/start-webui.ts",
+    "dev:webui": "bun run scripts/start-webui.ts --watch"
   },
   "devDependencies": {
     "@types/bun": "latest",
