@@ -42,10 +42,13 @@ export function useStreamingMessages(
           // 流式进行中，从缓存获取内容
           const streamContent =
             streamContentsRef.current.get(msg.id) || "";
+          // 创建 CompletedAssiMessage，不展开 StreamingAssiMessage
           return {
-            ...msg,
-            streaming: false as const,
+            id: msg.id,
             content: streamContent,
+            timestamp: msg.timestamp,
+            role: "assistant" as const,
+            streaming: false as const,
           };
         }
         // 流式完成，直接使用
@@ -64,6 +67,7 @@ export function useStreamingMessages(
     if (!context) return;
 
     const activeStreamingIds = new Set<string>();
+    const connectionsToClose = new Set<string>();
 
     // 检查是否有新的流式消息需要连接
     context.assiMessages.forEach((msg) => {
@@ -79,7 +83,6 @@ export function useStreamingMessages(
               // 初始内容
               console.debug(`[useStreamingMessages] Received initial content for ${msg.id}, length: ${content.length}`);
               streamContentsRef.current.set(msg.id, content);
-              setStreamingMessageIds((prev) => new Set(prev).add(msg.id));
               setStreamContentVersion((prev) => prev + 1);
             },
             (chunk) => {
@@ -98,13 +101,8 @@ export function useStreamingMessages(
               console.debug(`[useStreamingMessages] Stream ended for ${msg.id}, final length: ${finalContent.length}`);
               streamContentsRef.current.set(msg.id, finalContent);
 
-              // 清理连接和流式状态
+              // 清理连接
               streamConnectionsRef.current.delete(msg.id);
-              setStreamingMessageIds((prev) => {
-                const next = new Set(prev);
-                next.delete(msg.id);
-                return next;
-              });
 
               // 触发重新渲染
               setStreamContentVersion((prev) => prev + 1);
@@ -114,26 +112,23 @@ export function useStreamingMessages(
           streamConnectionsRef.current.set(msg.id, closeConnection);
         }
       } else {
-        // 流式完成，清理连接和缓存
-        const closeConnection = streamConnectionsRef.current.get(msg.id);
-        if (closeConnection) {
-          closeConnection();
-          streamConnectionsRef.current.delete(msg.id);
-        }
-        // 移除流式状态
-        setStreamingMessageIds((prev) => {
-          const next = new Set(prev);
-          next.delete(msg.id);
-          return next;
-        });
+        // 流式完成，标记需要清理的连接
+        connectionsToClose.add(msg.id);
         // 保留最终内容在缓存中，以便后续渲染
-        if (msg.streaming === false) {
-          streamContentsRef.current.set(msg.id, msg.content);
-        }
+        streamContentsRef.current.set(msg.id, msg.content);
       }
     });
 
-    // 更新流式消息 ID 集合
+    // 清理已完成的流式连接
+    connectionsToClose.forEach((messageId) => {
+      const closeConnection = streamConnectionsRef.current.get(messageId);
+      if (closeConnection) {
+        closeConnection();
+        streamConnectionsRef.current.delete(messageId);
+      }
+    });
+
+    // 统一更新流式消息 ID 集合（只更新一次，避免竞态条件）
     setStreamingMessageIds((prev) => {
       const next = new Set(prev);
       // 添加新的流式消息

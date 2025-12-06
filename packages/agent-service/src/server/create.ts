@@ -113,11 +113,15 @@ function createSSEHandler(
  * @returns POST handler 函数
  */
 function createPostHandler(agent: ReturnType<typeof createAgent>) {
-  return async ({ body }: { body: unknown }) => {
+  return async ({ body, set }: any) => {
     // 解析请求体（ElysiaJS 自动解析 JSON）
     const { content } = body as { content: string };
 
     if (!content || typeof content !== "string") {
+      set.status = 400;
+      set.headers = {
+        "Content-Type": "application/json",
+      };
       return {
         error: "Invalid request body. Expected { content: string }",
       };
@@ -138,7 +142,10 @@ function createPostHandler(agent: ReturnType<typeof createAgent>) {
     // Dispatch 到 agent
     agent.dispatch(input);
 
-    // 返回 id 和 timestamp
+    // 设置响应头并返回 JSON
+    set.headers = {
+      "Content-Type": "application/json",
+    };
     return {
       id,
       timestamp,

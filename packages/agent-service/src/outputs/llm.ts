@@ -72,8 +72,21 @@ export function createLlmOutput(
       // 检查是否有新的用户消息需要回复
       const { userMessages, assiMessages } = context;
 
-      // 如果用户消息数量大于助手消息数量，说明有新消息需要回复
-      if (userMessages.length > assiMessages.length) {
+      // 计算已完成的助手消息数量（不包括流式中的消息）
+      const completedAssiMessagesCount = assiMessages.filter(
+        (msg) => msg.streaming === false
+      ).length;
+
+      // 如果用户消息数量大于已完成的助手消息数量，说明有新消息需要回复
+      // 并且没有正在流式的消息
+      const hasStreamingMessage = assiMessages.some(
+        (msg) => msg.streaming === true
+      );
+
+      if (
+        userMessages.length > completedAssiMessagesCount &&
+        !hasStreamingMessage
+      ) {
         // 生成消息 ID
         const messageId = uuidv4();
         const timestamp = Date.now();
