@@ -3,7 +3,11 @@
  */
 
 import type { StateOfLlm } from "@/decl/states";
-import type { InputFromLlm, SendAssiMessage } from "@/decl/inputs";
+import type {
+  InputFromLlm,
+  StartAssiMessageStream,
+  EndAssiMessageStream,
+} from "@/decl/inputs";
 
 /**
  * Llm Actor 的状态转换函数
@@ -18,18 +22,21 @@ export function transitionLlm(
   input: InputFromLlm
 ): (state: StateOfLlm) => StateOfLlm {
   return (state: StateOfLlm) => {
-    if (input.type === "send-assi-message") {
-      return transitionLlmSendMessage(input)(state);
+    if (input.type === "start-assi-message-stream") {
+      return transitionLlmStartStream(input)(state);
+    }
+    if (input.type === "end-assi-message-stream") {
+      return transitionLlmEndStream(input)(state);
     }
     return state;
   };
 }
 
 /**
- * 处理发送助手消息的转换
+ * 处理开始流式生成助手消息的转换
  */
-function transitionLlmSendMessage(
-  input: SendAssiMessage
+function transitionLlmStartStream(
+  input: StartAssiMessageStream
 ): (state: StateOfLlm) => StateOfLlm {
   return (state: StateOfLlm) => {
     return {
@@ -38,11 +45,44 @@ function transitionLlmSendMessage(
         ...state.assiMessages,
         {
           id: input.id,
-          content: input.content,
           timestamp: input.timestamp,
           role: "assistant",
+          streaming: true,
         },
       ],
+    };
+  };
+}
+
+/**
+ * 处理结束流式生成助手消息的转换
+ */
+function transitionLlmEndStream(
+  input: EndAssiMessageStream
+): (state: StateOfLlm) => StateOfLlm {
+  return (state: StateOfLlm) => {
+    // 找到对应的消息并更新
+    const messageIndex = state.assiMessages.findIndex(
+      (msg) => msg.id === input.id
+    );
+
+    if (messageIndex === -1) {
+      // 如果找不到消息，可能是状态不一致，返回原状态
+      return state;
+    }
+
+    const updatedMessages = [...state.assiMessages];
+    updatedMessages[messageIndex] = {
+      id: input.id,
+      timestamp: input.timestamp,
+      role: "assistant",
+      streaming: false,
+      content: input.content,
+    };
+
+    return {
+      ...state,
+      assiMessages: updatedMessages,
     };
   };
 }

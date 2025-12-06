@@ -8,7 +8,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
-import type { Message } from "@/types";
+import { useEffect, useState } from "react";
+import type { Message, AssiMessage, UserMessage } from "@/types";
 import {
   containerStyles,
   emptyStateStyles,
@@ -26,7 +27,39 @@ import {
 
 type MessageListProps = {
   messages: Message[];
+  streamingMessageIds?: Set<string>;
 };
+
+/**
+ * 流式光标组件
+ */
+function StreamingCursor() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible((prev) => !prev);
+    }, 530);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-block",
+        width: "2px",
+        height: "1em",
+        backgroundColor: "primary.main",
+        marginLeft: "2px",
+        verticalAlign: "baseline",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.3s",
+      }}
+    />
+  );
+}
 
 /**
  * Markdown 组件配置
@@ -52,7 +85,10 @@ const createMarkdownComponents = (role: "user" | "assistant") => ({
   },
 });
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({
+  messages,
+  streamingMessageIds = new Set(),
+}: MessageListProps) {
   return (
     <Box sx={containerStyles}>
       {messages.length === 0 ? (
@@ -75,43 +111,70 @@ export function MessageList({ messages }: MessageListProps) {
           </Typography>
         </Box>
       ) : (
-        messages.map((message) => (
-          <Fade in={true} key={message.id} timeout={300}>
-            <Box sx={messageRowStyles(message.role)}>
-              {message.role === "assistant" && (
-                <Avatar
-                  sx={avatarStyles("assistant")}
-                  src="/moorex.svg"
-                  alt="Agent"
-                />
-              )}
+        messages.map((message) => {
+          const isStreaming =
+            message.role === "assistant" &&
+            streamingMessageIds.has(message.id);
+          
+          // 提取消息内容
+          let content = "";
+          if (message.role === "user") {
+            content = (message as UserMessage).content;
+          } else {
+            const assiMsg = message as AssiMessage;
+            if (assiMsg.streaming === false) {
+              content = assiMsg.content;
+            } else {
+              // 流式进行中，内容为空（应该从流式连接获取）
+              content = "";
+            }
+          }
 
-              <Paper elevation={2} sx={messagePaperStyles(message.role)}>
-                <Box sx={markdownContainerStyles}>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={createMarkdownComponents(message.role)}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </Box>
-                <Typography variant="caption" sx={timestampStyles}>
-                  {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Typography>
-              </Paper>
+          return (
+            <Fade in={true} key={message.id} timeout={300}>
+              <Box sx={messageRowStyles(message.role)}>
+                {message.role === "assistant" && (
+                  <Avatar
+                    sx={avatarStyles("assistant")}
+                    src="/moorex.svg"
+                    alt="Agent"
+                  />
+                )}
 
-              {message.role === "user" && (
-                <Avatar sx={avatarStyles("user")}>
-                  <Person sx={avatarIconStyles} />
-                </Avatar>
-              )}
-            </Box>
-          </Fade>
-        ))
+                <Paper elevation={2} sx={messagePaperStyles(message.role)}>
+                  <Box sx={markdownContainerStyles}>
+                    {content ? (
+                      <>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={createMarkdownComponents(message.role)}
+                        >
+                          {content}
+                        </ReactMarkdown>
+                        {isStreaming && <StreamingCursor />}
+                      </>
+                    ) : isStreaming ? (
+                      <StreamingCursor />
+                    ) : null}
+                  </Box>
+                  <Typography variant="caption" sx={timestampStyles}>
+                    {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Typography>
+                </Paper>
+
+                {message.role === "user" && (
+                  <Avatar sx={avatarStyles("user")}>
+                    <Person sx={avatarIconStyles} />
+                  </Avatar>
+                )}
+              </Box>
+            </Fade>
+          );
+        })
       )}
     </Box>
   );

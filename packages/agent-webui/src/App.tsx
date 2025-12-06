@@ -15,8 +15,9 @@ import {
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
 import { createSSEConnection, applyPatchesToContext } from "@/utils/sse";
+import { useStreamingMessages } from "@/hooks";
 import { sendMessage } from "@/utils/api";
-import type { Message, ContextOfUser } from "@/types";
+import type { ContextOfUser } from "@/types";
 import {
   rootStyles,
   appBarStyles,
@@ -30,22 +31,13 @@ import {
 
 function App() {
   const [context, setContext] = useState<ContextOfUser | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 从 context 更新 messages
-  useEffect(() => {
-    if (context) {
-      const allMessages: Message[] = [
-        ...context.userMessages,
-        ...context.assiMessages,
-      ].sort((a, b) => a.timestamp - b.timestamp);
-      setMessages(allMessages);
-    }
-  }, [context]);
+  // 使用流式消息管理 Hook
+  const { messages, streamingMessageIds } = useStreamingMessages(context);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -147,7 +139,7 @@ function App() {
           </Box>
         ) : (
           <>
-            <MessageList messages={messages} />
+            <MessageList messages={messages} streamingMessageIds={streamingMessageIds} />
             <div ref={messagesEndRef} />
           </>
         )}

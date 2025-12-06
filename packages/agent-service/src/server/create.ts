@@ -8,11 +8,12 @@ import { createAgent } from "@moora/agent";
 import type { InputFromUser, ContextOfUser } from "@moora/agent";
 import { createUserOutput } from "@/outputs/user";
 import { createLlmOutput } from "@/outputs/llm";
+import { StreamManager, type SSEConnection } from "@/streams";
 
 /**
- * SSE 连接
+ * SSE 连接（用于 /agent 路由）
  */
-type SSEConnection = {
+type AgentSSEConnection = {
   queue: string[];
   resolve: (() => void) | null;
   closed: boolean;
@@ -48,11 +49,11 @@ export type CreateServiceOptions = {
  */
 function createSSEHandler(
   agent: ReturnType<typeof createAgent>,
-  connections: Set<SSEConnection>
+  connections: Set<AgentSSEConnection>
 ) {
   return function* () {
     // 创建 SSE 连接
-    const connection: SSEConnection = {
+    const connection: AgentSSEConnection = {
       queue: [],
       resolve: null,
       closed: false,
@@ -146,6 +147,58 @@ function createPostHandler(agent: ReturnType<typeof createAgent>) {
 }
 
 /**
+ * 创建 GET /streams/:messageId SSE handler
+ *
+ * @param streamManager - StreamManager 实例
+ * @returns SSE 生成器函数
+ */
+function createStreamSSEHandler(streamManager: StreamManager) {
+  return function* ({ params }: { params: { messageId: string } }) {
+    const { messageId } = params;
+
+    // 创建 SSE 连接
+    const connection: SSEConnection = {
+      queue: [],
+      resolve: null,
+      closed: false,
+    };
+
+    try {
+      // 订阅流式更新
+      streamManager.subscribe(messageId, connection);
+
+      // 保持连接打开，等待后续更新
+      while (!connection.closed) {
+        // 等待数据到达队列
+        yield new Promise<void>((resolve) => {
+          connection.resolve = resolve;
+          // 如果队列中已有数据，立即 resolve
+          if (connection.queue.length > 0) {
+            resolve();
+          }
+        });
+
+        // 发送队列中的所有数据
+        while (connection.queue.length > 0 && !connection.closed) {
+          const data = connection.queue.shift();
+          if (data) {
+            yield sse(data);
+          }
+        }
+      }
+    } catch (error) {
+      // 连接异常时标记为关闭
+      connection.closed = true;
+      throw error;
+    } finally {
+      // 确保连接被标记为关闭并取消订阅
+      connection.closed = true;
+      streamManager.unsubscribe(messageId, connection);
+    }
+  };
+}
+
+/**
  * 创建 Agent Service
  *
  * @param options - 服务选项
@@ -172,8 +225,11 @@ function createPostHandler(agent: ReturnType<typeof createAgent>) {
 export function createService(options: CreateServiceOptions) {
   const { openai, prompt } = options;
 
-  // SSE 连接集合
-  const connections = new Set<SSEConnection>();
+  // SSE 连接集合（用于 /agent 路由）
+  const connections = new Set<AgentSSEConnection>();
+
+  // 创建 StreamManager 实例
+  const streamManager = new StreamManager();
 
   // 创建 agent 实例
   const agent = createAgent({
@@ -183,15 +239,17 @@ export function createService(options: CreateServiceOptions) {
     llm: createLlmOutput({
       openai,
       prompt,
+      streamManager,
     }),
   });
 
   // 订阅 agent 状态变化，触发 output
-  agent.subscribe(output => output);
+  agent.subscribe((output) => output);
 
   const app = new Elysia()
     .get("/agent", createSSEHandler(agent, connections))
-    .post("/agent", createPostHandler(agent));
+    .post("/agent", createPostHandler(agent))
+    .get("/streams/:messageId", createStreamSSEHandler(streamManager));
 
   return app;
 }

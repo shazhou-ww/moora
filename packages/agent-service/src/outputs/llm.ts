@@ -1,13 +1,20 @@
 /**
  * LLM Output 函数实现
  *
- * 调用 OpenAI API，将结果转化为 InputFromLlm
+ * 调用 OpenAI Streaming API，通过 StreamManager 分发 chunk，
+ * 并通过 InputFromLlm 通知 Agent State 流式开始和结束
  */
 
 import OpenAI from "openai";
 import { v4 as uuidv4 } from "uuid";
-import type { ContextOfLlm, InputFromLlm, AgentInput, Output } from "@moora/agent";
+import type {
+  ContextOfLlm,
+  InputFromLlm,
+  AgentInput,
+  Output,
+} from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
+import type { StreamManager } from "@/streams";
 
 /**
  * 创建 LLM Output 函数的选项
@@ -34,12 +41,17 @@ export type CreateLlmOutputOptions = {
    * System prompt
    */
   prompt: string;
+
+  /**
+   * StreamManager 实例
+   */
+  streamManager: StreamManager;
 };
 
 /**
  * 创建 LLM Output 函数
  *
- * 当 ContextOfLlm 发生变化时，调用 OpenAI API 生成回复
+ * 当 ContextOfLlm 发生变化时，调用 OpenAI Streaming API 生成回复
  *
  * @param options - 创建选项
  * @returns LLM Output 函数
@@ -47,7 +59,7 @@ export type CreateLlmOutputOptions = {
 export function createLlmOutput(
   options: CreateLlmOutputOptions
 ): (context: ContextOfLlm) => Output<AgentInput> {
-  const { openai: openaiConfig, prompt } = options;
+  const { openai: openaiConfig, prompt, streamManager } = options;
 
   // 创建 OpenAI 客户端
   const openai = new OpenAI({
@@ -62,11 +74,27 @@ export function createLlmOutput(
 
       // 如果用户消息数量大于助手消息数量，说明有新消息需要回复
       if (userMessages.length > assiMessages.length) {
+        // 生成消息 ID
+        const messageId = uuidv4();
+        const timestamp = Date.now();
+
+        // 通知 Agent State 开始流式生成
+        const startInput: InputFromLlm = {
+          type: "start-assi-message-stream",
+          id: messageId,
+          timestamp,
+        };
+        dispatch(startInput);
+
+        // 在 StreamManager 中开始流式生成
+        streamManager.startStream(messageId);
+
         try {
           // 构建消息列表
-          const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-            { role: "system", content: prompt },
-          ];
+          const messages: Array<{
+            role: "system" | "user" | "assistant";
+            content: string;
+          }> = [{ role: "system", content: prompt }];
 
           // 添加历史消息（交替添加用户和助手消息）
           const maxLength = Math.max(userMessages.length, assiMessages.length);
@@ -78,36 +106,63 @@ export function createLlmOutput(
               });
             }
             if (i < assiMessages.length) {
-              messages.push({
-                role: "assistant",
-                content: assiMessages[i]?.content ?? "",
-              });
+              const assiMsg = assiMessages[i];
+              // 只添加已完成的消息（有 content）
+              if (assiMsg && assiMsg.streaming === false) {
+                messages.push({
+                  role: "assistant",
+                  content: assiMsg.content,
+                });
+              }
             }
           }
 
-          // 调用 OpenAI API
-          const completion = await openai.chat.completions.create({
+          // 调用 OpenAI Streaming API
+          const stream = await openai.chat.completions.create({
             model: openaiConfig.model,
             messages,
+            stream: true,
           });
 
-          const content = completion.choices[0]?.message?.content;
+          let fullContent = "";
 
-          if (content) {
-            // 将结果转化为 InputFromLlm
-            const input: InputFromLlm = {
-              type: "send-assi-message",
-              id: uuidv4(),
-              content,
-              timestamp: Date.now(),
-            };
+          // 处理流式响应
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
 
-            // Dispatch 到 agent
-            dispatch(input);
+            if (content) {
+              fullContent += content;
+              // 通过 StreamManager 分发 chunk
+              streamManager.appendChunk(messageId, content);
+            }
           }
+
+          // 通知 Agent State 结束流式生成
+          const endInput: InputFromLlm = {
+            type: "end-assi-message-stream",
+            id: messageId,
+            content: fullContent,
+            timestamp: Date.now(),
+          };
+          dispatch(endInput);
+
+          // 在 StreamManager 中结束流式生成
+          streamManager.endStream(messageId, fullContent);
         } catch (error) {
-          // 错误处理：可以记录日志或发送错误消息
+          // 错误处理：直接结束 streaming
           console.error("OpenAI API error:", error);
+
+          // 通知 Agent State 结束流式生成（使用空内容或错误消息）
+          const endInput: InputFromLlm = {
+            type: "end-assi-message-stream",
+            id: messageId,
+            content: "",
+            timestamp: Date.now(),
+          };
+          dispatch(endInput);
+
+          // 在 StreamManager 中结束流式生成
+          streamManager.endStream(messageId, "");
         }
       }
     };

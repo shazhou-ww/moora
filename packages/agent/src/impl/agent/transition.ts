@@ -24,7 +24,10 @@ export function transition(
     if (input.type === "send-user-message") {
       const newUserState = transitionUser(input)({ userMessages });
       return { ...state, userMessages: newUserState.userMessages };
-    } else if (input.type === "send-assi-message") {
+    } else if (
+      input.type === "start-assi-message-stream" ||
+      input.type === "end-assi-message-stream"
+    ) {
       const newLlmState = transitionLlm(input)({ assiMessages });
       return { ...state, assiMessages: newLlmState.assiMessages };
     }

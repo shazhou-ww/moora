@@ -3,31 +3,52 @@
  */
 
 /**
- * 消息类型
+ * 流式进行中的助手消息
  */
-export type Message = {
+export type StreamingAssiMessage = {
+  id: string;
+  timestamp: number;
+  role: "assistant";
+  streaming: true;
+};
+
+/**
+ * 流式完成的助手消息
+ */
+export type CompletedAssiMessage = {
   id: string;
   content: string;
   timestamp: number;
-  role: "user" | "assistant";
+  role: "assistant";
+  streaming: false;
 };
+
+/**
+ * 助手消息类型（Discriminated Union）
+ */
+export type AssiMessage = StreamingAssiMessage | CompletedAssiMessage;
+
+/**
+ * 用户消息类型
+ */
+export type UserMessage = {
+  id: string;
+  content: string;
+  timestamp: number;
+  role: "user";
+};
+
+/**
+ * 消息类型（Union）
+ */
+export type Message = UserMessage | AssiMessage;
 
 /**
  * ContextOfUser 类型
  */
 export type ContextOfUser = {
-  userMessages: Array<{
-    id: string;
-    content: string;
-    timestamp: number;
-    role: "user";
-  }>;
-  assiMessages: Array<{
-    id: string;
-    content: string;
-    timestamp: number;
-    role: "assistant";
-  }>;
+  userMessages: UserMessage[];
+  assiMessages: AssiMessage[];
 };
 
 /**
@@ -59,4 +80,22 @@ export type SendMessageResponse = {
   id: string;
   timestamp: number;
 };
+
+/**
+ * 流式消息事件类型
+ */
+export type StreamMessageEvent =
+  | {
+      type: "initial";
+      content: string;
+      isActive: boolean;
+    }
+  | {
+      type: "chunk";
+      chunk: string;
+    }
+  | {
+      type: "end";
+      content: string;
+    };
 

@@ -48,11 +48,16 @@ export { contextOfUserSchema, contextOfLlmSchema } from "./contexts";
 // ============================================================================
 export type {
   SendUserMessage,
-  SendAssiMessage,
+  StartAssiMessageStream,
+  EndAssiMessageStream,
   InputFromUser,
   InputFromLlm,
 } from "./inputs";
-export { sendUserMessageSchema, sendAssiMessageSchema } from "./inputs";
+export {
+  sendUserMessageSchema,
+  startAssiMessageStreamSchema,
+  endAssiMessageStreamSchema,
+} from "./inputs";
 
 // ============================================================================
 // Helpers
