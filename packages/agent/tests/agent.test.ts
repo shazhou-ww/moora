@@ -27,6 +27,7 @@ describe("Agent", () => {
 
     expect(state.userMessages).toEqual([]);
     expect(state.assiMessages).toEqual([]);
+    expect(state.cutOff).toBe(0);
   });
 
   test("should dispatch user message and update state", async () => {
@@ -52,11 +53,13 @@ describe("Agent", () => {
   test("should dispatch start stream and update state", async () => {
     const agent = createAgent(mockOutputFns);
     const timestamp = Date.now();
+    const cutOff = timestamp - 100;
 
     agent.dispatch({
       type: "start-assi-message-stream",
       id: "test-id-2",
       timestamp,
+      cutOff,
     });
 
     // dispatch 是异步的，需要等待
@@ -67,18 +70,21 @@ describe("Agent", () => {
     expect(state.assiMessages[0]?.id).toBe("test-id-2");
     expect(state.assiMessages[0]?.role).toBe("assistant");
     expect(state.assiMessages[0]?.streaming).toBe(true);
+    expect(state.cutOff).toBe(cutOff);
   });
 
   test("should dispatch end stream and update state", async () => {
     const agent = createAgent(mockOutputFns);
     const timestamp = Date.now();
     const messageId = "test-id-3";
+    const cutOff = timestamp - 100;
 
     // 先开始流式生成
     agent.dispatch({
       type: "start-assi-message-stream",
       id: messageId,
       timestamp,
+      cutOff,
     });
 
     // dispatch 是异步的，需要等待
@@ -103,6 +109,7 @@ describe("Agent", () => {
     if (state.assiMessages[0]?.streaming === false) {
       expect(state.assiMessages[0].content).toBe("Hi there!");
     }
+    expect(state.cutOff).toBe(cutOff);
   });
 
   test("should subscribe to output changes", async () => {

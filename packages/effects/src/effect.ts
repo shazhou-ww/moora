@@ -18,50 +18,57 @@ import type { Eff } from "./types";
  * 创建一个带有内部状态的 Eff 函数。
  * 状态在多次调用之间保持，类似于 React 的 useState。
  *
- * 状态更新在 eff 执行时同步进行，fn 接收包含 context 和 state 的对象，
- * 返回包含新 state 和 result 的对象。
+ * 状态更新通过 `setState` 完成。`setState` 只更新状态，不会触发新的 effect。
+ * Effect 的触发由外部 context 的变化控制（当 Eff 被调用时）。
  *
  * @template Context - 上下文类型
- * @template Result - 结果类型
  * @template State - 状态类型
  * @param initial - 初始状态
- * @param fn - Eff 函数，接收包含 context 和 state 的对象，返回包含新 state 和 result 的对象
+ * @param fn - Eff 函数，接收包含 context、state 和 setState 的对象
  * @returns 带状态的 Eff
  *
  * @example
  * ```typescript
- * // 统计调用次数
+ * // 跟踪上次的 context，只在 context 改变时更新状态
  * const handler = (dispatch) => stateful(
- *   0,
- *   ({ context, state }) => ({
- *     state: state + 1,
- *     result: void console.log(`第 ${state + 1} 次调用`),
- *   })
+ *   { lastValue: null },
+ *   ({ context, state, setState }) => {
+ *     if (context.value !== state.lastValue) {
+ *       console.log(`值从 ${state.lastValue} 变为 ${context.value}`);
+ *       setState({ lastValue: context.value });
+ *     }
+ *   }
  * );
  *
  * // 累积数据并批量处理
  * const batchHandler = (dispatch) => stateful(
  *   [],
- *   ({ context, state }) => {
+ *   ({ context, state, setState }) => {
  *     const newBuffer = [...state, context];
  *     if (newBuffer.length >= 10) {
  *       queueMicrotask(() => flush(newBuffer));
- *       return { state: [], result: undefined };
+ *       setState([]);
+ *     } else {
+ *       setState(newBuffer);
  *     }
- *     return { state: newBuffer, result: undefined };
  *   }
  * );
  * ```
  */
-export function stateful<Context, Result, State>(
+export function stateful<Context, State>(
   initial: State,
-  fn: Eff<{ context: Context; state: State }, { state: State; result: Result }>
-): Eff<Context, Result> {
+  fn: (params: { context: Context; state: State; setState: (state: State) => void }) => void
+): Eff<Context> {
   let state = initial;
+  let contextRef: Context | null = null;
 
   return (context: Context) => {
-    const { state: newState, result } = fn({ context, state });
-    state = newState;
-    return result;
+    contextRef = context;
+    const setState = (newState: State) => {
+      if (contextRef === context) {
+        state = newState;
+      }
+    };
+    fn({ context, state, setState });
   };
 }

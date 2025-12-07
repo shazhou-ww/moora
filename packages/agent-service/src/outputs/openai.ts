@@ -91,6 +91,7 @@ export async function streamLlmCall(
     assiMessages,
     streamManager,
     messageId,
+    onFirstChunk,
   } = options;
 
   // 将 Agent 消息转换为 OpenAI 消息格式
@@ -104,12 +105,19 @@ export async function streamLlmCall(
   });
 
   let fullContent = "";
+  let isFirstChunk = true;
 
   // 处理流式响应
   for await (const chunk of stream) {
     const content = chunk.choices[0]?.delta?.content;
 
     if (content) {
+      // 如果是第一个 chunk，调用回调
+      if (isFirstChunk && onFirstChunk) {
+        isFirstChunk = false;
+        onFirstChunk();
+      }
+
       fullContent += content;
       // 通过 StreamManager 分发 chunk
       streamManager.appendChunk(messageId, content);

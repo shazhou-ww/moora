@@ -66,6 +66,10 @@ export type StreamLlmCallOptions = {
    * 消息 ID
    */
   messageId: string;
+  /**
+   * 在收到第一个 chunk 时的回调
+   */
+  onFirstChunk?: () => void;
 };
 
 // ============================================================================

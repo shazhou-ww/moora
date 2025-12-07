@@ -25,7 +25,7 @@ import type { Eff } from "@moora/effects";
  */
 export const createOutput =
   (outputFns: OutputFns) =>
-  (state: AgentState): Eff<Dispatch<AgentInput>, void> => {
+  (state: AgentState): Eff<Dispatch<AgentInput>> => {
     // 确保 state 存在并提取所需的字段，使用默认值防止 undefined
     if (!state) {
       console.error("[createOutput] State is undefined!");
@@ -33,9 +33,10 @@ export const createOutput =
     }
     const userMessages = state.userMessages ?? [];
     const assiMessages = state.assiMessages ?? [];
+    const cutOff = state.cutOff ?? 0;
     return (dispatch: Dispatch<AgentInput>) => {
       const contextUser: ContextOfUser = { userMessages, assiMessages };
-      const contextLlm: ContextOfLlm = { userMessages, assiMessages };
+      const contextLlm: ContextOfLlm = { userMessages, assiMessages, cutOff };
       outputFns.user(dispatch)(contextUser);
       outputFns.llm(dispatch)(contextLlm);
     };

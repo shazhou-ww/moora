@@ -29,6 +29,10 @@ export const startAssiMessageStreamSchema = z.object({
   type: z.literal("start-assi-message-stream"),
   id: z.string(),
   timestamp: z.number(),
+  /**
+   * 这次 llm 请求所处理的最迟的用户消息时间戳，用于更新 cutOff
+   */
+  cutOff: z.number(),
 });
 
 export type StartAssiMessageStream = z.infer<typeof startAssiMessageStreamSchema>;

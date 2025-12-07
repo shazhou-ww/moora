@@ -29,7 +29,7 @@ export type CreateUserOutputOptions = {
  */
 export function createUserOutput(
   options: CreateUserOutputOptions
-): (dispatch: Dispatch<AgentInput>) => Eff<ContextOfUser, void> {
+): (dispatch: Dispatch<AgentInput>) => Eff<ContextOfUser> {
   const { publishPatch } = options;
   let previousContext: ContextOfUser | null = null;
 

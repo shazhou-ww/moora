@@ -99,6 +99,10 @@ export type UserObUser = z.infer<typeof userObUserSchema>;
  */
 export const llmObLlmSchema = z.object({
   assiMessages: z.array(assiMessageSchema),
+  /**
+   * 截止时间戳，表示截止到这个时间之前（包括这个时间）的 user message 都已经发给 LLM 处理过了
+   */
+  cutOff: z.number(),
 });
 
 export type LlmObLlm = z.infer<typeof llmObLlmSchema>;

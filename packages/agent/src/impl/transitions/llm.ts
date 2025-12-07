@@ -50,6 +50,8 @@ function transitionLlmStartStream(
           streaming: true,
         },
       ],
+      // 使用 input 中携带的 cutOff 更新状态
+      cutOff: input.cutOff,
     };
   };
 }

@@ -12,5 +12,6 @@ import type { StateOfLlm } from "@/decl/states";
 export function initialLlm(): StateOfLlm {
   return {
     assiMessages: [],
+    cutOff: 0,
   };
 }

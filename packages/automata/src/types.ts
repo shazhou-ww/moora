@@ -47,7 +47,7 @@ export type PubSub<T> = {
 /**
  * 分发函数，用于发送输入信号
  */
-export type Dispatch<Input> = Eff<Input, void>;
+export type Dispatch<Input> = Eff<Input>;
 
 /**
  * 输出处理器，接收输出并返回一个 Eff 函数
@@ -60,7 +60,7 @@ export type Dispatch<Input> = Eff<Input, void>;
  * - 异步副作用在微任务中执行，不会阻塞当前执行栈
  * - 异步副作用可以通过 dispatch 产生新的输入，形成反馈循环
  */
-export type OutputHandler<Input, Output> = (dispatch: Dispatch<Input>) => Eff<Output, void>;
+export type OutputHandler<Input, Output> = (dispatch: Dispatch<Input>) => Eff<Output>;
 
 /**
  * 订阅函数

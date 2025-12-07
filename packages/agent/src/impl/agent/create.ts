@@ -38,7 +38,7 @@ import type { Eff } from "@moora/effects";
  */
 export function createAgent(
   outputFns: OutputFns
-): StatefulTransferer<AgentInput, Eff<Dispatch<AgentInput>, void>, AgentState> {
+): StatefulTransferer<AgentInput, Eff<Dispatch<AgentInput>>, AgentState> {
   return moore({
     initial: initial,
     transition: transition,

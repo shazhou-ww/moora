@@ -18,7 +18,7 @@ export function transition(
   input: AgentInput
 ): (state: AgentState) => AgentState {
   return (state: AgentState) => {
-    const { userMessages, assiMessages } = state;
+    const { userMessages, assiMessages, cutOff } = state;
 
     // 根据 Input 类型调用对应的 transition 函数
     if (input.type === "send-user-message") {
@@ -28,8 +28,12 @@ export function transition(
       input.type === "start-assi-message-stream" ||
       input.type === "end-assi-message-stream"
     ) {
-      const newLlmState = transitionLlm(input)({ assiMessages });
-      return { ...state, assiMessages: newLlmState.assiMessages };
+      const newLlmState = transitionLlm(input)({ assiMessages, cutOff });
+      return {
+        ...state,
+        assiMessages: newLlmState.assiMessages,
+        cutOff: newLlmState.cutOff,
+      };
     }
 
     return state;

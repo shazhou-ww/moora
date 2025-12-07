@@ -75,4 +75,4 @@ export type TransitionFnOf<Actor extends Actors> = (
  */
 export type OutputFnOf<Actor extends Actors> = (
   dispatch: Dispatch<AgentInput>
-) => Eff<ContextOf<Actor>, void>;
+) => Eff<ContextOf<Actor>>;

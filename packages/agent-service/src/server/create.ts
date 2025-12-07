@@ -62,7 +62,7 @@ export function createService(options: CreateServiceOptions) {
 
   // 订阅 agent 状态变化，触发 output
   // OutputHandler 签名: (dispatch) => (output) => void
-  // output 是 Eff<Dispatch<AgentInput>, void>，需要执行它
+  // output 是 Eff<Dispatch<AgentInput>>，需要执行它
   agent.subscribe((dispatch) => (output) => {
     output(dispatch);
   });
