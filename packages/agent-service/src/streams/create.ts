@@ -6,6 +6,9 @@ import { createPubSub } from "@moora/automata";
 import type { CancelFn } from "@moora/automata";
 import type { SSEConnection, StreamConnection, StreamManager } from "@/types";
 import { sendToConnection } from "./helpers";
+import { getLogger } from "@/logger";
+
+const logger = getLogger().stream;
 
 /**
  * 创建 StreamManager 实例
@@ -91,9 +94,7 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      console.debug(
-        `Stream not found for messageId: ${messageId}, chunk will be ignored`
-      );
+      logger.debug("Stream not found, chunk ignored", { messageId });
       return;
     }
 
@@ -115,9 +116,7 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      console.debug(
-        `Stream not found for messageId: ${messageId}, endStream will be ignored`
-      );
+      logger.debug("Stream not found, endStream ignored", { messageId });
       return;
     }
 
@@ -151,9 +150,7 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      console.warn(
-        `Stream not found for messageId: ${messageId}, connection will be closed`
-      );
+      logger.warn("Stream not found, connection closed", { messageId });
       connection.closed = true;
       if (connection.resolve) {
         connection.resolve();

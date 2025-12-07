@@ -5,6 +5,9 @@
  */
 
 import OpenAI from "openai";
+import { getLogger } from "@/logger";
+
+const logger = getLogger().llm;
 import { v4 as uuidv4 } from "uuid";
 import type {
   ContextOfLlm,
@@ -97,36 +100,26 @@ export function createLlmOutput(
       const isStreaming = hasStreamingMessage(assiMessages);
 
       // 详细打印判定上下文
-      console.log("[createLlmOutput] ===== Decision Context =====", {
+      logger.debug("Decision context", {
         activeCallsCount: state.llmCalls.length,
         activeCallIds: state.llmCalls,
         cutOff,
         latestUserMessageTimestamp: getLatestUserMessageTimestamp(userMessages),
         hasNewer,
         isStreaming,
-        userMessages: userMessages.map((msg) => ({
-          id: msg.id,
-          timestamp: msg.timestamp,
-          contentPreview: msg.content.substring(0, 50),
-          isNewerThanCutOff: msg.timestamp > cutOff,
-        })),
-        assiMessages: assiMessages.map((msg) => ({
-          id: msg.id,
-          timestamp: msg.timestamp,
-          streaming: msg.streaming,
-          contentPreview: msg.streaming === false ? msg.content.substring(0, 50) : "[streaming]",
-        })),
+        userMessagesCount: userMessages.length,
+        assiMessagesCount: assiMessages.length,
       });
 
       // 如果正在调用中，忽略这次 effect
       if (hasActiveCalls) {
-        console.log("[createLlmOutput] Already calling, skipping this effect");
+        logger.debug("Already calling, skipping this effect");
         return;
       }
 
       // 如果没有新消息，或者已经有 streaming 消息，不做任何操作
       if (!hasNewer || isStreaming) {
-        console.log("[createLlmOutput] No action needed", {
+        logger.debug("No action needed", {
           reason: !hasNewer ? "no-newer-messages" : "already-streaming",
         });
         return;
@@ -135,9 +128,7 @@ export function createLlmOutput(
       // 生成消息 ID（会在 executeLlmCall 中复用）
       const messageId = uuidv4();
 
-      console.log("[createLlmOutput] Starting LLM call", {
-        messageId,
-      });
+      logger.info("Starting LLM call", { messageId });
 
       // 将 messageId 添加到 llmCalls 数组中
       setState((prev) => ({
@@ -146,9 +137,7 @@ export function createLlmOutput(
 
       // 使用 queueMicrotask 执行异步 LLM 调用
       queueMicrotask(() => {
-        console.log("[createLlmOutput] queueMicrotask: About to execute LLM call", {
-          messageId,
-        });
+        logger.debug("About to execute LLM call", { messageId });
         executeLlmCall({
           openai,
           openaiConfig,
@@ -158,26 +147,23 @@ export function createLlmOutput(
           dispatch,
           messageId, // 传入 messageId，确保复用
           onComplete: () => {
-            console.log("[createLlmOutput] LLM call completed, removing from llmCalls", {
-              messageId,
-            });
+            logger.debug("LLM call completed, removing from llmCalls", { messageId });
             // 调用完成后，从 llmCalls 中移除 messageId（使用 updater 函数）
             setState((prev) => ({
               llmCalls: prev.llmCalls.filter((id) => id !== messageId),
             }));
           },
           onError: () => {
-            console.log("[createLlmOutput] LLM call failed, removing from llmCalls", {
-              messageId,
-            });
+            logger.warn("LLM call failed, removing from llmCalls", { messageId });
             // 调用失败时，从 llmCalls 中移除 messageId（使用 updater 函数）
             setState((prev) => ({
               llmCalls: prev.llmCalls.filter((id) => id !== messageId),
             }));
           },
         }).catch((error) => {
-          console.error("[createLlmOutput] Error executing LLM call:", error, {
+          logger.error("Error executing LLM call", {
             messageId,
+            error: error instanceof Error ? error.message : String(error),
           });
           // 即使出错，也要从 llmCalls 中移除 messageId（使用 updater 函数）
           setState((prev) => ({
@@ -242,7 +228,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
   // 计算这次请求实际处理的最迟的用户消息时间戳
   const cutOff = getLatestUserMessageTimestamp(userMessages);
 
-  console.log("[executeLlmCall] Starting LLM call", {
+  logger.info("Executing LLM call", {
     messageId,
     timestamp,
     cutOff,
@@ -269,7 +255,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
         // 在收到第一个 chunk 时，通知 Agent State 开始流式生成，携带 cutOff
         if (!hasReceivedFirstChunk) {
           hasReceivedFirstChunk = true;
-          console.log("[executeLlmCall] Received first chunk, dispatching start-assi-message-stream", {
+          logger.debug("Received first chunk, dispatching start-assi-message-stream", {
             messageId,
             cutOff,
           });
@@ -286,7 +272,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
 
     // 如果没有收到任何 chunk（不应该发生，但为了安全）
     if (!hasReceivedFirstChunk) {
-      console.log("[executeLlmCall] No chunks received, dispatching start-assi-message-stream anyway", {
+      logger.warn("No chunks received, dispatching start-assi-message-stream anyway", {
         messageId,
         cutOff,
       });
@@ -312,7 +298,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     // 在 StreamManager 中结束流式生成
     streamManager.endStream(messageId, fullContent);
 
-    console.log("[executeLlmCall] LLM call succeeded", {
+    logger.info("LLM call succeeded", {
       messageId,
       contentLength: fullContent.length,
     });
@@ -321,11 +307,14 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     onComplete();
   } catch (error) {
     // 错误处理：如果在收到第一个 chunk 之前就出错，不 dispatch start-assi-message-stream
-    console.error("[executeLlmCall] OpenAI API error:", error);
+    logger.error("OpenAI API error", {
+      messageId,
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     // 如果已经收到第一个 chunk，需要结束 streaming
     if (hasReceivedFirstChunk) {
-      console.log("[executeLlmCall] Error after first chunk, dispatching end-assi-message-stream");
+      logger.debug("Error after first chunk, dispatching end-assi-message-stream", { messageId });
       // 通知 Agent State 结束流式生成（使用空内容或错误消息）
       const endInput: InputFromLlm = {
         type: "end-assi-message-stream",
@@ -335,13 +324,13 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
       };
       dispatch(endInput);
     } else {
-      console.log("[executeLlmCall] Error before first chunk, skipping end-assi-message-stream");
+      logger.debug("Error before first chunk, skipping end-assi-message-stream", { messageId });
     }
 
     // 在 StreamManager 中结束流式生成（如果流还存在）
     streamManager.endStream(messageId, "");
 
-    console.log("[executeLlmCall] LLM call failed, calling onError", {
+    logger.warn("LLM call failed, calling onError", {
       messageId,
       hasReceivedFirstChunk,
     });

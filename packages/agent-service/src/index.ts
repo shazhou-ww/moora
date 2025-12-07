@@ -6,6 +6,17 @@
 
 import "dotenv/config";
 import { createService } from "./server/create";
+import { createLogger, getLogger, setLogger } from "./logger";
+
+// 导出 logger 模块
+export { createLogger, getLogger, setLogger };
+export type { Logger, CategoryLogger, LogCategory, LogLevel, LoggerOptions } from "./logger";
+
+// 创建 logger 实例
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as "trace" | "debug" | "info" | "warn" | "error" | "fatal") || "info",
+});
+setLogger(logger);
 
 // 从环境变量读取配置
 const llmEndpointUrl = process.env.LLM_ENDPOINT_URL || "https://api.openai.com/v1";
@@ -16,7 +27,7 @@ const port = parseInt(process.env.PORT || "3000", 10);
 
 // 验证必需的环境变量
 if (!llmApiKey) {
-  console.error("Error: LLM_API_KEY environment variable is required");
+  logger.server.fatal("LLM_API_KEY environment variable is required");
   process.exit(1);
 }
 
@@ -33,6 +44,6 @@ const app = createService({
 });
 
 app.listen(port, () => {
-  console.log(`🚀 Agent Service is running on http://localhost:${port}`);
+  logger.server.info(`Agent Service is running on http://localhost:${port}`);
 });
 
