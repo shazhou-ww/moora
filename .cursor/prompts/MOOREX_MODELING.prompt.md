@@ -54,7 +54,8 @@ type ContextOf<Actor extends Actors>
 type InputFrom<Actor extends Actors>
 type InitialFnOf<Actor extends Actors>
 type TransitionFnOf<Actor extends Actors>
-type OutputFnOf<Actor extends Actors>
+type OutputFnOf<Actor extends Actors> = Eff<{ context: ContextOf<Actor>; dispatch: Dispatch<AgentInput> }>
+// 注意：OutputFnOf 非柯里化设计，允许 effect 在闭包外层创建，使 stateful 等组合器状态可共享
 
 // Agent 总类型
 type AgentState = StateOfUser & StateOfLlm

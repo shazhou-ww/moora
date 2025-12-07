@@ -53,8 +53,8 @@ export const createOutput =
         toolCallRequests, // 来自 StateOfLlm，因为 ToolkitObLlm 观察 Llm 的 toolCallRequests
         toolResults,
       };
-      outputFns.user(dispatch)(contextUser);
-      outputFns.llm(dispatch)(contextLlm);
-      outputFns.toolkit(dispatch)(contextToolkit);
+      outputFns.user({ context: contextUser, dispatch });
+      outputFns.llm({ context: contextLlm, dispatch });
+      outputFns.toolkit({ context: contextToolkit, dispatch });
     };
   };

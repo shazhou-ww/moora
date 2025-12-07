@@ -8,8 +8,8 @@ import type { OutputFns } from "../src/index";
 
 // 创建一个简单的 mock outputFns
 const mockOutputFns: OutputFns = {
-  user: () => () => {},
-  llm: () => () => {},
+  user: () => {},
+  llm: () => {},
 };
 
 describe("Starter Agent", () => {

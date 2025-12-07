@@ -21,6 +21,9 @@ import type { Eff } from "./types";
  * 状态更新通过 `setState` 完成。`setState` 只更新状态，不会触发新的 effect。
  * Effect 的触发由外部 context 的变化控制（当 Eff 被调用时）。
  *
+ * `setState` 只支持 updater 函数形式：`setState((prevState) => newState)`
+ * 这种方式确保状态更新总是基于最新的状态值，即使是在异步副作用中调用也能正确工作。
+ *
  * @template Context - 上下文类型
  * @template State - 状态类型
  * @param initial - 初始状态
@@ -35,7 +38,7 @@ import type { Eff } from "./types";
  *   ({ context, state, setState }) => {
  *     if (context.value !== state.lastValue) {
  *       console.log(`值从 ${state.lastValue} 变为 ${context.value}`);
- *       setState({ lastValue: context.value });
+ *       setState(() => ({ lastValue: context.value }));
  *     }
  *   }
  * );
@@ -47,27 +50,34 @@ import type { Eff } from "./types";
  *     const newBuffer = [...state, context];
  *     if (newBuffer.length >= 10) {
  *       queueMicrotask(() => flush(newBuffer));
- *       setState([]);
+ *       setState(() => []);
  *     } else {
- *       setState(newBuffer);
+ *       setState(() => newBuffer);
  *     }
+ *   }
+ * );
+ *
+ * // 异步副作用中使用 updater 函数
+ * const asyncHandler = (dispatch) => stateful(
+ *   { count: 0 },
+ *   ({ context, state, setState }) => {
+ *     queueMicrotask(() => {
+ *       // 使用 updater 函数，确保状态更新总是生效
+ *       setState((prev) => ({ count: prev.count + 1 }));
+ *     });
  *   }
  * );
  * ```
  */
 export function stateful<Context, State>(
   initial: State,
-  fn: (params: { context: Context; state: State; setState: (state: State) => void }) => void
+  fn: (params: { context: Context; state: State; setState: (updater: (prevState: State) => State) => void }) => void
 ): Eff<Context> {
   let state = initial;
-  let contextRef: Context | null = null;
 
   return (context: Context) => {
-    contextRef = context;
-    const setState = (newState: State) => {
-      if (contextRef === context) {
-        state = newState;
-      }
+    const setState = (updater: (prevState: State) => State) => {
+      state = updater(state);
     };
     fn({ context, state, setState });
   };

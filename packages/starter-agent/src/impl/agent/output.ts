@@ -24,6 +24,6 @@ import type { Dispatch } from "@moora/automata";
 export const createOutput =
   (outputFns: OutputFns) =>
   ({ userMessages, assiMessages }: AgentState) => (dispatch: Dispatch<AgentInput>) => {
-    outputFns.user(dispatch)({ userMessages, assiMessages });
-    outputFns.llm(dispatch)({ userMessages, assiMessages });
+    outputFns.user({ context: { userMessages, assiMessages }, dispatch });
+    outputFns.llm({ context: { userMessages, assiMessages }, dispatch });
   }

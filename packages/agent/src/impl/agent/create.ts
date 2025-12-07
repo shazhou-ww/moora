@@ -18,7 +18,7 @@ import type { OutputFnOf } from "@/decl/helpers";
  * 返回一个空的 effect，不执行任何操作
  */
 function createNoopOutput<Actor extends typeof USER | typeof LLM | typeof TOOLKIT>(): OutputFnOf<Actor> {
-  return () => () => {};
+  return () => {};
 }
 
 /**

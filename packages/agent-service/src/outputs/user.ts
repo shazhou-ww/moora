@@ -29,12 +29,11 @@ export type CreateUserOutputOptions = {
  */
 export function createUserOutput(
   options: CreateUserOutputOptions
-): (dispatch: Dispatch<AgentInput>) => Eff<ContextOfUser> {
+): Eff<{ context: ContextOfUser; dispatch: Dispatch<AgentInput> }> {
   const { publishPatch } = options;
   let previousContext: ContextOfUser | null = null;
 
-  return (dispatch: Dispatch<AgentInput>) => {
-    return (context: ContextOfUser) => {
+  return ({ context, dispatch }) => {
       // 如果是第一次，记录 context，不发送（全量数据在连接时发送）
       if (previousContext === null) {
         previousContext = context;
@@ -54,6 +53,5 @@ export function createUserOutput(
         publishPatch(patchData);
         previousContext = context;
       }
-    };
   };
 }

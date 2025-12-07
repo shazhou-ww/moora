@@ -108,13 +108,14 @@ type Output<Input> = Eff<Dispatch<Input>, void>
 - **关键函数的类型定义**
   - `type InitialFnOf<Actor extends Actors> = () => StateOf<Actor>`
   - `type TransitionFnOf<Actor extends Actors> = (input: InputFrom<Actor>) => (state: StateOf<Actor>) => StateOf<Actor>`
-  - `type OutputFnOf<Actor extends Actors> = (dispatch: Dispatch<AgentInput>) => Eff<ContextOf<Actor>, void>`
+  - `type OutputFnOf<Actor extends Actors> = Eff<{ context: ContextOf<Actor>; dispatch: Dispatch<AgentInput> }>`
   
-  注意：`OutputFnOf` 接收 `dispatch` 作为参数，返回 `Eff<ContextOf<Actor>, void>`。这是因为：
+  注意：`OutputFnOf` 返回 `Eff<{ context, dispatch }>`，直接接收包含 `context` 和 `dispatch` 的对象。这是因为：
   - **Context** 是 Actor 发出的 Observation 的并集，表示该 Actor 对外呈现的信息
   - **Output** 函数根据 Actor 的 Context（它向外发出的信息）来决定要执行什么副作用
   - 这符合 Moore 机的语义：输出由当前状态决定，而 Context 正是 Actor 状态中向外可见的部分
-  - Output 函数接收 `dispatch` 作为参数，允许在副作用中 dispatch 新的 Input
+  - Output 函数同时接收 `context` 和 `dispatch`，允许在副作用中访问上下文并 dispatch 新的 Input
+  - **重要设计**：这种非柯里化的设计允许 effect 在闭包外层创建，使得使用 `stateful` 等 effect 组合器时，状态可以在多次调用之间正确共享
   
   **重要**：
   - `InitialFn` 和 `TransitionFn` 是 Agent 建模的核心部分，必须是**纯函数**
@@ -280,12 +281,12 @@ import type { OutputFns } from '@moora/starter-agent';
 
 // 定义各个 Actor 的 output 函数
 const outputFns: OutputFns = {
-  user: (dispatch) => (context) => {
+  user: ({ context, dispatch }) => {
     // 同步执行，可以立即处理输出
     console.log('User context:', context);
     // 如果需要异步操作，使用 queueMicrotask
   },
-  llm: (dispatch) => (context) => {
+  llm: ({ context, dispatch }) => {
     // 同步执行
     console.log('LLM context:', context);
     // 如果需要异步操作，使用 queueMicrotask
@@ -316,11 +317,11 @@ import type { OutputFns } from '@moora/starter-agent';
 
 // 定义 output 函数（实际项目中可能来自不同的模块）
 const outputFns: OutputFns = {
-  user: (dispatch) => (context) => {
+  user: ({ context, dispatch }) => {
     console.log('[User] Messages:', context.userMessages);
     // User actor 的副作用，如果需要异步操作，使用 queueMicrotask
   },
-  llm: (dispatch) => (context) => {
+  llm: ({ context, dispatch }) => {
     console.log('[LLM] Processing...');
     // 如果需要异步操作，使用 queueMicrotask
     queueMicrotask(async () => {

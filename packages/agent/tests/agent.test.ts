@@ -8,9 +8,9 @@ import type { OutputFns } from "../src/index";
 
 // 创建一个简单的 mock outputFns
 const mockOutputFns: OutputFns = {
-  user: () => () => {},
-  llm: () => () => {},
-  toolkit: () => () => {},
+  user: () => {},
+  llm: () => {},
+  toolkit: () => {},
 };
 
 describe("Agent", () => {
@@ -131,7 +131,7 @@ describe("Agent", () => {
   test("should support partial outputFns with noop for missing actors", async () => {
     // 只提供 user output，其他应该自动填充为 noop
     const partialOutputFns = {
-      user: () => () => {},
+      user: () => {},
     };
 
     const agent = createAgent(partialOutputFns);
