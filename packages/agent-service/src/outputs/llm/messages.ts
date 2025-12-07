@@ -50,4 +50,3 @@ export function mergeMessages(
     (a, b) => a.timestamp - b.timestamp
   );
 }
-

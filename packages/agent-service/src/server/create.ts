@@ -49,9 +49,9 @@ function formatInputLog(update: AgentUpdatePack) {
       return { ...input, content: ellipsis(input.content) };
     case "end-assi-message-stream":
       return { ...input, content: ellipsis(input.content) };
-    case "tool-call-request":
+    case "request-tool-call":
       return { ...input, arguments: ellipsis(input.arguments) };
-    case "tool-result":
+    case "receive-tool-result":
       return { ...input, result: ellipsis(input.result) };
     default:
       return input;
@@ -83,10 +83,10 @@ function formatInputLog(update: AgentUpdatePack) {
  * ```
  */
 export function createService(options: CreateServiceOptions) {
-  const { openai, prompt, toolkit: providedToolkit } = options;
+  const { openai, prompt, toolkit: providedToolkit, tavilyApiKey } = options;
 
-  // 使用提供的 toolkit 或创建默认空 toolkit
-  const toolkit: Toolkit = providedToolkit ?? createDefaultToolkit();
+  // 使用提供的 toolkit 或创建默认 toolkit（包含 Tavily 等内置工具）
+  const toolkit: Toolkit = providedToolkit ?? createDefaultToolkit({ tavilyApiKey });
 
   // 创建 Patch PubSub（用于 /agent 路由的 SSE 推送）
   const patchPubSub = createPubSub<string>();
@@ -103,6 +103,7 @@ export function createService(options: CreateServiceOptions) {
       openai,
       prompt,
       streamManager,
+      toolkit,
     }),
     toolkit: createToolkitOutput({
       toolkit,

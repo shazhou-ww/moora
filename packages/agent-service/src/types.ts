@@ -4,7 +4,7 @@
 
 import type { PubSub, CancelFn } from "@moora/automata";
 import type OpenAI from "openai";
-import type { UserMessage, AssiMessage } from "@moora/agent";
+import type { UserMessage, AssiMessage, ToolCallRequest, ToolResult } from "@moora/agent";
 
 // ============================================================================
 // OpenAI 相关类型
@@ -59,6 +59,18 @@ export type StreamLlmCallOptions = {
    */
   assiMessages: AssiMessage[];
   /**
+   * Toolkit 实例（可选）
+   */
+  toolkit?: import("@moora/toolkit").Toolkit;
+  /**
+   * 工具调用请求列表
+   */
+  toolCallRequests: ToolCallRequest[];
+  /**
+   * 工具执行结果列表
+   */
+  toolResults: ToolResult[];
+  /**
    * StreamManager 实例
    */
   streamManager: StreamManager;
@@ -70,6 +82,29 @@ export type StreamLlmCallOptions = {
    * 在收到第一个 chunk 时的回调
    */
   onFirstChunk?: () => void;
+};
+
+/**
+ * 流式 LLM 调用结果中的 tool call 信息
+ */
+export type LlmToolCall = {
+  id: string;
+  name: string;
+  arguments: string;
+};
+
+/**
+ * 流式 LLM 调用的结果
+ */
+export type StreamLlmCallResult = {
+  /**
+   * 文本内容（如果 LLM 只返回 tool_calls，则为空字符串）
+   */
+  content: string;
+  /**
+   * 工具调用列表（如果没有工具调用，则为空数组）
+   */
+  toolCalls: LlmToolCall[];
 };
 
 // ============================================================================
@@ -153,6 +188,10 @@ export type CreateServiceOptions = {
    * Toolkit 实例（可选，默认使用空 toolkit）
    */
   toolkit?: import("@moora/toolkit").Toolkit;
+  /**
+   * Tavily API Key（可选，用于启用 Tavily 搜索工具）
+   */
+  tavilyApiKey?: string;
 };
 
 /**
@@ -171,5 +210,9 @@ export type CreateLlmOutputOptions = {
    * StreamManager 实例
    */
   streamManager: StreamManager;
+  /**
+   * Toolkit 实例（可选）
+   */
+  toolkit?: import("@moora/toolkit").Toolkit;
 };
 

@@ -30,7 +30,7 @@ export const startAssiMessageStreamSchema = z.object({
   id: z.string(),
   timestamp: z.number(),
   /**
-   * 这次 llm 请求所处理的最迟的用户消息时间戳，用于更新 cutOff
+   * 这次 llm 请求所处理的最迟的用户消息或工具结果时间戳，用于更新 cutOff
    */
   cutOff: z.number(),
 });
@@ -50,29 +50,33 @@ export const endAssiMessageStreamSchema = z.object({
 export type EndAssiMessageStream = z.infer<typeof endAssiMessageStreamSchema>;
 
 /**
- * 工具调用请求 Input Schema
+ * 请求工具调用 Input Schema
  */
-export const toolCallRequestSchema = z.object({
-  type: z.literal("tool-call-request"),
+export const requestToolCallSchema = z.object({
+  type: z.literal("request-tool-call"),
   toolCallId: z.string(),
   name: z.string(),
   arguments: z.string(),
   timestamp: z.number(),
+  /**
+   * 这次 llm 请求所处理的最迟的用户消息或工具结果时间戳，用于更新 cutOff
+   */
+  cutOff: z.number(),
 });
 
-export type ToolCallRequest = z.infer<typeof toolCallRequestSchema>;
+export type RequestToolCall = z.infer<typeof requestToolCallSchema>;
 
 /**
- * 工具执行结果 Input Schema
+ * 接收工具执行结果 Input Schema
  */
-export const toolResultSchema = z.object({
-  type: z.literal("tool-result"),
+export const receiveToolResultSchema = z.object({
+  type: z.literal("receive-tool-result"),
   toolCallId: z.string(),
   result: z.string(),
   timestamp: z.number(),
 });
 
-export type ToolResult = z.infer<typeof toolResultSchema>;
+export type ReceiveToolResult = z.infer<typeof receiveToolResultSchema>;
 
 // ============================================================================
 // Actor Input 类型定义
@@ -89,9 +93,9 @@ export type InputFromUser = SendUserMessage;
 export type InputFromLlm =
   | StartAssiMessageStream
   | EndAssiMessageStream
-  | ToolCallRequest;
+  | RequestToolCall;
 
 /**
  * Toolkit Actor 可以 dispatch 的 Input
  */
-export type InputFromToolkit = ToolResult;
+export type InputFromToolkit = ReceiveToolResult;

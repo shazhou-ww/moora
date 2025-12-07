@@ -39,6 +39,7 @@ const llmEndpointUrl = process.env.LLM_ENDPOINT_URL || "https://api.openai.com/v
 const llmApiKey = process.env.LLM_API_KEY;
 const llmModel = process.env.LLM_MODEL || "gpt-4";
 const systemPrompt = process.env.SYSTEM_PROMPT || "You are a helpful assistant.";
+const tavilyApiKey = process.env.TAVILY_API_KEY;
 const port = parseInt(process.env.PORT || "3000", 10);
 
 // 验证必需的环境变量
@@ -57,6 +58,7 @@ const app = createService({
     model: llmModel,
   },
   prompt: systemPrompt,
+  tavilyApiKey,
 });
 
 app.listen(port, () => {

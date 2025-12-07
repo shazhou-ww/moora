@@ -34,7 +34,7 @@ export function transition(
     } else if (
       input.type === "start-assi-message-stream" ||
       input.type === "end-assi-message-stream" ||
-      input.type === "tool-call-request"
+      input.type === "request-tool-call"
     ) {
       const newLlmState = transitionLlm(input)({
         assiMessages,
@@ -48,7 +48,7 @@ export function transition(
         cutOff: Math.max(cutOff, newLlmState.cutOff),
         toolCallRequests: newLlmState.toolCallRequests,
       };
-    } else if (input.type === "tool-result") {
+    } else if (input.type === "receive-tool-result") {
       const newToolkitState = transitionToolkit(input)({
         toolResults: toolResults || [],
       });

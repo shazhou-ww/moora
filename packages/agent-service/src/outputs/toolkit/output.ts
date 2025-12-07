@@ -4,7 +4,7 @@
  * 监听 tool call requests 并执行工具调用，返回结果
  */
 
-import { emptyToolkit, type Toolkit } from "@moora/toolkit";
+import type { Toolkit } from "@moora/toolkit";
 import type { ContextOfToolkit, AgentInput } from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
@@ -14,22 +14,7 @@ import { getLogger } from "@/logger";
 const logger = getLogger().toolkit;
 
 // ============================================================================
-// Toolkit 配置
-// ============================================================================
-
-/**
- * 创建默认 toolkit
- *
- * 当前返回空的 toolkit，后续可以添加工具
- *
- * @returns 空的 Toolkit 实例
- */
-export function createDefaultToolkit(): Toolkit {
-  return emptyToolkit();
-}
-
-// ============================================================================
-// Toolkit Output 类型定义
+// 类型定义
 // ============================================================================
 
 /**
@@ -54,7 +39,7 @@ export type CreateToolkitOutputOptions = {
 };
 
 // ============================================================================
-// Toolkit Output 实现
+// 实现
 // ============================================================================
 
 /**
@@ -146,18 +131,22 @@ export function createToolkitOutput(
             });
           }
 
-          // 注意：不要在这里调用 setState 移除 executingToolCalls
-          // 因为 setState 会触发 effect 重新执行，而此时 context 可能还未更新
-          // toolCallId 会保留在 executingToolCalls 中，直到下次 context 更新时被清理
-          // 这是安全的，因为 completedToolCallIds 检查会阻止重复执行
-
-          // Dispatch tool result
+          // 先 Dispatch tool result，确保 toolResults 更新在 executingToolCalls 更新之前
+          // 这样 setState 触发的 effect 重新执行时，toolResults 已经包含新结果，
+          // 不会再次检测该 toolCallId 为 pending
           dispatch({
-            type: "tool-result",
+            type: "receive-tool-result",
             toolCallId,
             result,
             timestamp: Date.now(),
           });
+
+          // 从执行中移除
+          setState((prev) => ({
+            executingToolCalls: prev.executingToolCalls.filter(
+              (id) => id !== toolCallId
+            ),
+          }));
         });
       }
     }

@@ -137,6 +137,10 @@ export const llmObLlmSchema = z.object({
    * 截止时间戳，表示截止到这个时间之前（包括这个时间）的 user message 都已经发给 LLM 处理过了
    */
   cutOff: z.number(),
+  /**
+   * Llm 发出的工具调用请求
+   */
+  toolCallRequests: z.array(toolCallRequestSchema),
 });
 
 export type LlmObLlm = z.infer<typeof llmObLlmSchema>;

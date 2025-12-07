@@ -3,7 +3,7 @@
  */
 
 import type { StateOfToolkit } from "@/decl/states";
-import type { InputFromToolkit, ToolResult } from "@/decl/inputs";
+import type { InputFromToolkit, ReceiveToolResult } from "@/decl/inputs";
 
 /**
  * Toolkit Actor 的状态转换函数
@@ -18,8 +18,8 @@ export function transitionToolkit(
   input: InputFromToolkit
 ): (state: StateOfToolkit) => StateOfToolkit {
   return (state: StateOfToolkit) => {
-    if (input.type === "tool-result") {
-      return transitionToolkitResult(input)(state);
+    if (input.type === "receive-tool-result") {
+      return transitionToolkitReceiveResult(input)(state);
     }
     return state;
   };
@@ -28,8 +28,8 @@ export function transitionToolkit(
 /**
  * 处理工具执行结果的转换
  */
-function transitionToolkitResult(
-  input: ToolResult
+function transitionToolkitReceiveResult(
+  input: ReceiveToolResult
 ): (state: StateOfToolkit) => StateOfToolkit {
   return (state: StateOfToolkit) => {
     return {

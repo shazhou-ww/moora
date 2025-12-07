@@ -16,7 +16,7 @@ import type {
 } from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
 import type { CreateLlmOutputOptions } from "@/types";
-import { streamLlmCall } from "./openai";
+import { streamLlmCall } from "./openai.js";
 import type { Eff } from "@moora/effects";
 import { stateful } from "@moora/effects";
 
@@ -41,13 +41,27 @@ type LlmOutputInternalState = {
 // ============================================================================
 
 /**
- * 检查是否有比 cutOff 更新的用户消息
+ * 检查是否有比 cutOff 更新的用户消息或工具结果
  */
-function hasNewerUserMessages(
+function hasNewerMessages(
   userMessages: Array<{ timestamp: number }>,
+  toolResults: Array<{ timestamp: number }>,
   cutOff: number
 ): boolean {
-  return userMessages.some((msg) => msg.timestamp > cutOff);
+  const hasNewerUserMessage = userMessages.some((msg) => msg.timestamp > cutOff);
+  const hasNewerToolResult = toolResults.some((r) => r.timestamp > cutOff);
+  return hasNewerUserMessage || hasNewerToolResult;
+}
+
+/**
+ * 检查是否有待处理的 tool calls（有 request 但没有对应的 result）
+ */
+function hasPendingToolCalls(
+  toolCallRequests: Array<{ toolCallId: string }>,
+  toolResults: Array<{ toolCallId: string }>
+): boolean {
+  const resultIds = new Set(toolResults.map((r) => r.toolCallId));
+  return toolCallRequests.some((req) => !resultIds.has(req.toolCallId));
 }
 
 // ============================================================================
@@ -75,7 +89,7 @@ function hasStreamingMessage(
 export function createLlmOutput(
   options: CreateLlmOutputOptions
 ): Eff<{ context: ContextOfLlm; dispatch: Dispatch<AgentInput> }> {
-  const { openai: openaiConfig, prompt, streamManager } = options;
+  const { openai: openaiConfig, prompt, streamManager, toolkit } = options;
 
   // 创建 OpenAI 客户端
   const openai = new OpenAI({
@@ -88,27 +102,32 @@ export function createLlmOutput(
     { llmCalls: [] },
     ({ context: ctx, state, setState }) => {
       const { context, dispatch } = ctx;
-      const { userMessages, assiMessages, cutOff } = context;
+      const { userMessages, assiMessages, cutOff, toolCallRequests, toolResults } = context;
 
       // 判断是否有正在进行的调用
       const hasActiveCalls = state.llmCalls.length > 0;
 
-      // 检查是否有尚未发给过 llm 的 user message
-      const hasNewer = hasNewerUserMessages(userMessages, cutOff);
+      // 检查是否有比 cutOff 更新的用户消息或工具结果
+      const hasNewer = hasNewerMessages(userMessages, toolResults, cutOff);
 
       // 检查是否有正在流式生成的消息
       const isStreaming = hasStreamingMessage(assiMessages);
+
+      // 检查是否有待处理的 tool calls（有 request 但没有 result）
+      const hasPending = hasPendingToolCalls(toolCallRequests, toolResults);
 
       // 详细打印判定上下文
       logger.debug("Decision context", {
         activeCallsCount: state.llmCalls.length,
         activeCallIds: state.llmCalls,
         cutOff,
-        latestUserMessageTimestamp: getLatestUserMessageTimestamp(userMessages),
         hasNewer,
+        hasPending,
         isStreaming,
         userMessagesCount: userMessages.length,
         assiMessagesCount: assiMessages.length,
+        toolCallRequestsCount: toolCallRequests.length,
+        toolResultsCount: toolResults.length,
       });
 
       // 如果正在调用中，忽略这次 effect
@@ -117,10 +136,22 @@ export function createLlmOutput(
         return;
       }
 
-      // 如果没有新消息，或者已经有 streaming 消息，不做任何操作
-      if (!hasNewer || isStreaming) {
+      // 如果正在 streaming，不做任何操作
+      if (isStreaming) {
+        logger.debug("No action needed", { reason: "already-streaming" });
+        return;
+      }
+
+      // 如果有待处理的 tool calls，等待它们完成
+      if (hasPending) {
+        logger.debug("No action needed", { reason: "waiting-for-tool-results" });
+        return;
+      }
+
+      // 需要调用 LLM 的条件：有新的用户消息或新的工具结果
+      if (!hasNewer) {
         logger.debug("No action needed", {
-          reason: !hasNewer ? "no-newer-messages" : "already-streaming",
+          reason: "no-newer-user-message-or-tool-results",
         });
         return;
       }
@@ -143,6 +174,7 @@ export function createLlmOutput(
           openaiConfig,
           prompt,
           streamManager,
+          toolkit,
           context,
           dispatch,
           messageId, // 传入 messageId，确保复用
@@ -187,6 +219,7 @@ type ExecuteLlmCallParams = {
   openaiConfig: { model: string };
   prompt: string;
   streamManager: CreateLlmOutputOptions["streamManager"];
+  toolkit: CreateLlmOutputOptions["toolkit"];
   context: ContextOfLlm;
   dispatch: Dispatch<AgentInput>;
   messageId: string;
@@ -215,18 +248,23 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     openaiConfig,
     prompt,
     streamManager,
+    toolkit,
     context,
     dispatch,
     messageId,
     onComplete,
     onError,
   } = params;
-  const { userMessages, assiMessages } = context;
+  const { userMessages, assiMessages, toolCallRequests, toolResults } = context;
 
   const timestamp = Date.now();
 
-  // 计算这次请求实际处理的最迟的用户消息时间戳
-  const cutOff = getLatestUserMessageTimestamp(userMessages);
+  // 计算这次请求实际处理的最迟的用户消息或工具结果时间戳
+  const latestUserMessageTs = getLatestUserMessageTimestamp(userMessages);
+  const latestToolResultTs = toolResults.length > 0
+    ? Math.max(...toolResults.map((r) => r.timestamp))
+    : 0;
+  const cutOff = Math.max(latestUserMessageTs, latestToolResultTs);
 
   logger.info("Executing LLM call", {
     messageId,
@@ -243,12 +281,15 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
 
   try {
     // 执行 Streaming LLM Call（内部会处理消息格式转换）
-    const fullContent = await streamLlmCall({
+    const result = await streamLlmCall({
       openai,
       model: openaiConfig.model,
       prompt,
       userMessages,
       assiMessages,
+      toolkit,
+      toolCallRequests,
+      toolResults,
       streamManager,
       messageId,
       onFirstChunk: () => {
@@ -270,37 +311,72 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
       },
     });
 
-    // 如果没有收到任何 chunk（不应该发生，但为了安全）
-    if (!hasReceivedFirstChunk) {
-      logger.warn("No chunks received, dispatching start-assi-message-stream anyway", {
+    const { content: fullContent, toolCalls } = result;
+
+    // 处理 tool calls：派发 request-tool-call
+    if (toolCalls.length > 0) {
+      logger.info("LLM returned tool calls", {
         messageId,
-        cutOff,
+        toolCallsCount: toolCalls.length,
+        toolCallNames: toolCalls.map((tc) => tc.name),
       });
-      // 仍然需要 dispatch start-assi-message-stream
-      const startInput: InputFromLlm = {
-        type: "start-assi-message-stream",
-        id: messageId,
-        timestamp,
-        cutOff,
-      };
-      dispatch(startInput);
+
+      const toolCallTimestamp = Date.now();
+      for (const tc of toolCalls) {
+        const toolCallInput: InputFromLlm = {
+          type: "request-tool-call",
+          toolCallId: tc.id,
+          name: tc.name,
+          arguments: tc.arguments,
+          timestamp: toolCallTimestamp,
+          cutOff, // 传入 cutOff 以更新状态
+        };
+        dispatch(toolCallInput);
+      }
     }
 
-    // 通知 Agent State 结束流式生成
-    const endInput: InputFromLlm = {
-      type: "end-assi-message-stream",
-      id: messageId,
-      content: fullContent,
-      timestamp: Date.now(),
-    };
-    dispatch(endInput);
+    // 如果没有收到任何 chunk（可能只返回了 tool_calls）
+    if (!hasReceivedFirstChunk) {
+      if (toolCalls.length > 0) {
+        // 只有 tool_calls，没有 content，不需要创建消息
+        logger.debug("Only tool calls received, no content chunk", { messageId });
+      } else {
+        logger.warn("No chunks received, dispatching start-assi-message-stream anyway", {
+          messageId,
+          cutOff,
+        });
+        // 仍然需要 dispatch start-assi-message-stream
+        const startInput: InputFromLlm = {
+          type: "start-assi-message-stream",
+          id: messageId,
+          timestamp,
+          cutOff,
+        };
+        dispatch(startInput);
+      }
+    }
 
-    // 在 StreamManager 中结束流式生成
-    streamManager.endStream(messageId, fullContent);
+    // 只有在收到过 content chunk 时才 dispatch end-assi-message-stream
+    if (hasReceivedFirstChunk) {
+      // 通知 Agent State 结束流式生成
+      const endInput: InputFromLlm = {
+        type: "end-assi-message-stream",
+        id: messageId,
+        content: fullContent,
+        timestamp: Date.now(),
+      };
+      dispatch(endInput);
+    }
+
+    // 在 StreamManager 中结束流式生成（如果有内容或已开始）
+    if (hasReceivedFirstChunk || fullContent.length > 0) {
+      streamManager.endStream(messageId, fullContent);
+    }
 
     logger.info("LLM call succeeded", {
       messageId,
       contentLength: fullContent.length,
+      toolCallsCount: toolCalls.length,
     });
 
     // 调用成功，调用 onComplete
@@ -339,4 +415,3 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     onError();
   }
 }
-

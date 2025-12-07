@@ -7,7 +7,7 @@ import type {
   InputFromLlm,
   StartAssiMessageStream,
   EndAssiMessageStream,
-  ToolCallRequest,
+  RequestToolCall,
 } from "@/decl/inputs";
 
 /**
@@ -29,8 +29,8 @@ export function transitionLlm(
     if (input.type === "end-assi-message-stream") {
       return transitionLlmEndStream(input)(state);
     }
-    if (input.type === "tool-call-request") {
-      return transitionLlmToolCallRequest(input)(state);
+    if (input.type === "request-tool-call") {
+      return transitionLlmRequestToolCall(input)(state);
     }
     return state;
   };
@@ -107,9 +107,11 @@ function transitionLlmEndStream(
 
 /**
  * 处理工具调用请求的转换
+ *
+ * 同时更新 cutOff，确保只有 tool_calls 时也能正确更新 cutOff
  */
-function transitionLlmToolCallRequest(
-  input: ToolCallRequest
+function transitionLlmRequestToolCall(
+  input: RequestToolCall
 ): (state: StateOfLlm) => StateOfLlm {
   return (state: StateOfLlm) => {
     return {
@@ -123,6 +125,8 @@ function transitionLlmToolCallRequest(
           timestamp: input.timestamp,
         },
       ],
+      // 确保 cutOff 只增不减
+      cutOff: Math.max(state.cutOff, input.cutOff),
     };
   };
 }

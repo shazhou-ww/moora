@@ -47,6 +47,7 @@ export const createOutput =
         userMessages,
         assiMessages,
         cutOff,
+        toolCallRequests,
         toolResults,
       };
       const contextToolkit: ContextOfToolkit = {
