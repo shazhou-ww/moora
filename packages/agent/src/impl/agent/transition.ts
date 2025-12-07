@@ -5,6 +5,7 @@
 import type { AgentState, AgentInput } from "@/decl/agent";
 import { transitionUser } from "@/impl/transitions/user";
 import { transitionLlm } from "@/impl/transitions/llm";
+import { transitionToolkit } from "@/impl/transitions/toolkit";
 
 /**
  * Agent 的状态转换函数
@@ -18,7 +19,13 @@ export function transition(
   input: AgentInput
 ): (state: AgentState) => AgentState {
   return (state: AgentState) => {
-    const { userMessages, assiMessages, cutOff } = state;
+    const {
+      userMessages,
+      assiMessages,
+      cutOff,
+      toolCallRequests,
+      toolResults,
+    } = state;
 
     // 根据 Input 类型调用对应的 transition 函数
     if (input.type === "send-user-message") {
@@ -26,13 +33,27 @@ export function transition(
       return { ...state, userMessages: newUserState.userMessages };
     } else if (
       input.type === "start-assi-message-stream" ||
-      input.type === "end-assi-message-stream"
+      input.type === "end-assi-message-stream" ||
+      input.type === "tool-call-request"
     ) {
-      const newLlmState = transitionLlm(input)({ assiMessages, cutOff });
+      const newLlmState = transitionLlm(input)({
+        assiMessages,
+        cutOff,
+        toolCallRequests: toolCallRequests || [],
+      });
       return {
         ...state,
         assiMessages: newLlmState.assiMessages,
         cutOff: newLlmState.cutOff,
+        toolCallRequests: newLlmState.toolCallRequests,
+      };
+    } else if (input.type === "tool-result") {
+      const newToolkitState = transitionToolkit(input)({
+        toolResults: toolResults || [],
+      });
+      return {
+        ...state,
+        toolResults: newToolkitState.toolResults,
       };
     }
 

@@ -5,10 +5,10 @@
  */
 
 import type { Actors } from "./actors";
-import type { StateOfUser, StateOfLlm } from "./states";
-import type { ContextOfUser, ContextOfLlm } from "./contexts";
-import type { InputFromUser, InputFromLlm } from "./inputs";
-import type { USER, LLM } from "./actors";
+import type { StateOfUser, StateOfLlm, StateOfToolkit } from "./states";
+import type { ContextOfUser, ContextOfLlm, ContextOfToolkit } from "./contexts";
+import type { InputFromUser, InputFromLlm, InputFromToolkit } from "./inputs";
+import type { USER, LLM, TOOLKIT } from "./actors";
 import type { AgentInput } from "./agent";
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
@@ -23,8 +23,10 @@ import type { Eff } from "@moora/effects";
 export type StateOf<Actor extends Actors> = Actor extends typeof USER
   ? StateOfUser
   : Actor extends typeof LLM
-    ? StateOfLlm
-    : never;
+  ? StateOfLlm
+  : Actor extends typeof TOOLKIT
+  ? StateOfToolkit
+  : never;
 
 /**
  * 根据 Actor 类型推导对应的 Context
@@ -32,8 +34,10 @@ export type StateOf<Actor extends Actors> = Actor extends typeof USER
 export type ContextOf<Actor extends Actors> = Actor extends typeof USER
   ? ContextOfUser
   : Actor extends typeof LLM
-    ? ContextOfLlm
-    : never;
+  ? ContextOfLlm
+  : Actor extends typeof TOOLKIT
+  ? ContextOfToolkit
+  : never;
 
 /**
  * 根据 Actor 类型推导对应的 Input
@@ -41,8 +45,10 @@ export type ContextOf<Actor extends Actors> = Actor extends typeof USER
 export type InputFrom<Actor extends Actors> = Actor extends typeof USER
   ? InputFromUser
   : Actor extends typeof LLM
-    ? InputFromLlm
-    : never;
+  ? InputFromLlm
+  : Actor extends typeof TOOLKIT
+  ? InputFromToolkit
+  : never;
 
 // ============================================================================
 // 关键函数的类型定义

@@ -7,6 +7,7 @@ import type {
   InputFromLlm,
   StartAssiMessageStream,
   EndAssiMessageStream,
+  ToolCallRequest,
 } from "@/decl/inputs";
 
 /**
@@ -27,6 +28,9 @@ export function transitionLlm(
     }
     if (input.type === "end-assi-message-stream") {
       return transitionLlmEndStream(input)(state);
+    }
+    if (input.type === "tool-call-request") {
+      return transitionLlmToolCallRequest(input)(state);
     }
     return state;
   };
@@ -85,6 +89,28 @@ function transitionLlmEndStream(
     return {
       ...state,
       assiMessages: updatedMessages,
+    };
+  };
+}
+
+/**
+ * 处理工具调用请求的转换
+ */
+function transitionLlmToolCallRequest(
+  input: ToolCallRequest
+): (state: StateOfLlm) => StateOfLlm {
+  return (state: StateOfLlm) => {
+    return {
+      ...state,
+      toolCallRequests: [
+        ...state.toolCallRequests,
+        {
+          toolCallId: input.toolCallId,
+          name: input.name,
+          arguments: input.arguments,
+          timestamp: input.timestamp,
+        },
+      ],
     };
   };
 }

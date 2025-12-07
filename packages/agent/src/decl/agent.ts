@@ -4,8 +4,8 @@
 
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
-import type { StateOfUser, StateOfLlm } from "./states";
-import type { InputFromUser, InputFromLlm } from "./inputs";
+import type { StateOfUser, StateOfLlm, StateOfToolkit } from "./states";
+import type { InputFromUser, InputFromLlm, InputFromToolkit } from "./inputs";
 import type { Actors } from "./actors";
 import type { OutputFnOf } from "./helpers";
 
@@ -16,12 +16,12 @@ import type { OutputFnOf } from "./helpers";
 /**
  * Agent 的总 State = 各个 Actor State 的并集
  */
-export type AgentState = StateOfUser & StateOfLlm;
+export type AgentState = StateOfUser & StateOfLlm & StateOfToolkit;
 
 /**
  * Agent 的总 Input = 各个 Actor Input 的并集
  */
-export type AgentInput = InputFromUser | InputFromLlm;
+export type AgentInput = InputFromUser | InputFromLlm | InputFromToolkit;
 
 // ============================================================================
 // OutputFns 类型定义

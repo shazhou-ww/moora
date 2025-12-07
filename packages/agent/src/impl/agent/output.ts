@@ -3,7 +3,7 @@
  */
 
 import type { AgentState, AgentInput, OutputFns } from "@/decl/agent";
-import type { ContextOfUser, ContextOfLlm } from "@/decl/contexts";
+import type { ContextOfUser, ContextOfLlm, ContextOfToolkit } from "@/decl/contexts";
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
 
@@ -34,10 +34,27 @@ export const createOutput =
     const userMessages = state.userMessages ?? [];
     const assiMessages = state.assiMessages ?? [];
     const cutOff = state.cutOff ?? 0;
+    const toolCallRequests = state.toolCallRequests ?? [];
+    const toolResults = state.toolResults ?? [];
     return (dispatch: Dispatch<AgentInput>) => {
-      const contextUser: ContextOfUser = { userMessages, assiMessages };
-      const contextLlm: ContextOfLlm = { userMessages, assiMessages, cutOff };
+      const contextUser: ContextOfUser = {
+        userMessages,
+        assiMessages,
+        toolCallRequests,
+        toolResults,
+      };
+      const contextLlm: ContextOfLlm = {
+        userMessages,
+        assiMessages,
+        cutOff,
+        toolResults,
+      };
+      const contextToolkit: ContextOfToolkit = {
+        toolCallRequests, // 来自 StateOfLlm，因为 ToolkitObLlm 观察 Llm 的 toolCallRequests
+        toolResults,
+      };
       outputFns.user(dispatch)(contextUser);
       outputFns.llm(dispatch)(contextLlm);
+      outputFns.toolkit(dispatch)(contextToolkit);
     };
   };

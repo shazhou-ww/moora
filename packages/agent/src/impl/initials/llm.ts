@@ -13,5 +13,6 @@ export function initialLlm(): StateOfLlm {
   return {
     assiMessages: [],
     cutOff: 0,
+    toolCallRequests: [],
   };
 }

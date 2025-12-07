@@ -49,6 +49,31 @@ export const endAssiMessageStreamSchema = z.object({
 
 export type EndAssiMessageStream = z.infer<typeof endAssiMessageStreamSchema>;
 
+/**
+ * 工具调用请求 Input Schema
+ */
+export const toolCallRequestSchema = z.object({
+  type: z.literal("tool-call-request"),
+  toolCallId: z.string(),
+  name: z.string(),
+  arguments: z.string(),
+  timestamp: z.number(),
+});
+
+export type ToolCallRequest = z.infer<typeof toolCallRequestSchema>;
+
+/**
+ * 工具执行结果 Input Schema
+ */
+export const toolResultSchema = z.object({
+  type: z.literal("tool-result"),
+  toolCallId: z.string(),
+  result: z.string(),
+  timestamp: z.number(),
+});
+
+export type ToolResult = z.infer<typeof toolResultSchema>;
+
 // ============================================================================
 // Actor Input 类型定义
 // ============================================================================
@@ -61,4 +86,12 @@ export type InputFromUser = SendUserMessage;
 /**
  * Llm Actor 可以 dispatch 的 Input
  */
-export type InputFromLlm = StartAssiMessageStream | EndAssiMessageStream;
+export type InputFromLlm =
+  | StartAssiMessageStream
+  | EndAssiMessageStream
+  | ToolCallRequest;
+
+/**
+ * Toolkit Actor 可以 dispatch 的 Input
+ */
+export type InputFromToolkit = ToolResult;

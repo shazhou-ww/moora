@@ -5,6 +5,7 @@
 import type { AgentState } from "@/decl/agent";
 import { initialUser } from "@/impl/initials/user";
 import { initialLlm } from "@/impl/initials/llm";
+import { initialToolkit } from "@/impl/initials/toolkit";
 
 /**
  * Agent 的初始状态
@@ -14,9 +15,11 @@ import { initialLlm } from "@/impl/initials/llm";
 export function initial(): AgentState {
   const userState = initialUser();
   const llmState = initialLlm();
+  const toolkitState = initialToolkit();
 
   return {
     ...userState,
     ...llmState,
+    ...toolkitState,
   };
 }

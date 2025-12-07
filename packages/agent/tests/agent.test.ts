@@ -10,6 +10,7 @@ import type { OutputFns } from "../src/index";
 const mockOutputFns: OutputFns = {
   user: () => () => {},
   llm: () => () => {},
+  toolkit: () => () => {},
 };
 
 describe("Agent", () => {
