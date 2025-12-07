@@ -4,7 +4,23 @@
  * Agent Service 启动入口
  */
 
-import "dotenv/config";
+import { config } from "dotenv";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
+
+// 从当前文件位置加载 .env 文件
+// 优先加载 packages/agent-service/.env，如果不存在则加载根目录 .env
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const packageEnvPath = join(__dirname, "..", ".env");
+const rootEnvPath = join(__dirname, "..", "..", "..", ".env");
+
+if (existsSync(packageEnvPath)) {
+  config({ path: packageEnvPath });
+} else if (existsSync(rootEnvPath)) {
+  config({ path: rootEnvPath });
+}
+
 import { createService } from "./server/create";
 import { createLogger, getLogger, setLogger } from "./logger";
 

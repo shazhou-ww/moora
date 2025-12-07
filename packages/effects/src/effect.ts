@@ -18,8 +18,8 @@ import type { Eff } from "./types";
  * 创建一个带有内部状态的 Eff 函数。
  * 状态在多次调用之间保持，类似于 React 的 useState。
  *
- * 状态更新通过 `setState` 完成。`setState` 只更新状态，不会触发新的 effect。
- * Effect 的触发由外部 context 的变化控制（当 Eff 被调用时）。
+ * 状态更新通过 `setState` 完成。`setState` 会触发新的 effect 执行（通过 queueMicrotask），
+ * 并且使用**最新的 context**（而非闭包捕获的旧 context）。
  *
  * `setState` 只支持 updater 函数形式：`setState((prevState) => newState)`
  * 这种方式确保状态更新总是基于最新的状态值，即使是在异步副作用中调用也能正确工作。
@@ -33,7 +33,7 @@ import type { Eff } from "./types";
  * @example
  * ```typescript
  * // 跟踪上次的 context，只在 context 改变时更新状态
- * const handler = (dispatch) => stateful(
+ * const handler = stateful(
  *   { lastValue: null },
  *   ({ context, state, setState }) => {
  *     if (context.value !== state.lastValue) {
@@ -44,7 +44,7 @@ import type { Eff } from "./types";
  * );
  *
  * // 累积数据并批量处理
- * const batchHandler = (dispatch) => stateful(
+ * const batchHandler = stateful(
  *   [],
  *   ({ context, state, setState }) => {
  *     const newBuffer = [...state, context];
@@ -57,12 +57,13 @@ import type { Eff } from "./types";
  *   }
  * );
  *
- * // 异步副作用中使用 updater 函数
- * const asyncHandler = (dispatch) => stateful(
+ * // 异步副作用中使用 updater 函数，setState 会使用最新的 context
+ * const asyncHandler = stateful(
  *   { count: 0 },
  *   ({ context, state, setState }) => {
  *     queueMicrotask(() => {
  *       // 使用 updater 函数，确保状态更新总是生效
+ *       // setState 触发的回调会使用最新的 context
  *       setState((prev) => ({ count: prev.count + 1 }));
  *     });
  *   }
@@ -74,14 +75,19 @@ export function stateful<Context, State>(
   fn: (params: { context: Context; state: State; setState: (updater: (prevState: State) => State) => void }) => void
 ): Eff<Context> {
   let state = initial;
+  let contextRef: Context;
 
   return (context: Context) => {
+    // 每次调用时更新 contextRef，确保 setState 回调使用最新的 context
+    contextRef = context;
+    
     const setState = (updater: (prevState: State) => State) => {
       const prevState = state;
       state = updater(state);
       if (state !== prevState) {
         queueMicrotask(() => {
-          fn({ context, state, setState });
+          // 使用 contextRef 而不是闭包捕获的 context
+          fn({ context: contextRef, state, setState });
         });
       }
     };

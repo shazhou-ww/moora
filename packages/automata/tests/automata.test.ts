@@ -150,7 +150,9 @@ describe('machine', () => {
   });
 
   test('output function receives full update pack', async () => {
-    const sm = automata(
+    type Output = { from: number | null; to: number; input: number | null };
+    
+    const sm = automata<number, Output, number>(
       {
         initial: () => 0,
         transition: (n: number) => (state) => state + n,
@@ -169,7 +171,7 @@ describe('machine', () => {
       }
     );
 
-    const outputs: Array<{ from: number | null; to: number; input: number | null }> = [];
+    const outputs: Output[] = [];
 
     const unsubscribe = sm.subscribe((output) => {
       outputs.push(output);
