@@ -61,19 +61,18 @@ export type TransitionFnOf<Actor extends Actors> = (
 ) => (state: StateOf<Actor>) => StateOf<Actor>;
 
 /**
- * Output 函数类型
+ * Effect 函数类型
  *
- * **纯函数**：根据 Actor 的 Context 决定要触发的副作用，返回副作用函数。
- * 函数本身不执行任何副作用，所有副作用都在返回的函数中执行。
+ * 根据 Actor 的 Context 决定要触发的副作用。
  *
  * 注意：参数应该是 ContextOf<Actor> 而不是 StateOf<Actor>，
- * 因为 Output 函数需要根据 Actor 的 Context（发出的 Observation）来决定要触发的副作用。
+ * 因为 Effect 函数需要根据 Actor 的 Context（发出的 Observation）来决定要触发的副作用。
  *
  * 返回 Eff<{ context, dispatch }> 而不是柯里化的形式，
- * 这样可以让各个 Actor 的 Output 可以同时访问 context 和 dispatch，
+ * 这样可以让各个 Actor 的 Effect 可以同时访问 context 和 dispatch，
  * 并且可以方便地在闭包中创建 stateful effect。
  */
-export type OutputFnOf<Actor extends Actors> = Eff<{
+export type EffectFnOf<Actor extends Actors> = Eff<{
   context: ContextOf<Actor>;
   dispatch: Dispatch<AgentInput>;
 }>;

@@ -4,17 +4,17 @@
 
 import { describe, test, expect } from "vitest";
 import { createAgent } from "../src/index";
-import type { OutputFns } from "../src/index";
+import type { EffectFns } from "../src/index";
 
-// 创建一个简单的 mock outputFns
-const mockOutputFns: OutputFns = {
+// 创建一个简单的 mock effectFns
+const mockEffectFns: EffectFns = {
   user: () => {},
   llm: () => {},
 };
 
 describe("Starter Agent", () => {
   test("should create agent instance", () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     expect(agent).toBeDefined();
     expect(agent.dispatch).toBeDefined();
     expect(agent.subscribe).toBeDefined();
@@ -22,7 +22,7 @@ describe("Starter Agent", () => {
   });
 
   test("should have initial state", () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const state = agent.current();
 
     expect(state.userMessages).toEqual([]);
@@ -30,7 +30,7 @@ describe("Starter Agent", () => {
   });
 
   test("should dispatch user message and update state", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const timestamp = Date.now();
 
     agent.dispatch({
@@ -40,7 +40,7 @@ describe("Starter Agent", () => {
       timestamp,
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     const state = agent.current();
@@ -50,7 +50,7 @@ describe("Starter Agent", () => {
   });
 
   test("should dispatch assistant message and update state", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const timestamp = Date.now();
 
     agent.dispatch({
@@ -60,7 +60,7 @@ describe("Starter Agent", () => {
       timestamp,
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     const state = agent.current();
@@ -70,7 +70,7 @@ describe("Starter Agent", () => {
   });
 
   test("should subscribe to output changes", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     let outputReceived = false;
 
     agent.subscribe((output) => {
@@ -78,7 +78,7 @@ describe("Starter Agent", () => {
       // Mock effect
     });
 
-    // subscribe 时同步执行，应该立即收到初始状态输出
+    // subscribe 时同步执行，应该立即收到初始状态输�?
     expect(outputReceived).toBe(true);
   });
 });

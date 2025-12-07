@@ -29,6 +29,7 @@ agent.subscribe((_dispatch) => (update) => {
 ```
 
 日志格式：
+
 - **初始状态**: `{ type: "initial", userMessagesCount, assiMessagesCount, cutOff }`
 - **状态变化**: `{ inputType, inputId, prevUserMessagesCount, currUserMessagesCount, ... }`
 

@@ -1,4 +1,4 @@
-# Agent 建模迭代 Prompt
+﻿# Agent 建模迭代 Prompt
 
 > 从 [AGENT_MODELING_METHODOLOGY.md](../../docs/AGENT_MODELING_METHODOLOGY.md) 提取，聚焦架构、文件结构、迭代方法
 
@@ -54,8 +54,8 @@ type ContextOf<Actor extends Actors>
 type InputFrom<Actor extends Actors>
 type InitialFnOf<Actor extends Actors>
 type TransitionFnOf<Actor extends Actors>
-type OutputFnOf<Actor extends Actors> = Eff<{ context: ContextOf<Actor>; dispatch: Dispatch<AgentInput> }>
-// 注意：OutputFnOf 非柯里化设计，允许 effect 在闭包外层创建，使 stateful 等组合器状态可共享
+type EffectFnOf<Actor extends Actors> = Eff<{ context: ContextOf<Actor>; dispatch: Dispatch<AgentInput> }>
+// 注意：EffectFnOf 非柯里化设计，允许 effect 在闭包外层创建，使 stateful 等组合器状态可共享
 
 // Agent 总类型
 type AgentState = StateOfUser & StateOfLlm
@@ -74,7 +74,7 @@ type AgentInput = InputFromUser | InputFromLlm
 │   ├── contexts.ts                # ContextOfFoo 类型 schema
 │   ├── inputs.ts                  # Input 类型 schema
 │   ├── helpers.ts                 # Helper Generic 类型
-│   ├── agent.ts                   # AgentState, AgentInput, OutputFns
+│   ├── agent.ts                   # AgentState, AgentInput, EffectFns
 │   └── index.ts                   # 综合 export
 │
 ├── impl/                          # 实现目录
@@ -91,7 +91,7 @@ type AgentInput = InputFromUser | InputFromLlm
 │   ├── agent/                    # Agent 综合实现
 │   │   ├── initial.ts            # initialAgent
 │   │   ├── transition.ts         # transitionAgent
-│   │   ├── output.ts             # createOutputAgent
+│   │   ├── effect.ts             # createEffectAgent
 │   │   ├── create.ts             # createAgent 工厂函数
 │   │   └── index.ts
 │   │

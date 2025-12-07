@@ -63,10 +63,10 @@ export type {
   InputFrom,
   InitialFnOf,
   TransitionFnOf,
-  OutputFnOf,
+  EffectFnOf,
 } from "./helpers";
 
 // ============================================================================
 // Agent
 // ============================================================================
-export type { AgentState, AgentInput, Output, OutputFns } from "./agent";
+export type { AgentState, AgentInput, EffectFns } from "./agent";

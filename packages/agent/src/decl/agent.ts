@@ -7,7 +7,7 @@ import type { Eff } from "@moora/effects";
 import type { StateOfUser, StateOfLlm, StateOfToolkit } from "./states";
 import type { InputFromUser, InputFromLlm, InputFromToolkit } from "./inputs";
 import type { Actors } from "./actors";
-import type { OutputFnOf } from "./helpers";
+import type { EffectFnOf } from "./helpers";
 
 // ============================================================================
 // Agent 统合类型
@@ -24,21 +24,21 @@ export type AgentState = StateOfUser & StateOfLlm & StateOfToolkit;
 export type AgentInput = InputFromUser | InputFromLlm | InputFromToolkit;
 
 // ============================================================================
-// OutputFns 类型定义
+// EffectFns 类型定义
 // ============================================================================
 
 /**
- * 各个 Actor 的 Output 函数映射类型
+ * 各个 Actor 的 Effect 函数映射类型
  *
  * 用于 createAgent 函数的参数类型
  */
-export type OutputFns = {
-  [A in Actors]: OutputFnOf<A>;
+export type EffectFns = {
+  [A in Actors]: EffectFnOf<A>;
 };
 
 /**
- * 部分 Output 函数映射类型
+ * 部分 Effect 函数映射类型
  *
- * 用于 createAgent 函数的参数类型，允许只提供部分 Actor 的 Output 函数
+ * 用于 createAgent 函数的参数类型，允许只提供部分 Actor 的 Effect 函数
  */
-export type PartialOutputFns = Partial<OutputFns>;
+export type PartialEffectFns = Partial<EffectFns>;

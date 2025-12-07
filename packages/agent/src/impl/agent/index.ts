@@ -4,5 +4,5 @@
 
 export { initial } from "./initial";
 export { transition } from "./transition";
-export { createOutput } from "./output";
+export { createEffect } from "./effect";
 export { createAgent } from "./create";

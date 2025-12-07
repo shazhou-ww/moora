@@ -4,10 +4,10 @@
 
 import { automata } from "@moora/automata";
 import type { StatefulTransferer, UpdatePack } from "@moora/automata";
-import type { AgentState, AgentInput, OutputFns } from "@/decl/agent";
+import type { AgentState, AgentInput, EffectFns } from "@/decl/agent";
 import { initial } from "@/impl/agent/initial";
 import { transition } from "@/impl/agent/transition";
-import { createOutput } from "@/impl/agent/output";
+import { createEffect } from "@/impl/agent/effect";
 
 // ============================================================================
 // 类型定义
@@ -36,7 +36,7 @@ export type AgentUpdatePack = UpdatePack<AgentInput, AgentState>;
  * 1. 副作用在 subscribe 时自动执行，用户 handler 只需处理日志
  * 2. 暴露完整的状态更新信息（prev state, input, current state）
  *
- * @param outputFns - 各个 Actor 的 Output 函数映射
+ * @param effectFns - 各个 Actor 的 Effect 函数映射
  * @returns Agent 自动机实例
  *
  * @example
@@ -61,9 +61,9 @@ export type AgentUpdatePack = UpdatePack<AgentInput, AgentState>;
  * ```
  */
 export function createAgent(
-  outputFns: OutputFns
+  effectFns: EffectFns
 ): StatefulTransferer<AgentInput, AgentUpdatePack, AgentState> {
-  const executeOutput = createOutput(outputFns);
+  const executeEffect = createEffect(effectFns);
 
   const machine = automata(
     { initial, transition },
@@ -72,7 +72,7 @@ export function createAgent(
 
   // 内部订阅，自动执行副作用
   machine.subscribe((update) => {
-    executeOutput(update.state)(machine.dispatch);
+    executeEffect(update.state)(machine.dispatch);
   });
 
   return machine;

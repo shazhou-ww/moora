@@ -4,12 +4,12 @@
 
 import { automata } from "@moora/automata";
 import type { StatefulTransferer, UpdatePack } from "@moora/automata";
-import type { AgentState, AgentInput, OutputFns, PartialOutputFns } from "@/decl/agent";
+import type { AgentState, AgentInput, EffectFns, PartialEffectFns } from "@/decl/agent";
 import { initial } from "@/impl/agent/initial";
 import { transition } from "@/impl/agent/transition";
-import { createOutput } from "@/impl/agent/output";
+import { createEffect } from "@/impl/agent/effect";
 import { USER, LLM, TOOLKIT } from "@/decl/actors";
-import type { OutputFnOf } from "@/decl/helpers";
+import type { EffectFnOf } from "@/decl/helpers";
 
 // ============================================================================
 // 类型定义
@@ -29,24 +29,24 @@ export type AgentUpdatePack = UpdatePack<AgentInput, AgentState>;
 // ============================================================================
 
 /**
- * 创建 noop Output 函数
+ * 创建 noop Effect 函数
  *
  * 返回一个空的 effect，不执行任何操作
  */
-function createNoopOutput<Actor extends typeof USER | typeof LLM | typeof TOOLKIT>(): OutputFnOf<Actor> {
+function createNoopEffect<Actor extends typeof USER | typeof LLM | typeof TOOLKIT>(): EffectFnOf<Actor> {
   return () => {};
 }
 
 /**
- * 填充 partial OutputFns 为完整的 OutputFns
+ * 填充 partial EffectFns 为完整的 EffectFns
  *
  * 对于缺失的 Actor，使用 noop 函数填充
  */
-function fillOutputFns(partialOutputFns: PartialOutputFns): OutputFns {
+function fillEffectFns(partialEffectFns: PartialEffectFns): EffectFns {
   return {
-    [USER]: partialOutputFns[USER] ?? createNoopOutput<typeof USER>(),
-    [LLM]: partialOutputFns[LLM] ?? createNoopOutput<typeof LLM>(),
-    [TOOLKIT]: partialOutputFns[TOOLKIT] ?? createNoopOutput<typeof TOOLKIT>(),
+    [USER]: partialEffectFns[USER] ?? createNoopEffect<typeof USER>(),
+    [LLM]: partialEffectFns[LLM] ?? createNoopEffect<typeof LLM>(),
+    [TOOLKIT]: partialEffectFns[TOOLKIT] ?? createNoopEffect<typeof TOOLKIT>(),
   };
 }
 
@@ -57,15 +57,15 @@ function fillOutputFns(partialOutputFns: PartialOutputFns): OutputFns {
 /**
  * 创建 Agent 实例
  *
- * 使用 automata 实现，副作用在 output 函数中直接执行，
+ * 使用 automata 实现，副作用在 effect 函数中直接执行，
  * 输出为 UpdatePack，包含完整的状态更新信息用于日志和调试。
  *
  * 这种设计：
  * 1. 副作用在 automata 内部自动执行，subscribe 只需处理日志
  * 2. 暴露完整的状态更新信息（prev state, input, current state）
- * 3. 对于未提供的 Actor output 函数，会自动填充为 noop（空操作）
+ * 3. 对于未提供的 Actor effect 函数，会自动填充为 noop（空操作）
  *
- * @param partialOutputFns - 各个 Actor 的 Output 函数映射（可以是部分提供）
+ * @param partialEffectFns - 各个 Actor 的 Effect 函数映射（可以是部分提供）
  * @returns Agent 自动机实例
  *
  * @example
@@ -90,10 +90,10 @@ function fillOutputFns(partialOutputFns: PartialOutputFns): OutputFns {
  * ```
  */
 export function createAgent(
-  partialOutputFns: PartialOutputFns
+  partialEffectFns: PartialEffectFns
 ): StatefulTransferer<AgentInput, AgentUpdatePack, AgentState> {
-  const outputFns = fillOutputFns(partialOutputFns);
-  const executeOutput = createOutput(outputFns);
+  const effectFns = fillEffectFns(partialEffectFns);
+  const executeEffect = createEffect(effectFns);
 
   const machine = automata(
     { initial, transition },
@@ -102,7 +102,7 @@ export function createAgent(
 
   // 内部订阅，自动执行副作用
   machine.subscribe((update) => {
-    executeOutput(update.state)(machine.dispatch);
+    executeEffect(update.state)(machine.dispatch);
   });
 
   return machine;

@@ -4,10 +4,10 @@
 
 import { describe, test, expect } from "vitest";
 import { createAgent } from "../src/index";
-import type { OutputFns } from "../src/index";
+import type { EffectFns } from "../src/index";
 
-// 创建一个简单的 mock outputFns
-const mockOutputFns: OutputFns = {
+// 创建一个简单的 mock effectFns
+const mockEffectFns: EffectFns = {
   user: () => {},
   llm: () => {},
   toolkit: () => {},
@@ -15,7 +15,7 @@ const mockOutputFns: OutputFns = {
 
 describe("Agent", () => {
   test("should create agent instance", () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     expect(agent).toBeDefined();
     expect(agent.dispatch).toBeDefined();
     expect(agent.subscribe).toBeDefined();
@@ -23,7 +23,7 @@ describe("Agent", () => {
   });
 
   test("should have initial state", () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const state = agent.current();
 
     expect(state.userMessages).toEqual([]);
@@ -32,7 +32,7 @@ describe("Agent", () => {
   });
 
   test("should dispatch user message and update state", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const timestamp = Date.now();
 
     agent.dispatch({
@@ -42,7 +42,7 @@ describe("Agent", () => {
       timestamp,
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     const state = agent.current();
@@ -52,7 +52,7 @@ describe("Agent", () => {
   });
 
   test("should dispatch start stream and update state", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const timestamp = Date.now();
     const cutOff = timestamp - 100;
 
@@ -63,7 +63,7 @@ describe("Agent", () => {
       cutOff,
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     const state = agent.current();
@@ -75,12 +75,12 @@ describe("Agent", () => {
   });
 
   test("should dispatch end stream and update state", async () => {
-    const agent = createAgent(mockOutputFns);
+    const agent = createAgent(mockEffectFns);
     const timestamp = Date.now();
     const messageId = "test-id-3";
     const cutOff = timestamp - 100;
 
-    // 先开始流式生成
+    // 先开始流式生�?
     agent.dispatch({
       type: "start-assi-message-stream",
       id: messageId,
@@ -88,10 +88,10 @@ describe("Agent", () => {
       cutOff,
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
-    // 然后结束流式生成（timestamp 不会被使用，会保留 start stream 的时间戳）
+    // 然后结束流式生成（timestamp 不会被使用，会保�?start stream 的时间戳�?
     agent.dispatch({
       type: "end-assi-message-stream",
       id: messageId,
@@ -99,7 +99,7 @@ describe("Agent", () => {
       timestamp: timestamp + 100, // 这个值不会被使用
     });
 
-    // dispatch 是异步的，需要等待
+    // dispatch 是异步的，需要等�?
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     const state = agent.current();
@@ -109,35 +109,35 @@ describe("Agent", () => {
     expect(state.assiMessages[0]?.streaming).toBe(false);
     if (state.assiMessages[0]?.streaming === false) {
       expect(state.assiMessages[0].content).toBe("Hi there!");
-      // 验证时间戳是 start stream 的时间戳，而不是 end stream 的时间戳
+      // 验证时间戳是 start stream 的时间戳，而不�?end stream 的时间戳
       expect(state.assiMessages[0].timestamp).toBe(timestamp);
     }
     expect(state.cutOff).toBe(cutOff);
   });
 
-  test("should subscribe to output changes", async () => {
-    const agent = createAgent(mockOutputFns);
-    let outputReceived = false;
+  test("should subscribe to state changes", async () => {
+    const agent = createAgent(mockEffectFns);
+    let updateReceived = false;
 
-    agent.subscribe((output) => {
-      outputReceived = true;
+    agent.subscribe((update) => {
+      updateReceived = true;
       // Mock effect
     });
 
-    // subscribe 时同步执行，应该立即收到初始状态输出
-    expect(outputReceived).toBe(true);
+    // subscribe 时同步执行，应该立即收到初始状态输�?
+    expect(updateReceived).toBe(true);
   });
 
-  test("should support partial outputFns with noop for missing actors", async () => {
-    // 只提供 user output，其他应该自动填充为 noop
-    const partialOutputFns = {
+  test("should support partial effectFns with noop for missing actors", async () => {
+    // 只提�?user effect，其他应该自动填充为 noop
+    const partialEffectFns = {
       user: () => {},
     };
 
-    const agent = createAgent(partialOutputFns);
+    const agent = createAgent(partialEffectFns);
     expect(agent).toBeDefined();
 
-    // 应该能正常工作，即使没有提供 llm 和 toolkit
+    // 应该能正常工作，即使没有提供 llm �?toolkit
     const timestamp = Date.now();
     agent.dispatch({
       type: "send-user-message",
