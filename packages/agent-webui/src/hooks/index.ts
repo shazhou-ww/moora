@@ -3,3 +3,4 @@
  */
 
 export { useStreamingMessages } from "./useStreamingMessages";
+export type { RenderItem } from "./useStreamingMessages";

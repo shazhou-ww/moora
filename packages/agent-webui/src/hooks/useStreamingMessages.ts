@@ -8,6 +8,13 @@ import type { ContextOfUser, Message, ToolCallRequest, ToolResult } from "@/type
 import type { ToolCallItem } from "@/components/ToolCallStatus";
 
 /**
+ * 渲染列表项类型：消息或工具调用
+ */
+export type RenderItem =
+  | { type: "message"; data: Message }
+  | { type: "toolCall"; data: ToolCallItem };
+
+/**
  * 将 toolCallRequests 和 toolResults 合并成 ToolCallItem 列表
  */
 function mergeToolCalls(
@@ -31,7 +38,7 @@ function mergeToolCalls(
  * 管理流式消息的连接、内容缓存和状态
  *
  * @param context - Agent 上下文
- * @returns 处理后的消息列表、流式消息 ID 集合和工具调用列表
+ * @returns 处理后的渲染列表（消息和工具调用按时间排序）、流式消息 ID 集合和工具调用列表
  */
 export function useStreamingMessages(
   context: ContextOfUser | null
@@ -39,6 +46,7 @@ export function useStreamingMessages(
   messages: Message[];
   streamingMessageIds: Set<string>;
   toolCalls: ToolCallItem[];
+  renderItems: RenderItem[];
 } {
   // 流式消息内容缓存（messageId -> content）
   const streamContentsRef = useRef<Map<string, string>>(new Map());
@@ -198,9 +206,32 @@ export function useStreamingMessages(
     );
   }, [context]);
 
+  // 合并消息和工具调用，按时间排序
+  const renderItems: RenderItem[] = useMemo(() => {
+    const items: RenderItem[] = [];
+
+    // 添加消息
+    messages.forEach((msg) => {
+      items.push({ type: "message", data: msg });
+    });
+
+    // 添加工具调用（按 request 的时间戳）
+    toolCalls.forEach((toolCall) => {
+      items.push({ type: "toolCall", data: toolCall });
+    });
+
+    // 按时间戳排序
+    return items.sort((a, b) => {
+      const timestampA = a.type === "message" ? a.data.timestamp : a.data.request.timestamp;
+      const timestampB = b.type === "message" ? b.data.timestamp : b.data.request.timestamp;
+      return timestampA - timestampB;
+    });
+  }, [messages, toolCalls]);
+
   return {
     messages,
     streamingMessageIds,
     toolCalls,
+    renderItems,
   };
 }

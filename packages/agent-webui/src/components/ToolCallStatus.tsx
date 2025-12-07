@@ -46,7 +46,7 @@ type ToolCallStatusProps = {
 /**
  * 单个工具调用的渲染
  */
-function ToolCallItemView({ toolCall }: { toolCall: ToolCallItem }) {
+export function ToolCallItemView({ toolCall }: { toolCall: ToolCallItem }) {
   const [expanded, setExpanded] = useState(false);
   const { request, result } = toolCall;
   const isPending = !result;

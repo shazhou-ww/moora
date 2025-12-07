@@ -39,7 +39,7 @@ function App() {
   const [scrollToBottomFn, setScrollToBottomFn] = useState<(() => void) | null>(null);
 
   // 使用流式消息管理 Hook
-  const { messages, streamingMessageIds, toolCalls } = useStreamingMessages(context);
+  const { messages, streamingMessageIds, toolCalls, renderItems } = useStreamingMessages(context);
 
   // 处理 scroll indicator 状态变化
   const handleScrollIndicatorChange = useCallback((show: boolean, scrollToBottom: () => void) => {
@@ -155,6 +155,7 @@ function App() {
             messages={messages}
             streamingMessageIds={streamingMessageIds}
             toolCalls={toolCalls}
+            renderItems={renderItems}
             onScrollIndicatorChange={handleScrollIndicatorChange}
           />
         )}

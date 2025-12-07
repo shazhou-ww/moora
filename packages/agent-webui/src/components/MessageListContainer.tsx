@@ -9,11 +9,13 @@ import { MessageList } from "./MessageList";
 import { contentBoxStyles } from "@/styles/app";
 import type { Message } from "@/types";
 import type { ToolCallItem } from "./ToolCallStatus";
+import type { RenderItem } from "@/hooks";
 
 type MessageListContainerProps = {
   messages: Message[];
   streamingMessageIds?: Set<string>;
   toolCalls?: ToolCallItem[];
+  renderItems?: RenderItem[];
   onScrollIndicatorChange?: (show: boolean, scrollToBottom: () => void) => void;
 };
 
@@ -47,6 +49,7 @@ export function MessageListContainer({
   messages,
   streamingMessageIds = new Set(),
   toolCalls = [],
+  renderItems = [],
   onScrollIndicatorChange,
 }: MessageListContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -227,6 +230,7 @@ export function MessageListContainer({
         messages={messages}
         streamingMessageIds={streamingMessageIds}
         toolCalls={toolCalls}
+        renderItems={renderItems}
       />
       <div ref={messagesEndRef} />
     </Box>

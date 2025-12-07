@@ -99,7 +99,7 @@ export function createToolkitOutput(
       for (const toolCall of pendingToolCalls) {
         const { toolCallId, name, arguments: args } = toolCall;
 
-        logger.info("Executing tool call", { toolCallId, name });
+        logger.info("Executing tool call", { toolCallId, name, arguments: args });
 
         queueMicrotask(async () => {
           let result: string;
@@ -113,6 +113,7 @@ export function createToolkitOutput(
               logger.warn("Tool not found", { toolCallId, name });
             } else {
               // 执行工具
+              logger.debug("Invoking toolkit", { toolCallId, name, argsLength: args.length });
               result = await toolkit.invoke(name, args);
               logger.info("Tool call completed", {
                 toolCallId,
@@ -134,12 +135,19 @@ export function createToolkitOutput(
           // 先 Dispatch tool result，确保 toolResults 更新在 executingToolCalls 更新之前
           // 这样 setState 触发的 effect 重新执行时，toolResults 已经包含新结果，
           // 不会再次检测该 toolCallId 为 pending
+          logger.debug("Dispatching receive-tool-result", {
+            toolCallId,
+            name,
+            resultLength: result.length,
+            timestamp: Date.now(),
+          });
           dispatch({
             type: "receive-tool-result",
             toolCallId,
             result,
             timestamp: Date.now(),
           });
+          logger.debug("Dispatched receive-tool-result", { toolCallId, name });
 
           // 从执行中移除
           setState((prev) => ({
@@ -147,6 +155,7 @@ export function createToolkitOutput(
               (id) => id !== toolCallId
             ),
           }));
+          logger.debug("Removed from executingToolCalls", { toolCallId, name });
         });
       }
     }

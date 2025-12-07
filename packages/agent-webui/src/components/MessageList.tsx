@@ -10,7 +10,8 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import { useEffect, useState } from "react";
 import type { Message, AssiMessage, UserMessage } from "@/types";
-import { ToolCallStatus, type ToolCallItem } from "./ToolCallStatus";
+import { ToolCallStatus, ToolCallItemView, type ToolCallItem } from "./ToolCallStatus";
+import type { RenderItem } from "@/hooks";
 import {
   containerStyles,
   emptyStateStyles,
@@ -30,6 +31,7 @@ type MessageListProps = {
   messages: Message[];
   streamingMessageIds?: Set<string>;
   toolCalls?: ToolCallItem[];
+  renderItems?: RenderItem[];
 };
 
 /**
@@ -91,10 +93,95 @@ export function MessageList({
   messages,
   streamingMessageIds = new Set(),
   toolCalls = [],
+  renderItems = [],
 }: MessageListProps) {
+  // 如果提供了 renderItems，使用它来渲染；否则使用旧的 messages 渲染
+  const useRenderItems = renderItems.length > 0;
+
+  /**
+   * 渲染单条消息
+   */
+  const renderMessage = (message: Message) => {
+    const isStreaming =
+      message.role === "assistant" &&
+      streamingMessageIds.has(message.id);
+    
+    // 提取消息内容
+    let content = "";
+    if (message.role === "user") {
+      content = (message as UserMessage).content;
+    } else {
+      const assiMsg = message as AssiMessage;
+      if (assiMsg.streaming === false) {
+        content = assiMsg.content;
+      } else {
+        // 流式进行中，内容为空（应该从流式连接获取）
+        content = "";
+      }
+    }
+
+    return (
+      <Fade in={true} key={message.id} timeout={300}>
+        <Box sx={messageRowStyles(message.role)}>
+          {message.role === "assistant" && (
+            <Avatar
+              sx={avatarStyles("assistant")}
+              src="/moorex.svg"
+              alt="Agent"
+            />
+          )}
+
+          <Paper elevation={2} sx={messagePaperStyles(message.role)}>
+            <Box sx={markdownContainerStyles}>
+              {content ? (
+                <>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={createMarkdownComponents(message.role)}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                  {isStreaming && <StreamingCursor />}
+                </>
+              ) : isStreaming ? (
+                <StreamingCursor />
+              ) : null}
+            </Box>
+            <Typography variant="caption" sx={timestampStyles}>
+              {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Typography>
+          </Paper>
+
+          {message.role === "user" && (
+            <Avatar sx={avatarStyles("user")}>
+              <Person sx={avatarIconStyles} />
+            </Avatar>
+          )}
+        </Box>
+      </Fade>
+    );
+  };
+
+  /**
+   * 渲染单个工具调用
+   */
+  const renderToolCall = (toolCall: ToolCallItem) => {
+    return (
+      <Fade in={true} key={toolCall.request.toolCallId} timeout={300}>
+        <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: 1, px: 2 }}>
+          <ToolCallItemView toolCall={toolCall} />
+        </Box>
+      </Fade>
+    );
+  };
+
   return (
     <Box sx={containerStyles}>
-      {messages.length === 0 ? (
+      {(useRenderItems ? renderItems.length === 0 : messages.length === 0) ? (
         <Box sx={emptyStateStyles}>
           <Box
             component="img"
@@ -113,72 +200,21 @@ export function MessageList({
             发送一条消息开始与 Agent 对话
           </Typography>
         </Box>
-      ) : (
+      ) : useRenderItems ? (
+        // 使用 renderItems 渲染（消息和工具调用按时间排序）
         <>
-          {messages.map((message) => {
-          const isStreaming =
-            message.role === "assistant" &&
-            streamingMessageIds.has(message.id);
-          
-          // 提取消息内容
-          let content = "";
-          if (message.role === "user") {
-            content = (message as UserMessage).content;
-          } else {
-            const assiMsg = message as AssiMessage;
-            if (assiMsg.streaming === false) {
-              content = assiMsg.content;
+          {renderItems.map((item) => {
+            if (item.type === "message") {
+              return renderMessage(item.data);
             } else {
-              // 流式进行中，内容为空（应该从流式连接获取）
-              content = "";
+              return renderToolCall(item.data);
             }
-          }
-
-          return (
-            <Fade in={true} key={message.id} timeout={300}>
-              <Box sx={messageRowStyles(message.role)}>
-                {message.role === "assistant" && (
-                  <Avatar
-                    sx={avatarStyles("assistant")}
-                    src="/moorex.svg"
-                    alt="Agent"
-                  />
-                )}
-
-                <Paper elevation={2} sx={messagePaperStyles(message.role)}>
-                  <Box sx={markdownContainerStyles}>
-                    {content ? (
-                      <>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={createMarkdownComponents(message.role)}
-                        >
-                          {content}
-                        </ReactMarkdown>
-                        {isStreaming && <StreamingCursor />}
-                      </>
-                    ) : isStreaming ? (
-                      <StreamingCursor />
-                    ) : null}
-                  </Box>
-                  <Typography variant="caption" sx={timestampStyles}>
-                    {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Typography>
-                </Paper>
-
-                {message.role === "user" && (
-                  <Avatar sx={avatarStyles("user")}>
-                    <Person sx={avatarIconStyles} />
-                  </Avatar>
-                )}
-              </Box>
-            </Fade>
-          );
-        })}
+          })}
+        </>
+      ) : (
+        // 兼容旧的渲染方式
+        <>
+          {messages.map((message) => renderMessage(message))}
 
           {/* 在最后一条助手消息后显示 tool calls */}
           {toolCalls.length > 0 && (
