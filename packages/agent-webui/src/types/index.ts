@@ -39,6 +39,25 @@ export type UserMessage = {
 };
 
 /**
+ * 工具调用请求类型
+ */
+export type ToolCallRequest = {
+  toolCallId: string;
+  name: string;
+  arguments: string;
+  timestamp: number;
+};
+
+/**
+ * 工具执行结果类型
+ */
+export type ToolResult = {
+  toolCallId: string;
+  result: string;
+  timestamp: number;
+};
+
+/**
  * 消息类型（Union）
  */
 export type Message = UserMessage | AssiMessage;
@@ -49,6 +68,8 @@ export type Message = UserMessage | AssiMessage;
 export type ContextOfUser = {
   userMessages: UserMessage[];
   assiMessages: AssiMessage[];
+  toolCallRequests: ToolCallRequest[];
+  toolResults: ToolResult[];
 };
 
 /**
@@ -71,6 +92,9 @@ export type SSEMessage =
   | {
       type: "patch";
       patches: PatchOperation[];
+    }
+  | {
+      type: "heartbeat";
     };
 
 /**

@@ -4,7 +4,26 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { createStreamConnection } from "@/utils/stream";
-import type { ContextOfUser, Message } from "@/types";
+import type { ContextOfUser, Message, ToolCallRequest, ToolResult } from "@/types";
+import type { ToolCallItem } from "@/components/ToolCallStatus";
+
+/**
+ * 将 toolCallRequests 和 toolResults 合并成 ToolCallItem 列表
+ */
+function mergeToolCalls(
+  toolCallRequests: ToolCallRequest[],
+  toolResults: ToolResult[]
+): ToolCallItem[] {
+  const resultsMap = new Map<string, ToolResult>();
+  toolResults.forEach((result) => {
+    resultsMap.set(result.toolCallId, result);
+  });
+
+  return toolCallRequests.map((request) => ({
+    request,
+    result: resultsMap.get(request.toolCallId),
+  }));
+}
 
 /**
  * 流式消息管理 Hook
@@ -12,13 +31,14 @@ import type { ContextOfUser, Message } from "@/types";
  * 管理流式消息的连接、内容缓存和状态
  *
  * @param context - Agent 上下文
- * @returns 处理后的消息列表和流式消息 ID 集合
+ * @returns 处理后的消息列表、流式消息 ID 集合和工具调用列表
  */
 export function useStreamingMessages(
   context: ContextOfUser | null
 ): {
   messages: Message[];
   streamingMessageIds: Set<string>;
+  toolCalls: ToolCallItem[];
 } {
   // 流式消息内容缓存（messageId -> content）
   const streamContentsRef = useRef<Map<string, string>>(new Map());
@@ -156,7 +176,7 @@ export function useStreamingMessages(
 
   // 清理函数：组件卸载时清理所有连接
   useEffect(() => {
-    // 保存 ref 的当前值到局部变量，确保 cleanup 函数使用正确的值
+    // 清理函数：组件卸载时清理所有连接
     const connections = streamConnectionsRef.current;
     const contents = streamContentsRef.current;
 
@@ -169,8 +189,18 @@ export function useStreamingMessages(
     };
   }, []);
 
+  // 合并 tool calls
+  const toolCalls = useMemo(() => {
+    if (!context) return [];
+    return mergeToolCalls(
+      context.toolCallRequests ?? [],
+      context.toolResults ?? []
+    );
+  }, [context]);
+
   return {
     messages,
     streamingMessageIds,
+    toolCalls,
   };
 }

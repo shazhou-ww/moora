@@ -8,10 +8,12 @@ import { Box } from "@mui/material";
 import { MessageList } from "./MessageList";
 import { contentBoxStyles } from "@/styles/app";
 import type { Message } from "@/types";
+import type { ToolCallItem } from "./ToolCallStatus";
 
 type MessageListContainerProps = {
   messages: Message[];
   streamingMessageIds?: Set<string>;
+  toolCalls?: ToolCallItem[];
   onScrollIndicatorChange?: (show: boolean, scrollToBottom: () => void) => void;
 };
 
@@ -44,6 +46,7 @@ const scrollToBottom = (container: HTMLElement, messagesEnd: HTMLDivElement | nu
 export function MessageListContainer({
   messages,
   streamingMessageIds = new Set(),
+  toolCalls = [],
   onScrollIndicatorChange,
 }: MessageListContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -220,7 +223,11 @@ export function MessageListContainer({
 
   return (
     <Box ref={containerRef} sx={contentBoxStyles}>
-      <MessageList messages={messages} streamingMessageIds={streamingMessageIds} />
+      <MessageList
+        messages={messages}
+        streamingMessageIds={streamingMessageIds}
+        toolCalls={toolCalls}
+      />
       <div ref={messagesEndRef} />
     </Box>
   );

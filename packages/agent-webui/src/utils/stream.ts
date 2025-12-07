@@ -2,8 +2,6 @@
  * 流式连接工具
  */
 
-import type { StreamMessageEvent } from "@/types";
-
 /**
  * 创建流式连接
  *

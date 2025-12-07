@@ -10,6 +10,7 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import { useEffect, useState } from "react";
 import type { Message, AssiMessage, UserMessage } from "@/types";
+import { ToolCallStatus, type ToolCallItem } from "./ToolCallStatus";
 import {
   containerStyles,
   emptyStateStyles,
@@ -28,6 +29,7 @@ import {
 type MessageListProps = {
   messages: Message[];
   streamingMessageIds?: Set<string>;
+  toolCalls?: ToolCallItem[];
 };
 
 /**
@@ -88,6 +90,7 @@ const createMarkdownComponents = (role: "user" | "assistant") => ({
 export function MessageList({
   messages,
   streamingMessageIds = new Set(),
+  toolCalls = [],
 }: MessageListProps) {
   return (
     <Box sx={containerStyles}>
@@ -111,7 +114,8 @@ export function MessageList({
           </Typography>
         </Box>
       ) : (
-        messages.map((message) => {
+        <>
+          {messages.map((message) => {
           const isStreaming =
             message.role === "assistant" &&
             streamingMessageIds.has(message.id);
@@ -174,7 +178,17 @@ export function MessageList({
               </Box>
             </Fade>
           );
-        })
+        })}
+
+          {/* 在最后一条助手消息后显示 tool calls */}
+          {toolCalls.length > 0 && (
+            <Fade in={true} timeout={300}>
+              <Box>
+                <ToolCallStatus toolCalls={toolCalls} />
+              </Box>
+            </Fade>
+          )}
+        </>
       )}
     </Box>
   );
