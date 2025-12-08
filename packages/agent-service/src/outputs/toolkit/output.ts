@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Toolkit Output 函数实现
  *
  * 监听 tool call requests 并执行工具调用，返回结果
  */
 
 import type { Toolkit } from "@moora/toolkit";
-import type { ContextOfToolkit, AgentInput } from "@moora/agent";
+import type { PerspectiveOfToolkit, Actuation } from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
 import { stateful } from "@moora/effects";
@@ -45,7 +45,7 @@ export type CreateToolkitOutputOptions = {
 /**
  * 创建 Toolkit Output 函数
  *
- * 监听 ContextOfToolkit 中的 toolCallRequests，对于尚未处理且未在执行中的请求：
+ * 监听 PerspectiveOfToolkit 中的 toolCallRequests，对于尚未处理且未在执行中的请求：
  * 1. 调用对应的 tool
  * 2. 将结果 dispatch 为 ToolResult
  *
@@ -54,17 +54,17 @@ export type CreateToolkitOutputOptions = {
  */
 export function createToolkitOutput(
   options: CreateToolkitOutputOptions
-): Eff<{ context: ContextOfToolkit; dispatch: Dispatch<AgentInput> }> {
+): Eff<{ perspective: PerspectiveOfToolkit; dispatch: Dispatch<Actuation> }> {
   const { toolkit } = options;
 
   return stateful<
-    { context: ContextOfToolkit; dispatch: Dispatch<AgentInput> },
+    { perspective: PerspectiveOfToolkit; dispatch: Dispatch<Actuation> },
     ToolkitOutputInternalState
   >(
     { executingToolCalls: [] },
     ({ context: ctx, state, setState }) => {
-      const { context, dispatch } = ctx;
-      const { toolCallRequests, toolResults } = context;
+      const { perspective, dispatch } = ctx;
+      const { toolCallRequests, toolResults } = perspective;
 
       // 找出已经有结果的 tool call IDs
       const completedToolCallIds = new Set(
@@ -108,7 +108,7 @@ export function createToolkitOutput(
             // 检查工具是否存在
             if (!toolkit.hasTool(name)) {
               result = JSON.stringify({
-                error: `Tool not found: ${name}`,
+                error: "Tool not found: ${name}",
               });
               logger.warn("Tool not found", { toolCallId, name });
             } else {
@@ -133,7 +133,7 @@ export function createToolkitOutput(
           }
 
           // 先 Dispatch tool result，确保 toolResults 更新在 executingToolCalls 更新之前
-          // 这样 setState 触发的 effect 重新执行时，toolResults 已经包含新结果，
+          // 这样 setState 触发的 reaction 重新执行时，toolResults 已经包含新结果，
           // 不会再次检测该 toolCallId 为 pending
           logger.debug("Dispatching receive-tool-result", {
             toolCallId,

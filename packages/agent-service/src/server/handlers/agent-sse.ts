@@ -6,7 +6,7 @@
 
 import { sse } from "elysia";
 import { createAgent } from "@moora/agent";
-import type { ContextOfUser } from "@moora/agent";
+import type { PerspectiveOfUser } from "@moora/agent";
 import type { Subscribe } from "@moora/automata";
 import { getLogger } from "@/logger";
 
@@ -71,16 +71,16 @@ export function createAgentSSEHandler(
 
     try {
       // 发送初始全量数据
-      const agentState = agent.current();
-      const context: ContextOfUser = {
-        userMessages: agentState.userMessages,
-        assiMessages: agentState.assiMessages,
-        toolCallRequests: agentState.toolCallRequests,
-        toolResults: agentState.toolResults,
+      const worldscape = agent.current();
+      const perspective: PerspectiveOfUser = {
+        userMessages: worldscape.userMessages,
+        assiMessages: worldscape.assiMessages,
+        toolCallRequests: worldscape.toolCallRequests,
+        toolResults: worldscape.toolResults,
       };
       const fullData = JSON.stringify({
         type: "full",
-        data: context,
+        data: perspective,
       });
       logger.server.debug("Agent SSE: Sending full data");
       yield sse(fullData);

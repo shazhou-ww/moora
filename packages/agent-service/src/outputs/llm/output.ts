@@ -1,7 +1,7 @@
 /**
  * LLM Output 函数实现
  *
- * 使用 stateful effect 模式协调消息构建、OpenAI API 调用和 Agent State 更新
+ * 使用 stateful reaction 模式协调消息构建、OpenAI API 调用和 Agent State 更新
  */
 
 import OpenAI from "openai";
@@ -10,9 +10,9 @@ import { getLogger } from "@/logger";
 const logger = getLogger().llm;
 import { v4 as uuidv4 } from "uuid";
 import type {
-  ContextOfLlm,
-  InputFromLlm,
-  AgentInput,
+  PerspectiveOfLlm,
+  ActionFromLlm,
+  Actuation,
 } from "@moora/agent";
 import type { Dispatch } from "@moora/automata";
 import type { CreateLlmOutputOptions } from "@/types";
@@ -80,15 +80,15 @@ function hasStreamingMessage(
 /**
  * 创建 LLM Output 函数
  *
- * 使用 stateful effect 管理是否有进行中的 llm 调用（internal state）。
- * cutOff 从 context 中获取（持久化状态）。
+ * 使用 stateful reaction 管理是否有进行中的 llm 调用（internal state）。
+ * cutOff 从 perspective 中获取（持久化状态）。
  *
  * @param options - 创建选项
  * @returns LLM Output 函数
  */
 export function createLlmOutput(
   options: CreateLlmOutputOptions
-): Eff<{ context: ContextOfLlm; dispatch: Dispatch<AgentInput> }> {
+): Eff<{ perspective: PerspectiveOfLlm; dispatch: Dispatch<Actuation> }> {
   const { openai: openaiConfig, prompt, streamManager, toolkit } = options;
 
   // 创建 OpenAI 客户端
@@ -98,11 +98,11 @@ export function createLlmOutput(
   });
 
   // 在闭包外层创建 stateful，确保在多次调用之间共享状态
-  return stateful<{ context: ContextOfLlm; dispatch: Dispatch<AgentInput> }, LlmOutputInternalState>(
+  return stateful<{ perspective: PerspectiveOfLlm; dispatch: Dispatch<Actuation> }, LlmOutputInternalState>(
     { llmCalls: [] },
     ({ context: ctx, state, setState }) => {
-      const { context, dispatch } = ctx;
-      const { userMessages, assiMessages, cutOff, toolCallRequests, toolResults } = context;
+      const { perspective, dispatch } = ctx;
+      const { userMessages, assiMessages, cutOff, toolCallRequests, toolResults } = perspective;
 
       // 判断是否有正在进行的调用
       const hasActiveCalls = state.llmCalls.length > 0;
@@ -130,9 +130,9 @@ export function createLlmOutput(
         toolResultsCount: toolResults.length,
       });
 
-      // 如果正在调用中，忽略这次 effect
+      // 如果正在调用中，忽略这次 reaction
       if (hasActiveCalls) {
-        logger.debug("Already calling, skipping this effect");
+        logger.debug("Already calling, skipping this reaction");
         return;
       }
 
@@ -175,7 +175,7 @@ export function createLlmOutput(
           prompt,
           streamManager,
           toolkit,
-          context,
+          perspective,
           dispatch,
           messageId, // 传入 messageId，确保复用
           onComplete: () => {
@@ -220,8 +220,8 @@ type ExecuteLlmCallParams = {
   prompt: string;
   streamManager: CreateLlmOutputOptions["streamManager"];
   toolkit: CreateLlmOutputOptions["toolkit"];
-  context: ContextOfLlm;
-  dispatch: Dispatch<AgentInput>;
+  perspective: PerspectiveOfLlm;
+  dispatch: Dispatch<Actuation>;
   messageId: string;
   onComplete: () => void;
   onError: () => void;
@@ -249,13 +249,13 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     prompt,
     streamManager,
     toolkit,
-    context,
+    perspective,
     dispatch,
     messageId,
     onComplete,
     onError,
   } = params;
-  const { userMessages, assiMessages, toolCallRequests, toolResults } = context;
+  const { userMessages, assiMessages, toolCallRequests, toolResults } = perspective;
 
   const timestamp = Date.now();
 
@@ -300,13 +300,13 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
             messageId,
             cutOff,
           });
-          const startInput: InputFromLlm = {
+          const startAction: ActionFromLlm = {
             type: "start-assi-message-stream",
             id: messageId,
             timestamp,
             cutOff,
           };
-          dispatch(startInput);
+          dispatch(startAction);
         }
       },
     });
@@ -323,7 +323,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
 
       const toolCallTimestamp = Date.now();
       for (const tc of toolCalls) {
-        const toolCallInput: InputFromLlm = {
+        const toolCallAction: ActionFromLlm = {
           type: "request-tool-call",
           toolCallId: tc.id,
           name: tc.name,
@@ -331,7 +331,7 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
           timestamp: toolCallTimestamp,
           cutOff, // 传入 cutOff 以更新状态
         };
-        dispatch(toolCallInput);
+        dispatch(toolCallAction);
       }
     }
 
@@ -346,26 +346,26 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
           cutOff,
         });
         // 仍然需要 dispatch start-assi-message-stream
-        const startInput: InputFromLlm = {
+        const startAction: ActionFromLlm = {
           type: "start-assi-message-stream",
           id: messageId,
           timestamp,
           cutOff,
         };
-        dispatch(startInput);
+        dispatch(startAction);
       }
     }
 
     // 只有在收到过 content chunk 时才 dispatch end-assi-message-stream
     if (hasReceivedFirstChunk) {
       // 通知 Agent State 结束流式生成
-      const endInput: InputFromLlm = {
+      const endAction: ActionFromLlm = {
         type: "end-assi-message-stream",
         id: messageId,
         content: fullContent,
         timestamp: Date.now(),
       };
-      dispatch(endInput);
+      dispatch(endAction);
     }
 
     // 在 StreamManager 中结束流式生成（如果有内容或已开始）
@@ -392,13 +392,13 @@ async function executeLlmCall(params: ExecuteLlmCallParams): Promise<void> {
     if (hasReceivedFirstChunk) {
       logger.debug("Error after first chunk, dispatching end-assi-message-stream", { messageId });
       // 通知 Agent State 结束流式生成（使用空内容或错误消息）
-      const endInput: InputFromLlm = {
+      const endAction: ActionFromLlm = {
         type: "end-assi-message-stream",
         id: messageId,
         content: "",
         timestamp: Date.now(),
       };
-      dispatch(endInput);
+      dispatch(endAction);
     } else {
       logger.debug("Error before first chunk, skipping end-assi-message-stream", { messageId });
     }
