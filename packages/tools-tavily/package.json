@@ -1,6 +1,6 @@
 {
   "name": "@moora/tools-tavily",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tavily tools for Moora toolkit - search and extract capabilities",
   "type": "module",
   "main": "src/index.ts",
@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@moora/toolkit": "0.1.0",
+    "@moora/toolkit": "0.1.1",
     "@tavily/core": "^0.5.14"
   },
   "devDependencies": {

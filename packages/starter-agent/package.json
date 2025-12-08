@@ -1,6 +1,6 @@
 {
   "name": "@moora/starter-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A minimal starter agent implementation based on Automata",
   "keywords": [
     "agent",
@@ -23,7 +23,7 @@
     "url": "https://github.com/shazhou-ww/moora/issues"
   },
   "dependencies": {
-    "@moora/automata": "0.1.0",
+    "@moora/automata": "0.1.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@moora/agent-webui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agent WebUI based on Vite, React and MUI",
   "keywords": [
     "agent",

@@ -11,7 +11,7 @@ export async function execCommand(command: string): Promise<string> {
     const isWindows = process.platform === "win32";
     const shell = isWindows ? "cmd" : "sh";
     const shellArg = isWindows ? "/c" : "-c";
-    
+
     const proc = Bun.spawn([shell, shellArg, command], {
       stdout: "pipe",
       stderr: "pipe",
@@ -20,9 +20,9 @@ export async function execCommand(command: string): Promise<string> {
 
     const output = await new Response(proc.stdout).text();
     const errorOutput = await new Response(proc.stderr).text();
-    
+
     const exitCode = await proc.exited;
-    
+
     if (exitCode !== 0) {
       throw new Error(errorOutput || `Command failed with exit code ${exitCode}`);
     }
@@ -53,7 +53,9 @@ export async function hasUncommittedChanges(): Promise<boolean> {
  */
 export async function commitChanges(message: string): Promise<void> {
   await execCommand(`git add .`);
-  await execCommand(`git commit -m "${message}"`);
+  // Escape double quotes in the message for shell compatibility
+  const escapedMessage = message.replace(/"/g, '\\"');
+  await execCommand(`git commit -m "${escapedMessage}"`);
 }
 
 /**

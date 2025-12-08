@@ -1,6 +1,6 @@
 {
   "name": "@moora/effects",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A two-phase effect system for managing side effects in state machines",
   "keywords": [
     "effect",
