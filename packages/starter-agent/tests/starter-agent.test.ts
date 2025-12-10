@@ -84,9 +84,11 @@ describe("Starter Agent", () => {
     state = agent.current();
     expect(state.assiMessages).toHaveLength(1);
     expect(state.assiMessages[0]?.id).toBe(messageId);
-    expect(state.assiMessages[0]?.content).toBe("Hi there!");
-    expect(state.assiMessages[0]?.role).toBe("assistant");
     expect(state.assiMessages[0]?.streaming).toBe(false);
+    if (!state.assiMessages[0]?.streaming) {
+      expect(state.assiMessages[0]?.content).toBe("Hi there!");
+    }
+    expect(state.assiMessages[0]?.role).toBe("assistant");
   });
 
   test("should subscribe to output changes", async () => {
