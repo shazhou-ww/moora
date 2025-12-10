@@ -1,10 +1,10 @@
-# @moora/agent-webui
+# @moora/webui-agent-worker
 
 基于 Vite、React 和 MUI 的 Agent WebUI
 
 ## 概述
 
-这是一个简单的 Web UI，用于与 `@moora/agent-service` 交互，提供：
+这是一个简单的 Web UI，用于与 `@moora/service-agent-worker` 交互，提供：
 
 - 消息列表展示
 - 用户发送消息
@@ -23,7 +23,7 @@
 ### 开发模式
 
 ```bash
-cd packages/agent-webui
+cd packages/webui-agent-worker
 bun install
 bun run dev
 ```
@@ -44,7 +44,7 @@ bun run preview
 
 ## 配置
 
-WebUI 通过代理连接到 agent-service。默认配置：
+WebUI 通过代理连接到 service-agent-worker。默认配置：
 
 - WebUI 端口：`5173`
 - Agent Service 端口：`3000`（通过 `/api` 代理）
@@ -81,5 +81,5 @@ src/
 
 ## 开发
 
-确保 `@moora/agent-service` 正在运行（默认端口 3000），然后启动 WebUI。
+确保 `@moora/service-agent-worker` 正在运行（默认端口 3000），然后启动 WebUI。
 

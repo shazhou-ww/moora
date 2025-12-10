@@ -1,5 +1,5 @@
 {
-  "name": "@moora/agent-service",
+  "name": "@moora/service-agent-worker",
   "version": "0.1.2",
   "description": "Agent service implementation based on ElysiaJS",
   "keywords": [
@@ -17,9 +17,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/shazhou-ww/moora.git",
-    "directory": "packages/agent-service"
+    "directory": "packages/service-agent-worker"
   },
-  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-service#readme",
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/service-agent-worker#readme",
   "bugs": {
     "url": "https://github.com/shazhou-ww/moora/issues"
   },

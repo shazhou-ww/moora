@@ -1,4 +1,4 @@
-# @moora/agent-service
+# @moora/service-agent-worker
 
 基于 ElysiaJS 的 Agent Service 实现
 
@@ -21,7 +21,7 @@
 ## 使用方法
 
 ```typescript
-import { createService } from '@moora/agent-service';
+import { createService } from '@moora/service-agent-worker';
 
 const app = createService({
   openai: {

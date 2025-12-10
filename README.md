@@ -11,8 +11,8 @@ A monorepo structure for managing multiple related packages under the `@moora` s
 | [@moora/agent-worker](./packages/agent-worker) | Complete agent implementation with reaction factories |
 | [@moora/toolkit](./packages/toolkit) | Tool management for LLM agents |
 | [@moora/tools-tavily](./packages/tools-tavily) | Tavily web search tool integration |
-| [@moora/agent-service](./packages/agent-service) | ElysiaJS-based agent service with SSE |
-| [@moora/agent-webui](./packages/agent-webui) | React-based agent web UI |
+| [@moora/service-agent-worker](./packages/service-agent-worker) | ElysiaJS-based agent service with SSE |
+| [@moora/webui-agent-worker](./packages/webui-agent-worker) | React-based agent web UI |
 | [@moora/agent-starter](./packages/agent-starter) | Starter template for building agents |
 
 ## Quick Start
@@ -38,8 +38,8 @@ moora/
 │   ├── agent-worker/  # @moora/agent-worker - Agent core
 │   ├── toolkit/       # @moora/toolkit - Tool management
 │   ├── tools-tavily/  # @moora/tools-tavily - Tavily tools
-│   ├── agent-service/ # @moora/agent-service - Backend service
-│   ├── agent-webui/   # @moora/agent-webui - Frontend UI
+│   ├── service-agent-worker/ # @moora/service-agent-worker - Backend service
+│   ├── webui-agent-worker/   # @moora/webui-agent-worker - Frontend UI
 │   └── agent-starter/ # @moora/agent-starter - Template
 ├── scripts/           # Management scripts
 │   ├── publish.ts     # Version and publish management

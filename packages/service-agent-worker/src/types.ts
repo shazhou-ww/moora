@@ -1,5 +1,5 @@
 /**
- * @moora/agent-service 全局类型定义
+ * @moora/service-agent-worker 全局类型定义
  */
 
 import type { PubSub, CancelFn } from "@moora/pub-sub";

@@ -1,6 +1,6 @@
 # Agent Service - Coding Agent 指南
 
-本文档为 Coding Agent 提供开发 `@moora/agent-service` 时的指导规范。
+本文档为 Coding Agent 提供开发 `@moora/service-agent-worker` 时的指导规范。
 
 ## 架构
 
@@ -37,13 +37,13 @@ agent.subscribe((_dispatch) => (update) => {
 
 ```bash
 # 查看所有 agent 状态更新
-cat logs/agent-service.log | jq 'select(.category == "agent")' | pino-pretty
+cat logs/service-agent-worker.log | jq 'select(.category == "agent")' | pino-pretty
 
 # 按 input 类型过滤
-cat logs/agent-service.log | jq 'select(.inputType == "send-user-message")' | pino-pretty
+cat logs/service-agent-worker.log | jq 'select(.inputType == "send-user-message")' | pino-pretty
 
 # 查看 cutOff 变化
-cat logs/agent-service.log | jq 'select(.category == "agent" and .prevCutOff != .currCutOff)' | pino-pretty
+cat logs/service-agent-worker.log | jq 'select(.category == "agent" and .prevCutOff != .currCutOff)' | pino-pretty
 ```
 
 ## 日志系统
@@ -53,7 +53,7 @@ cat logs/agent-service.log | jq 'select(.category == "agent" and .prevCutOff != 
 ### 使用方法
 
 ```typescript
-import { getLogger } from "@moora/agent-service";
+import { getLogger } from "@moora/service-agent-worker";
 
 const logger = getLogger();
 
@@ -112,18 +112,18 @@ reqLogger.debug("Request body parsed", { size: 1024 });
 ```bash
 # .env 文件
 LOG_LEVEL=debug
-LOG_FILE=logs/agent-service.log
-ERROR_LOG_FILE=logs/agent-service-error.log
+LOG_FILE=logs/service-agent-worker.log
+ERROR_LOG_FILE=logs/service-agent-worker-error.log
 ```
 
 ```typescript
 // 代码中配置
-import { createLogger, setLogger } from "@moora/agent-service";
+import { createLogger, setLogger } from "@moora/service-agent-worker";
 
 const logger = createLogger({
   level: "debug",
-  logFile: "logs/agent-service.log",
-  errorLogFile: "logs/agent-service-error.log",
+  logFile: "logs/service-agent-worker.log",
+  errorLogFile: "logs/service-agent-worker-error.log",
 });
 setLogger(logger);
 ```

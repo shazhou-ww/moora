@@ -12,12 +12,12 @@ const watch = args.includes("--watch") || args.includes("-w");
 const script = "dev";
 
 const rootDir = process.cwd();
-const webuiDir = join(rootDir, "packages", "agent-webui");
+const webuiDir = join(rootDir, "packages", "webui-agent-worker");
 
 async function startWebUI() {
   try {
     console.log(`🚀 Starting Agent WebUI (dev mode)...`);
-    console.log(`📦 Package: @moora/agent-webui`);
+    console.log(`📦 Package: @moora/webui-agent-worker`);
     console.log(`📁 Directory: ${webuiDir}\n`);
 
     // 切换到 webui 目录并执行启动命令

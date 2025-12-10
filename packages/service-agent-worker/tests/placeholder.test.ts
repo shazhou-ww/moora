@@ -1,7 +1,7 @@
 /**
  * Placeholder test file
  *
- * TODO: Add actual tests for agent-service
+ * TODO: Add actual tests for service-agent-worker
  */
 
 import { describe, test, expect } from "vitest";

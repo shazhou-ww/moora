@@ -79,7 +79,7 @@ function formatInputLog(update: AgentUpdatePack) {
  *
  * @example
  * ```typescript
- * import { createService } from '@moora/agent-service';
+ * import { createService } from '@moora/service-agent-worker';
  *
  * const app = createService({
  *   openai: {

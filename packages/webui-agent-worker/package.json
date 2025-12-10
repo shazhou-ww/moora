@@ -1,5 +1,5 @@
 {
-  "name": "@moora/agent-webui",
+  "name": "@moora/webui-agent-worker",
   "version": "0.1.2",
   "description": "Agent WebUI based on Vite, React and MUI",
   "keywords": [
@@ -15,9 +15,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/shazhou-ww/moora.git",
-    "directory": "packages/agent-webui"
+    "directory": "packages/webui-agent-worker"
   },
-  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-webui#readme",
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/webui-agent-worker#readme",
   "bugs": {
     "url": "https://github.com/shazhou-ww/moora/issues"
   },

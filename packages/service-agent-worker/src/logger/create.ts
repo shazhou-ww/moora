@@ -14,7 +14,7 @@ import type { CategoryLogger, LogCategory, Logger, LoggerOptions } from "./types
  *
  * @example
  * ```typescript
- * import { createLogger } from '@moora/agent-service/logger';
+ * import { createLogger } from '@moora/service-agent-worker/logger';
  *
  * const logger = createLogger({ level: 'debug' });
  *

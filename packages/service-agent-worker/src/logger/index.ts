@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { getLogger, createLogger, setLogger } from '@moora/agent-service/logger';
+ * import { getLogger, createLogger, setLogger } from '@moora/service-agent-worker/logger';
  *
  * // 使用默认 logger
  * const logger = getLogger();

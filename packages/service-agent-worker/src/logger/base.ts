@@ -63,7 +63,7 @@ export function createBaseLogger(options: LoggerOptions = {}): pino.Logger {
     level,
     transport: { targets },
     base: {
-      service: "agent-service",
+      service: "service-agent-worker",
     },
     timestamp: pino.stdTimeFunctions.isoTime,
   });

@@ -13,12 +13,12 @@ const args = process.argv.slice(2);
 const watch = args.includes("--watch") || args.includes("-w");
 
 const rootDir = process.cwd();
-const serviceEntry = join(rootDir, "packages", "agent-service", "src", "index.ts");
+const serviceEntry = join(rootDir, "packages", "service-agent-worker", "src", "index.ts");
 
 async function startService() {
   try {
     console.log(`🚀 Starting Agent Service (${watch ? "watch" : "production"} mode)...`);
-    console.log(`📦 Package: @moora/agent-service`);
+    console.log(`📦 Package: @moora/service-agent-worker`);
     console.log(`📁 Entry: ${serviceEntry}\n`);
 
     // 从根目录运行，这样所有 workspace 包都在项目目录内
