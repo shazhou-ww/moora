@@ -2,7 +2,7 @@
  * Agent 总的 Worldscape 和 Actuation 定义
  */
 
-import type { Dispatch } from "@moora/automata";
+import type { Dispatch, UpdatePack, StatefulTransferer } from "@moora/automata";
 import type { Eff } from "@moora/effects";
 import type { AppearanceOfUser, AppearanceOfLlm, AppearanceOfToolkit } from "./appearances";
 import type { ActionFromUser, ActionFromLlm, ActionFromToolkit } from "./actions";
@@ -50,3 +50,19 @@ export type AgentReaction = (worldscape: Worldscape) => Eff<Dispatch<Actuation>>
  * 用于 createAgent 函数的参数类型，允许只提供部分 Actor 的 Reaction 函数
  */
 export type PartialReactionFns = Partial<ReactionFns>;
+
+/**
+ * Agent 的更新包类型（状态机的输出）
+ *
+ * 包含状态转换的完整信息：
+ * - prev: 前一个状态和触发转换的动作（初始状态时为 null）
+ * - state: 当前状态
+ */
+export type AgentUpdatePack = UpdatePack<Actuation, Worldscape>;
+
+/**
+ * Agent 类型
+ *
+ * createAgent 的返回类型，是一个有状态的转换器
+ */
+export type Agent = StatefulTransferer<Actuation, AgentUpdatePack, Worldscape>;

@@ -3,23 +3,10 @@
  */
 
 import { automata } from "@moora/automata";
-import type { StatefulTransferer, UpdatePack } from "@moora/automata";
-import type { Worldscape, Actuation, AgentReaction } from "@/decl/agent";
+import type { StatefulTransferer } from "@moora/automata";
+import type { Worldscape, Actuation, AgentReaction, AgentUpdatePack } from "@/decl/agent";
 import { initial } from "@/impl/agent/initial";
 import { transition } from "@/impl/agent/transition";
-
-// ============================================================================
-// 类型定义
-// ============================================================================
-
-/**
- * Agent 的更新包类型（状态机的输出）
- *
- * 包含状态转换的完整信息：
- * - prev: 前一个状态和触发转换的动作（初始状态时为 null）
- * - state: 当前状态
- */
-export type AgentUpdatePack = UpdatePack<Actuation, Worldscape>;
 
 // ============================================================================
 // 主要函数

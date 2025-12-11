@@ -112,7 +112,7 @@ export type {
 // ============================================================================
 // Agent
 // ============================================================================
-export type { Worldscape, Actuation, ReactionFns, AgentReaction } from "./agent";
+export type { Worldscape, Actuation, ReactionFns, AgentReaction, AgentUpdatePack, Agent } from "./agent";
 
 // ============================================================================
 // Reactions

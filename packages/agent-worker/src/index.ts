@@ -4,16 +4,22 @@
  * 完整的 Agent 实现，基于 Automata 和迭代式建模方法论
  */
 
-import type { Worldscape, Actuation } from "./decl/agent";
-
 // ============================================================================
-// 导出类型
+// Agent 核心类型
 // ============================================================================
 export type {
+  Agent,
+  AgentUpdatePack,
   Worldscape,
   Actuation,
   ReactionFns,
   AgentReaction,
+} from "./decl";
+
+// ============================================================================
+// Actors 类型
+// ============================================================================
+export type {
   Actors,
   AppearanceOfUser,
   AppearanceOfLlm,
@@ -33,7 +39,12 @@ export type {
   ToolResult,
   ToolCallRequests,
   ToolResults,
-  // Reaction types
+} from "./decl";
+
+// ============================================================================
+// Reaction 类型
+// ============================================================================
+export type {
   CallTool,
   NotifyUser,
   LlmReactionOptions,
@@ -42,18 +53,17 @@ export type {
   ReactionOptions,
 } from "./decl";
 
-// 导出 Agent 更新相关类型
-export type { AgentUpdatePack } from "./impl/agent/create";
-
 // ============================================================================
-// 导出函数
+// Agent 工厂函数
 // ============================================================================
 export { createAgent } from "./impl/agent";
 
 // createReaction - 将 ReactionFns 组合为 AgentReaction
 export { createReaction } from "./impl/agent/reaction";
 
-// Reaction factory functions
+// ============================================================================
+// Reaction 工厂函数
+// ============================================================================
 export {
   createUserReaction,
   createLlmReaction,
