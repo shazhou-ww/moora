@@ -6,6 +6,7 @@ import type { CallLlm } from "@moora/agent-common";
 import type { Toolkit } from "@moora/toolkit";
 import type {
   TaskId,
+  MessageId,
   TaskInput,
   Task,
   TaskRuntimeStatus,
@@ -34,9 +35,17 @@ export type WorkforceConfig = {
 // ============================================================================
 
 /**
- * 创建 Task 的简化输入（不包含 parentId）
+ * 创建 Task 的输入
+ *
+ * 必须包含 id, title, goal，调用方需要提供唯一 ID
  */
-export type CreateTaskInput = Omit<TaskInput, "parentId"> & {
+export type CreateTaskInput = {
+  /** 任务唯一 ID（UUID 格式），由调用方提供 */
+  id: TaskId;
+  /** 任务简短标题 */
+  title: string;
+  /** 任务详细目标需求 */
+  goal: string;
   /** 父任务 ID（可选，默认为根任务） */
   parentId?: TaskId;
 };
@@ -45,6 +54,8 @@ export type CreateTaskInput = Omit<TaskInput, "parentId"> & {
  * 追加消息到 Task 的输入
  */
 export type AppendMessageInput = {
+  /** 消息唯一 ID，由调用方提供 */
+  messageId: MessageId;
   /** 消息内容 */
   content: string;
   /** 目标 Task ID 列表 */

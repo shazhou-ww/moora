@@ -10,6 +10,7 @@
 export type {
   // Task 类型
   TaskId,
+  MessageId,
   TaskStatus,
   TaskSuccessResult,
   TaskFailureResult,
@@ -18,11 +19,6 @@ export type {
   TaskRuntimeData,
   TaskRuntimeStatus,
   Task,
-  // 消息记录类型
-  UserMessageRecord,
-  AssistantMessageRecord,
-  ToolCallRequestRecord,
-  ToolCallResponseRecord,
   // Task 事件类型
   TaskCreatedEvent,
   TaskStartedEvent,
@@ -70,6 +66,19 @@ export {
   isPseudoTool,
   parsePseudoToolCall,
   pseudoToolInfos,
+} from "./impl";
+
+// ============================================================================
+// Zod Schemas 导出
+// ============================================================================
+export {
+  taskSucceedParamsSchema,
+  taskFailParamsSchema,
+  subtaskDefinitionSchema,
+  taskBreakdownParamsSchema,
+  taskSucceedJsonSchema,
+  taskFailJsonSchema,
+  taskBreakdownJsonSchema,
 } from "./impl";
 
 // ============================================================================

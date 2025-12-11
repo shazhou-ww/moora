@@ -3,6 +3,7 @@
  */
 
 import type { Unsubscribe } from "@moora/pub-sub";
+import type { Worldscape } from "@moora/agent-worker";
 
 // ============================================================================
 // 基础类型
@@ -12,6 +13,11 @@ import type { Unsubscribe } from "@moora/pub-sub";
  * Task ID 类型，使用 UUID 格式
  */
 export type TaskId = string;
+
+/**
+ * Message ID 类型
+ */
+export type MessageId = string;
 
 /**
  * 根任务 ID，固定为全 0 的 UUID
@@ -62,7 +68,7 @@ export type TaskResult = TaskSuccessResult | TaskFailureResult;
  * 创建 Task 的输入参数
  */
 export type TaskInput = {
-  /** 任务唯一 ID（UUID 格式） */
+  /** 任务唯一 ID（UUID 格式），由调用方提供 */
   id: TaskId;
   /** 任务简短标题 */
   title: string;
@@ -75,23 +81,23 @@ export type TaskInput = {
 /**
  * Task 运行时数据
  *
- * 包含任务的基本信息和执行过程中的消息记录
+ * 包含任务的基本信息和 Worker Agent 的 Worldscape
  */
 export type TaskRuntimeData = {
   /** 任务唯一 ID */
   readonly id: TaskId;
   /** 任务简短标题 */
   readonly title: string;
+  /** 任务详细目标需求 */
+  readonly goal: string;
   /** 父任务 ID */
   readonly parentId: TaskId;
-  /** 用户消息列表（第一条为 goal） */
-  userMessages: UserMessageRecord[];
-  /** 助手消息列表 */
-  assistantMessages: AssistantMessageRecord[];
-  /** 工具调用请求列表 */
-  toolCallRequests: ToolCallRequestRecord[];
-  /** 工具调用响应列表 */
-  toolCallResponses: ToolCallResponseRecord[];
+  /**
+   * Worker Agent 的 Worldscape
+   *
+   * 包含 userMessages, assiMessages, toolCallRequests, toolResults 等
+   */
+  worldscape: Worldscape;
 };
 
 /**
@@ -116,48 +122,6 @@ export type TaskRuntimeStatus = {
  * 完整的 Task 信息
  */
 export type Task = TaskRuntimeData & TaskRuntimeStatus;
-
-// ============================================================================
-// 消息记录类型
-// ============================================================================
-
-/**
- * 用户消息记录
- */
-export type UserMessageRecord = {
-  id: string;
-  content: string;
-  timestamp: number;
-};
-
-/**
- * 助手消息记录
- */
-export type AssistantMessageRecord = {
-  id: string;
-  content: string;
-  timestamp: number;
-  streaming: boolean;
-};
-
-/**
- * 工具调用请求记录
- */
-export type ToolCallRequestRecord = {
-  toolCallId: string;
-  name: string;
-  arguments: string;
-  requestedAt: number;
-};
-
-/**
- * 工具调用响应记录
- */
-export type ToolCallResponseRecord = {
-  toolCallId: string;
-  result: string;
-  respondedAt: number;
-};
 
 // ============================================================================
 // Task 事件类型
@@ -187,6 +151,7 @@ export type TaskStartedEvent = {
 export type TaskMessageAppendedEvent = {
   type: "task-message-appended";
   taskId: TaskId;
+  messageId: MessageId;
   content: string;
   timestamp: number;
 };
@@ -241,7 +206,7 @@ export type TaskEvent =
 export type TaskDetailUserMessageEvent = {
   type: "task-detail-user-message";
   taskId: TaskId;
-  messageId: string;
+  messageId: MessageId;
   content: string;
   timestamp: number;
 };
@@ -252,7 +217,7 @@ export type TaskDetailUserMessageEvent = {
 export type TaskDetailStreamChunkEvent = {
   type: "task-detail-stream-chunk";
   taskId: TaskId;
-  messageId: string;
+  messageId: MessageId;
   chunk: string;
   timestamp: number;
 };
@@ -263,7 +228,7 @@ export type TaskDetailStreamChunkEvent = {
 export type TaskDetailStreamCompleteEvent = {
   type: "task-detail-stream-complete";
   taskId: TaskId;
-  messageId: string;
+  messageId: MessageId;
   content: string;
   timestamp: number;
 };

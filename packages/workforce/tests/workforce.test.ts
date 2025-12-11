@@ -98,8 +98,8 @@ describe("Workforce", () => {
       expect(task?.id).toBe("task-1");
       expect(task?.title).toBe("Test Task");
       expect(task?.status).toBe("ready");
-      expect(task?.userMessages.length).toBe(1);
-      expect(task?.userMessages[0]?.content).toBe("Complete the test");
+      expect(task?.worldscape.userMessages.length).toBe(1);
+      expect(task?.worldscape.userMessages[0]?.content).toBe("Complete the test");
     });
 
     it("should track parent-child relationships", () => {

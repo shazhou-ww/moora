@@ -5,6 +5,7 @@
 // Task 相关类型
 export type {
   TaskId,
+  MessageId,
   TaskStatus,
   TaskSuccessResult,
   TaskFailureResult,
@@ -13,10 +14,6 @@ export type {
   TaskRuntimeData,
   TaskRuntimeStatus,
   Task,
-  UserMessageRecord,
-  AssistantMessageRecord,
-  ToolCallRequestRecord,
-  ToolCallResponseRecord,
   TaskCreatedEvent,
   TaskStartedEvent,
   TaskMessageAppendedEvent,

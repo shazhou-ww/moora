@@ -6,19 +6,18 @@
 
 import { createPubSub } from "@moora/pub-sub";
 import type { PubSub } from "@moora/pub-sub";
+import type { Worldscape } from "@moora/agent-worker";
+import type { UserMessage, AssiMessage } from "@moora/agent-common";
 import {
   ROOT_TASK_ID,
   type TaskId,
+  type MessageId,
   type TaskInput,
   type Task,
   type TaskRuntimeData,
   type TaskRuntimeStatus,
   type TaskEvent,
   type TaskDetailEvent,
-  type UserMessageRecord,
-  type AssistantMessageRecord,
-  type ToolCallRequestRecord,
-  type ToolCallResponseRecord,
 } from "../types";
 
 // ============================================================================
@@ -72,27 +71,32 @@ export interface TaskTree {
   /**
    * 追加用户消息
    */
-  appendUserMessage(taskId: TaskId, message: UserMessageRecord): void;
+  appendUserMessage(taskId: TaskId, messageId: MessageId, content: string): void;
 
   /**
-   * 追加助手消息
+   * 追加助手消息（开始流式输出）
    */
-  appendAssistantMessage(taskId: TaskId, message: AssistantMessageRecord): void;
+  appendAssistantMessage(taskId: TaskId, messageId: MessageId): void;
 
   /**
-   * 更新助手消息（流式输出时使用）
+   * 更新助手消息（流式输出完成）
    */
-  updateAssistantMessage(taskId: TaskId, messageId: string, content: string, streaming: boolean): void;
+  completeAssistantMessage(taskId: TaskId, messageId: MessageId, content: string): void;
 
   /**
    * 追加工具调用请求
    */
-  appendToolCallRequest(taskId: TaskId, request: ToolCallRequestRecord): void;
+  appendToolCallRequest(
+    taskId: TaskId,
+    toolCallId: string,
+    name: string,
+    args: string
+  ): void;
 
   /**
    * 追加工具调用响应
    */
-  appendToolCallResponse(taskId: TaskId, response: ToolCallResponseRecord): void;
+  appendToolCallResponse(taskId: TaskId, toolCallId: string, result: string): void;
 
   /**
    * 完成 Task（成功）
@@ -131,6 +135,23 @@ export interface TaskTree {
 }
 
 // ============================================================================
+// 辅助函数
+// ============================================================================
+
+/**
+ * 创建空的 Worldscape
+ */
+function createEmptyWorldscape(): Worldscape {
+  return {
+    userMessages: [],
+    assiMessages: [],
+    toolCallRequests: [],
+    toolResults: [],
+    cutOff: 0,
+  };
+}
+
+// ============================================================================
 // TaskTree 实现
 // ============================================================================
 
@@ -159,22 +180,24 @@ export function createTaskTree(): TaskTree {
    */
   function createTask(input: TaskInput): void {
     const now = Date.now();
+    const goalMessageId = `msg-${input.id}-goal`;
+
+    // 创建初始 Worldscape，包含目标作为第一条用户消息
+    const worldscape = createEmptyWorldscape();
+    worldscape.userMessages.push({
+      id: goalMessageId,
+      role: "user",
+      content: input.goal,
+      timestamp: now,
+    });
 
     // 创建运行时数据
     const data: TaskRuntimeData = {
       id: input.id,
       title: input.title,
+      goal: input.goal,
       parentId: input.parentId,
-      userMessages: [
-        {
-          id: `msg-${input.id}-goal`,
-          content: input.goal,
-          timestamp: now,
-        },
-      ],
-      assistantMessages: [],
-      toolCallRequests: [],
-      toolCallResponses: [],
+      worldscape,
     };
 
     // 创建运行时状态
@@ -206,16 +229,13 @@ export function createTaskTree(): TaskTree {
     });
 
     // 发布用户消息详情事件
-    const firstMessage = data.userMessages[0];
-    if (firstMessage) {
-      taskDetailEventPubSub.pub({
-        type: "task-detail-user-message",
-        taskId: input.id,
-        messageId: firstMessage.id,
-        content: input.goal,
-        timestamp: now,
-      });
-    }
+    taskDetailEventPubSub.pub({
+      type: "task-detail-user-message",
+      taskId: input.id,
+      messageId: goalMessageId,
+      content: input.goal,
+      timestamp: now,
+    });
   }
 
   /**
@@ -297,91 +317,134 @@ export function createTaskTree(): TaskTree {
   /**
    * 追加用户消息
    */
-  function appendUserMessage(taskId: TaskId, message: UserMessageRecord): void {
+  function appendUserMessage(taskId: TaskId, messageId: MessageId, content: string): void {
     const data = taskDataMap.get(taskId);
     if (!data) return;
 
-    data.userMessages.push(message);
+    const now = Date.now();
+    const message: UserMessage = {
+      id: messageId,
+      role: "user",
+      content,
+      timestamp: now,
+    };
+    data.worldscape.userMessages.push(message);
 
     taskEventPubSub.pub({
       type: "task-message-appended",
       taskId,
-      content: message.content,
-      timestamp: message.timestamp,
+      messageId,
+      content,
+      timestamp: now,
     });
 
     taskDetailEventPubSub.pub({
       type: "task-detail-user-message",
       taskId,
-      messageId: message.id,
-      content: message.content,
-      timestamp: message.timestamp,
+      messageId,
+      content,
+      timestamp: now,
     });
   }
 
   /**
-   * 追加助手消息
+   * 追加助手消息（开始流式输出）
    */
-  function appendAssistantMessage(taskId: TaskId, message: AssistantMessageRecord): void {
+  function appendAssistantMessage(taskId: TaskId, messageId: MessageId): void {
     const data = taskDataMap.get(taskId);
     if (!data) return;
 
-    data.assistantMessages.push(message);
+    const now = Date.now();
+    const message: AssiMessage = {
+      id: messageId,
+      role: "assistant",
+      streaming: true,
+      timestamp: now,
+    };
+    data.worldscape.assiMessages.push(message);
   }
 
   /**
-   * 更新助手消息（流式输出时使用）
+   * 更新助手消息（流式输出完成）
    */
-  function updateAssistantMessage(
-    taskId: TaskId,
-    messageId: string,
-    content: string,
-    streaming: boolean
-  ): void {
+  function completeAssistantMessage(taskId: TaskId, messageId: MessageId, content: string): void {
     const data = taskDataMap.get(taskId);
     if (!data) return;
 
-    const message = data.assistantMessages.find((m) => m.id === messageId);
-    if (!message) return;
+    const messageIndex = data.worldscape.assiMessages.findIndex(
+      (m: AssiMessage) => m.id === messageId
+    );
+    if (messageIndex === -1) return;
 
-    message.content = content;
-    message.streaming = streaming;
+    const now = Date.now();
+    // 替换为完成的消息
+    data.worldscape.assiMessages[messageIndex] = {
+      id: messageId,
+      role: "assistant",
+      streaming: false,
+      content,
+      timestamp: now,
+    };
+
+    taskDetailEventPubSub.pub({
+      type: "task-detail-stream-complete",
+      taskId,
+      messageId,
+      content,
+      timestamp: now,
+    });
   }
 
   /**
    * 追加工具调用请求
    */
-  function appendToolCallRequest(taskId: TaskId, request: ToolCallRequestRecord): void {
+  function appendToolCallRequest(
+    taskId: TaskId,
+    toolCallId: string,
+    name: string,
+    args: string
+  ): void {
     const data = taskDataMap.get(taskId);
     if (!data) return;
 
-    data.toolCallRequests.push(request);
+    const now = Date.now();
+    data.worldscape.toolCallRequests.push({
+      toolCallId,
+      name,
+      arguments: args,
+      timestamp: now,
+    });
 
     taskDetailEventPubSub.pub({
       type: "task-detail-tool-call-request",
       taskId,
-      toolCallId: request.toolCallId,
-      name: request.name,
-      arguments: request.arguments,
-      timestamp: request.requestedAt,
+      toolCallId,
+      name,
+      arguments: args,
+      timestamp: now,
     });
   }
 
   /**
    * 追加工具调用响应
    */
-  function appendToolCallResponse(taskId: TaskId, response: ToolCallResponseRecord): void {
+  function appendToolCallResponse(taskId: TaskId, toolCallId: string, result: string): void {
     const data = taskDataMap.get(taskId);
     if (!data) return;
 
-    data.toolCallResponses.push(response);
+    const now = Date.now();
+    data.worldscape.toolResults.push({
+      toolCallId,
+      result,
+      timestamp: now,
+    });
 
     taskDetailEventPubSub.pub({
       type: "task-detail-tool-call-response",
       taskId,
-      toolCallId: response.toolCallId,
-      result: response.result,
-      timestamp: response.respondedAt,
+      toolCallId,
+      result,
+      timestamp: now,
     });
   }
 
@@ -524,7 +587,7 @@ export function createTaskTree(): TaskTree {
     startProcessing,
     appendUserMessage,
     appendAssistantMessage,
-    updateAssistantMessage,
+    completeAssistantMessage,
     appendToolCallRequest,
     appendToolCallResponse,
     succeedTask,

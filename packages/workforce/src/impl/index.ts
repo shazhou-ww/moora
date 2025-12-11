@@ -11,6 +11,16 @@ export {
   parsePseudoToolCall,
   createPseudoToolDefinitions,
   pseudoToolInfos,
+  // Zod schemas
+  taskSucceedParamsSchema,
+  taskFailParamsSchema,
+  subtaskDefinitionSchema,
+  taskBreakdownParamsSchema,
+  // JSON Schemas
+  taskSucceedJsonSchema,
+  taskFailJsonSchema,
+  taskBreakdownJsonSchema,
+  // Types
   type TaskSucceedParams,
   type TaskFailParams,
   type SubtaskDefinition,

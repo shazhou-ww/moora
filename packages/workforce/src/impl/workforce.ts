@@ -12,7 +12,7 @@ import {
   createToolkitReaction,
   createUserReaction,
 } from "@moora/agent-worker";
-import type { Agent, Actuation, AgentUpdatePack, Worldscape } from "@moora/agent-worker";
+import type { Agent, AgentUpdatePack } from "@moora/agent-worker";
 import { createToolkit } from "@moora/toolkit";
 import type { Toolkit, ToolDefinition } from "@moora/toolkit";
 
@@ -26,12 +26,10 @@ import {
   type Task,
   type TaskRuntimeStatus,
 } from "../types";
-import { createTaskTree, type TaskTree } from "./task-tree";
+import { createTaskTree } from "./task-tree";
 import {
-  isPseudoTool,
   parsePseudoToolCall,
   createPseudoToolDefinitions,
-  pseudoToolInfos,
 } from "./pseudo-tools";
 
 // ============================================================================
@@ -136,59 +134,32 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
         callLlm,
         tools: toolDefs,
         onStart: (messageId: string) => {
-          taskTree.appendAssistantMessage(taskId, {
-            id: messageId,
-            content: "",
-            timestamp: Date.now(),
-            streaming: true,
-          });
+          taskTree.appendAssistantMessage(taskId, messageId);
         },
         onChunk: (messageId: string, chunk: string) => {
-          const task = taskTree.getTaskData(taskId);
-          if (!task) return;
-          const message = task.assistantMessages.find((m) => m.id === messageId);
-          if (message) {
-            const newContent = message.content + chunk;
-            taskTree.updateAssistantMessage(taskId, messageId, newContent, true);
-            // 发布流式事件
-            taskTree.taskDetailEventPubSub.pub({
-              type: "task-detail-stream-chunk",
-              taskId,
-              messageId,
-              chunk,
-              timestamp: Date.now(),
-            });
-          }
-        },
-        onComplete: (messageId: string, content: string) => {
-          taskTree.updateAssistantMessage(taskId, messageId, content, false);
-          // 发布完成事件
+          // 发布流式事件
           taskTree.taskDetailEventPubSub.pub({
-            type: "task-detail-stream-complete",
+            type: "task-detail-stream-chunk",
             taskId,
             messageId,
-            content,
+            chunk,
             timestamp: Date.now(),
           });
+        },
+        onComplete: (messageId: string, content: string) => {
+          taskTree.completeAssistantMessage(taskId, messageId, content);
         },
       }),
       toolkit: createToolkitReaction({
         callTool: async (request: { toolCallId: string; name: string; arguments: string }) => {
+          // 先记录工具调用请求
+          taskTree.appendToolCallRequest(taskId, request.toolCallId, request.name, request.arguments);
+
+          // 执行工具调用
           const result = await callTool(request);
 
-          // 记录工具调用
-          taskTree.appendToolCallRequest(taskId, {
-            toolCallId: request.toolCallId,
-            name: request.name,
-            arguments: request.arguments,
-            requestedAt: Date.now(),
-          });
-
-          taskTree.appendToolCallResponse(taskId, {
-            toolCallId: request.toolCallId,
-            result,
-            respondedAt: Date.now(),
-          });
+          // 记录工具调用响应
+          taskTree.appendToolCallResponse(taskId, request.toolCallId, result);
 
           return result;
         },
@@ -199,7 +170,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     const agent = createAgent(reaction);
 
     // 订阅 Agent 更新
-    const unsubscribe = agent.subscribe((update: AgentUpdatePack) => {
+    const unsubscribe = agent.subscribe((_update: AgentUpdatePack) => {
       // 可以在这里添加额外的日志或处理
     });
 
@@ -280,10 +251,10 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
 
     workingAgents.set(nextTaskId, workingAgent);
 
-    // 发送初始用户消息
+    // 发送初始用户消息（从 Worldscape 获取）
     const task = taskTree.getTask(nextTaskId);
-    if (task && task.userMessages.length > 0) {
-      for (const msg of task.userMessages) {
+    if (task && task.worldscape.userMessages.length > 0) {
+      for (const msg of task.worldscape.userMessages) {
         workingAgent.agent.dispatch({
           type: "send-user-message",
           id: msg.id,
@@ -322,17 +293,10 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
    * 向 Task 追加补充信息
    */
   function appendMessage(input: AppendMessageInput): void {
-    const { content, taskIds } = input;
-    const now = Date.now();
+    const { messageId, content, taskIds } = input;
 
     for (const taskId of taskIds) {
-      const messageId = `msg-${taskId}-${uuidv4()}`;
-
-      taskTree.appendUserMessage(taskId, {
-        id: messageId,
-        content,
-        timestamp: now,
-      });
+      taskTree.appendUserMessage(taskId, messageId, content);
 
       // 如果 Task 正在被处理，通知 Agent
       const workingAgent = workingAgents.get(taskId);
@@ -341,7 +305,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
           type: "send-user-message",
           id: messageId,
           content,
-          timestamp: now,
+          timestamp: Date.now(),
         });
       }
     }
