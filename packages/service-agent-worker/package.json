@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@elysiajs/stream": "^1.1.0",
+    "@moora/agent-common": "0.1.2",
     "@moora/agent-worker": "0.1.2",
     "@moora/llm-openai": "0.1.2",
     "@moora/pub-sub": "0.1.2",

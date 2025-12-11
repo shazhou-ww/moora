@@ -4,7 +4,7 @@
  * 创建用于调用 LLM 的回调函数
  */
 
-import type { CallLlm } from "@moora/agent-worker";
+import type { CallLlm } from "@moora/agent-common";
 import { createCallLlmWithOpenAI } from "@moora/llm-openai";
 import type { CreateServiceOptions } from "@/types";
 

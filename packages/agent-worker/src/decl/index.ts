@@ -3,6 +3,33 @@
  */
 
 // ============================================================================
+// Common types from @moora/agent-common (re-export for convenience)
+// ============================================================================
+export type {
+  BaseMessage,
+  UserMessage,
+  AssiMessage,
+  AssiMessageStreaming,
+  AssiMessageCompleted,
+  UserMessages,
+  AssiMessages,
+  CallLlmMessage,
+  CallLlmScenario,
+  CallLlmToolDefinition,
+  CallLlmToolCall,
+  CallLlmContext,
+  CallLlmCallbacks,
+  CallLlm,
+} from "@moora/agent-common";
+export {
+  baseMessageSchema,
+  userMessageSchema,
+  assiMessageSchema,
+  assiMessageStreamingSchema,
+  assiMessageCompletedSchema,
+} from "@moora/agent-common";
+
+// ============================================================================
 // Actors
 // ============================================================================
 export { USER, LLM, TOOLKIT, type Actors } from "./actors";
@@ -11,11 +38,6 @@ export { USER, LLM, TOOLKIT, type Actors } from "./actors";
 // Observations
 // ============================================================================
 export type {
-  BaseMessage,
-  UserMessage,
-  AssiMessage,
-  UserMessages,
-  AssiMessages,
   ToolCallRequest,
   ToolResult,
   ToolCallRequests,
@@ -30,9 +52,6 @@ export type {
   UserObToolkit,
 } from "./observations";
 export {
-  baseMessageSchema,
-  userMessageSchema,
-  assiMessageSchema,
   toolCallRequestSchema,
   toolResultSchema,
   userObLlmSchema,
@@ -99,13 +118,6 @@ export type { Worldscape, Actuation, ReactionFns, AgentReaction } from "./agent"
 // Reactions
 // ============================================================================
 export type {
-  CallLlmMessage,
-  CallLlmScenario,
-  CallLlmToolDefinition,
-  CallLlmToolCall,
-  CallLlmContext,
-  CallLlmCallbacks,
-  CallLlm,
   CallTool,
   NotifyUser,
   LlmReactionOptions,

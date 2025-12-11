@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@moora/agent-common": ["./src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

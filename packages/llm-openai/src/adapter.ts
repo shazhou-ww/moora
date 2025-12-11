@@ -1,7 +1,7 @@
 /**
  * OpenAI Adapter for CallLlm Interface
  *
- * Converts @moora/agent-worker CallLlm interface to OpenAI Streaming API calls
+ * Converts @moora/agent-common CallLlm interface to OpenAI Streaming API calls
  */
 
 import OpenAI from "openai";
@@ -16,7 +16,7 @@ import type {
   CallLlmMessage,
   CallLlmToolDefinition,
   CallLlmToolCall,
-} from "@moora/agent-worker";
+} from "@moora/agent-common";
 import type { OpenAICallLlmOptions } from "./types.js";
 
 // ============================================================================

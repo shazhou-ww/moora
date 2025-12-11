@@ -6,71 +6,17 @@
  */
 
 import { z } from "zod";
+import {
+  userMessageSchema,
+  assiMessageSchema,
+  type UserMessage,
+  type AssiMessage,
+  type UserMessages,
+  type AssiMessages,
+} from "@moora/agent-common";
 
-// ============================================================================
-// 基础数据类型 Schema（供 Observations、States、Contexts 复用）
-// ============================================================================
-
-/**
- * 基础消息 Schema（content 可选，用于流式消息）
- */
-export const baseMessageSchema = z.object({
-  id: z.string(),
-  timestamp: z.number(),
-});
-
-export type BaseMessage = z.infer<typeof baseMessageSchema>;
-
-/**
- * 用户消息 Schema
- */
-export const userMessageSchema = baseMessageSchema.extend({
-  role: z.literal("user"),
-  content: z.string(),
-});
-
-export type UserMessage = z.infer<typeof userMessageSchema>;
-
-/**
- * 流式进行中的助手消息 Schema
- */
-export const assiMessageStreamingSchema = baseMessageSchema.extend({
-  role: z.literal("assistant"),
-  streaming: z.literal(true),
-});
-
-export type AssiMessageStreaming = z.infer<typeof assiMessageStreamingSchema>;
-
-/**
- * 流式完成的助手消息 Schema
- */
-export const assiMessageCompletedSchema = baseMessageSchema.extend({
-  role: z.literal("assistant"),
-  streaming: z.literal(false),
-  content: z.string(),
-});
-
-export type AssiMessageCompleted = z.infer<typeof assiMessageCompletedSchema>;
-
-/**
- * 助手消息 Schema（Discriminated Union）
- */
-export const assiMessageSchema = z.discriminatedUnion("streaming", [
-  assiMessageStreamingSchema,
-  assiMessageCompletedSchema,
-]);
-
-export type AssiMessage = z.infer<typeof assiMessageSchema>;
-
-/**
- * 用户消息列表类型
- */
-export type UserMessages = UserMessage[];
-
-/**
- * 助手消息列表类型
- */
-export type AssiMessages = AssiMessage[];
+// Re-export for internal use
+export type { BaseMessage, UserMessage, AssiMessage, AssiMessageStreaming, AssiMessageCompleted, UserMessages, AssiMessages } from "@moora/agent-common";
 
 // ============================================================================
 // Observation Schema 定义

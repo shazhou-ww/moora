@@ -22,7 +22,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@moora/agent-worker": "0.1.2",
+    "@moora/agent-common": "0.1.2",
     "openai": "^4.77.0"
   },
   "devDependencies": {

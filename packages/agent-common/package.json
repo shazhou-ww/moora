@@ -1,12 +1,12 @@
 {
-  "name": "@moora/agent-worker",
+  "name": "@moora/agent-common",
   "version": "0.1.2",
-  "description": "A complete agent implementation based on Automata",
+  "description": "Common types and schemas shared between agent packages",
   "keywords": [
     "agent",
-    "automata",
-    "state-machine",
-    "moore-machine"
+    "types",
+    "schema",
+    "common"
   ],
   "main": "src/index.ts",
   "module": "src/index.ts",
@@ -16,15 +16,13 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/shazhou-ww/moora.git",
-    "directory": "packages/agent-worker"
+    "directory": "packages/agent-common"
   },
-  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-worker#readme",
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/agent-common#readme",
   "bugs": {
     "url": "https://github.com/shazhou-ww/moora/issues"
   },
   "dependencies": {
-    "@moora/agent-common": "0.1.2",
-    "@moora/automata": "0.1.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
