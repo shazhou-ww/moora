@@ -11,16 +11,23 @@ import type { PerspectiveOfWorkforce } from "@/decl";
  */
 export function initialWorkforce(): PerspectiveOfWorkforce {
   return {
-    // WorkforceObUser - 已通知用户的任务完成事件
-    notifiedTaskCompletions: [],
-
-    // WorkforceObLlm - Llm 的请求列表
+    // LlmObWorkforce - 从 Llm 接收的任务请求
     taskCreateRequests: [],
     messageAppendRequests: [],
     taskCancelRequests: [],
 
-    // WorkforceObWorkforce - 内部状态
+    // WorkforceObWorkforce - 自己维护的任务状态
     topLevelTaskIds: [],
     taskCache: {},
+
+    // WorkforceObUser - 发给 User 的任务信息
+    ongoingTopLevelTasks: [],
+    notifiedTaskCompletions: [],
+
+    // WorkforceObLlm - 发给 Llm 的任务详情
+    topLevelTasks: {},
+
+    // WorkforceObToolkit - 发给 Toolkit 的所有任务
+    allTasks: {},
   };
 }

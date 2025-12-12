@@ -1,73 +1,52 @@
 /**
  * Appearances 类型定义
  *
- * Appearance 是所有指向该 Actor 的 Observation 的并集（入边）
+ * AppearanceOfFoo = 所有 XxxObFoo 的交集
  */
 
-import type { UserMessage, AssiMessage, TaskMonitorInfo, ToolCallRequest, ToolResult } from "./observations";
+import type {
+  UserObUser,
+  UserObLlm,
+  LlmObUser,
+  LlmObLlm,
+  LlmObToolkit,
+  LlmObWorkforce,
+  ToolkitObUser,
+  ToolkitObLlm,
+  ToolkitObToolkit,
+  WorkforceObUser,
+  WorkforceObLlm,
+  WorkforceObToolkit,
+  WorkforceObWorkforce,
+} from "./observations";
 
 /**
  * User 的 Appearance
  *
- * User 能看到的所有状态
+ * AppearanceOfUser = UserObUser & LlmObUser & ToolkitObUser & WorkforceObUser
  */
-export type AppearanceOfUser = {
-  userMessages: UserMessage[];
-  assiMessages: AssiMessage[];
-  ongoingTopLevelTasks: TaskMonitorInfo[];
-  toolResults: ToolResult[];
-};
+export type AppearanceOfUser = UserObUser & LlmObUser & ToolkitObUser & WorkforceObUser;
 
 /**
  * Llm 的 Appearance
  *
- * Llm 能看到的所有状态
+ * AppearanceOfLlm = PerspectiveOfLlm
+ *  = LlmObUser & LlmObToolkit & LlmObWorkforce & UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm
  */
-export type AppearanceOfLlm = {
-  userMessages: UserMessage[];
-  assiMessages: AssiMessage[];
-  cutOff: number;
-  topLevelTasks: Record<string, TaskMonitorInfo>;
-  toolResults: ToolResult[];
-};
+export type AppearanceOfLlm = LlmObUser & LlmObToolkit & LlmObWorkforce & UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm;
 
 /**
  * Toolkit 的 Appearance
  *
- * Toolkit 能看到的所有状态
+ * AppearanceOfToolkit = PerspectiveOfToolkit
+ *  = ToolkitObUser & ToolkitObLlm & LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit
  */
-export type AppearanceOfToolkit = {
-  toolCallRequests: ToolCallRequest[];
-  toolResults: ToolResult[];
-  allTasks: Record<string, TaskMonitorInfo>;
-};
+export type AppearanceOfToolkit = ToolkitObUser & ToolkitObLlm & LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit;
 
 /**
  * Workforce 的 Appearance
  *
- * Workforce 能看到的所有状态
+ * AppearanceOfWorkforce = PerspectiveOfWorkforce
+ *  = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & LlmObWorkforce & WorkforceObWorkforce
  */
-export type AppearanceOfWorkforce = {
-  notifiedTaskCompletions: string[];
-  taskCreateRequests: Array<{
-    requestId: string;
-    taskId: string;
-    title: string;
-    goal: string;
-    timestamp: number;
-  }>;
-  messageAppendRequests: Array<{
-    requestId: string;
-    messageId: string;
-    content: string;
-    taskIds: string[];
-    timestamp: number;
-  }>;
-  taskCancelRequests: Array<{
-    requestId: string;
-    taskIds: string[];
-    timestamp: number;
-  }>;
-  topLevelTaskIds: string[];
-  taskCache: Record<string, TaskMonitorInfo>;
-};
+export type AppearanceOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & LlmObWorkforce & WorkforceObWorkforce;

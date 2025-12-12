@@ -90,9 +90,11 @@ export type ToolResults = ToolResult[];
 
 /**
  * User 对 Llm 的观察 Schema
+ *
+ * UserObLlm: User 发给 Llm 的数据（用户消息）
  */
 export const userObLlmSchema = z.object({
-  assiMessages: z.array(assiMessageSchema as unknown as z.ZodTypeAny),
+  userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
 });
 
 export type UserObLlm = z.infer<typeof userObLlmSchema>;
@@ -105,18 +107,6 @@ export const userObUserSchema = z.object({
 });
 
 export type UserObUser = z.infer<typeof userObUserSchema>;
-
-/**
- * User 对 Workforce 的观察 Schema
- *
- * User 看到的是正在进行的顶层任务列表
- */
-export const userObWorkforceSchema = z.object({
-  /** 所有顶层正在进行的任务（不包括 succeeded/failed 的） */
-  ongoingTopLevelTasks: z.array(taskMonitorInfoSchema),
-});
-
-export type UserObWorkforce = z.infer<typeof userObWorkforceSchema>;
 
 /**
  * Llm 对自身的观察 Schema（自环）
@@ -133,9 +123,11 @@ export type LlmObLlm = z.infer<typeof llmObLlmSchema>;
 
 /**
  * Llm 对 User 的观察 Schema
+ *
+ * LlmObUser: Llm 发给 User 的数据（助手消息）
  */
 export const llmObUserSchema = z.object({
-  userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
+  assiMessages: z.array(assiMessageSchema as unknown as z.ZodTypeAny),
 });
 
 export type LlmObUser = z.infer<typeof llmObUserSchema>;
@@ -143,35 +135,9 @@ export type LlmObUser = z.infer<typeof llmObUserSchema>;
 /**
  * Llm 对 Workforce 的观察 Schema
  *
- * Llm 看到所有任务的详细信息（用于查询和决策）
+ * LlmObWorkforce: Llm 发给 Workforce 的请求
  */
 export const llmObWorkforceSchema = z.object({
-  /** 所有顶层任务的详细信息 Map */
-  topLevelTasks: z.record(z.string(), taskMonitorInfoSchema),
-});
-
-export type LlmObWorkforce = z.infer<typeof llmObWorkforceSchema>;
-
-/**
- * Workforce 对自身的观察 Schema（自环）
- *
- * Workforce 维护所有任务的完整状态
- */
-export const workforceObWorkforceSchema = z.object({
-  /** 所有顶层任务 ID 列表 */
-  topLevelTaskIds: z.array(z.string()),
-  /** 任务详情缓存 */
-  taskCache: z.record(z.string(), taskMonitorInfoSchema),
-});
-
-export type WorkforceObWorkforce = z.infer<typeof workforceObWorkforceSchema>;
-
-/**
- * Workforce 对 Llm 的观察 Schema
- *
- * Workforce 需要知道 Llm 何时请求创建、追加消息、取消任务
- */
-export const workforceObLlmSchema = z.object({
   /** Llm 请求创建的任务列表 */
   taskCreateRequests: z.array(
     z.object({
@@ -202,14 +168,42 @@ export const workforceObLlmSchema = z.object({
   ),
 });
 
+export type LlmObWorkforce = z.infer<typeof llmObWorkforceSchema>;
+
+/**
+ * Workforce 对自身的观察 Schema（自环）
+ *
+ * Workforce 维护所有任务的完整状态
+ */
+export const workforceObWorkforceSchema = z.object({
+  /** 所有顶层任务 ID 列表 */
+  topLevelTaskIds: z.array(z.string()),
+  /** 任务详情缓存 */
+  taskCache: z.record(z.string(), taskMonitorInfoSchema),
+});
+
+export type WorkforceObWorkforce = z.infer<typeof workforceObWorkforceSchema>;
+
+/**
+ * Workforce 对 Llm 的观察 Schema
+ *
+ * WorkforceObLlm: Workforce 发给 Llm 的任务信息
+ */
+export const workforceObLlmSchema = z.object({
+  /** 所有顶层任务的详细信息 Map */
+  topLevelTasks: z.record(z.string(), taskMonitorInfoSchema),
+});
+
 export type WorkforceObLlm = z.infer<typeof workforceObLlmSchema>;
 
 /**
  * Workforce 对 User 的观察 Schema
  *
- * Workforce 需要知道哪些任务完成需要通知用户
+ * WorkforceObUser: Workforce 发给 User 的任务信息
  */
 export const workforceObUserSchema = z.object({
+  /** 所有顶层正在进行的任务（不包括 succeeded/failed 的） */
+  ongoingTopLevelTasks: z.array(taskMonitorInfoSchema),
   /** 已通知用户的任务完成事件 ID 集合 */
   notifiedTaskCompletions: z.array(z.string()),
 });
@@ -218,18 +212,22 @@ export type WorkforceObUser = z.infer<typeof workforceObUserSchema>;
 
 /**
  * Llm 对 Toolkit 的观察 Schema
+ *
+ * LlmObToolkit: Llm 发给 Toolkit 的工具调用请求
  */
 export const llmObToolkitSchema = z.object({
-  toolResults: z.array(toolResultSchema),
+  toolCallRequests: z.array(toolCallRequestSchema),
 });
 
 export type LlmObToolkit = z.infer<typeof llmObToolkitSchema>;
 
 /**
  * Toolkit 对 Llm 的观察 Schema
+ *
+ * ToolkitObLlm: Toolkit 发给 Llm 的工具调用结果
  */
 export const toolkitObLlmSchema = z.object({
-  toolCallRequests: z.array(toolCallRequestSchema),
+  toolResults: z.array(toolResultSchema),
 });
 
 export type ToolkitObLlm = z.infer<typeof toolkitObLlmSchema>;
@@ -244,22 +242,24 @@ export const toolkitObToolkitSchema = z.object({
 export type ToolkitObToolkit = z.infer<typeof toolkitObToolkitSchema>;
 
 /**
- * User 对 Toolkit 的观察 Schema
+ * Toolkit 对 User 的观察 Schema
+ *
+ * ToolkitObUser: Toolkit 发给 User 的工具结果
  */
-export const userObToolkitSchema = z.object({
+export const toolkitObUserSchema = z.object({
   toolResults: z.array(toolResultSchema),
 });
 
-export type UserObToolkit = z.infer<typeof userObToolkitSchema>;
+export type ToolkitObUser = z.infer<typeof toolkitObUserSchema>;
 
 /**
- * Toolkit 对 Workforce 的观察 Schema
+ * Workforce 对 Toolkit 的观察 Schema
  *
- * Toolkit 需要访问 Workforce 的信息来响应查询工具调用
+ * WorkforceObToolkit: Workforce 发给 Toolkit 的任务信息
  */
-export const toolkitObWorkforceSchema = z.object({
+export const workforceObToolkitSchema = z.object({
   /** 所有任务的详细信息（用于查询） */
   allTasks: z.record(z.string(), taskMonitorInfoSchema),
 });
 
-export type ToolkitObWorkforce = z.infer<typeof toolkitObWorkforceSchema>;
+export type WorkforceObToolkit = z.infer<typeof workforceObToolkitSchema>;

@@ -14,13 +14,14 @@ export function initialUser(): PerspectiveOfUser {
     // UserObUser - 用户消息列表
     userMessages: [],
 
-    // UserObLlm - 助手消息列表
+    // LlmObUser - 助手消息列表
     assiMessages: [],
 
-    // UserObToolkit - 工具调用结果
+    // ToolkitObUser - 工具调用结果
     toolResults: [],
 
-    // UserObWorkforce - 正在进行的顶层任务
+    // WorkforceObUser - 正在进行的顶层任务和通知状态
     ongoingTopLevelTasks: [],
+    notifiedTaskCompletions: [],
   };
 }

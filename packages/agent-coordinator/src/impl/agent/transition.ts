@@ -127,9 +127,7 @@ function extractAppearance(
   if (actor === USER) {
     return {
       userMessages: worldscape.userMessages,
-      assiMessages: worldscape.assiMessages,
-      ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
-      toolResults: worldscape.toolResults,
+      notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
     } as AppearanceOfUser;
   }
 
