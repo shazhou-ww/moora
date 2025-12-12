@@ -31,6 +31,8 @@
     "typescript": "^5"
   },
   "scripts": {
+    "lint": "bunx eslint src",
+    "lint:fix": "bunx eslint src --fix",
     "test": "vitest --run --no-ui",
     "test:coverage": "vitest --run --coverage --no-ui",
     "test:ci": "vitest --run --coverage --no-ui"
