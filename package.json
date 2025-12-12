@@ -17,12 +17,20 @@
     "start:service": "bun run scripts/start-service.ts",
     "dev:service": "bun run scripts/start-service.ts --watch",
     "start:webui": "bun run scripts/start-webui.ts",
-    "dev:webui": "bun run scripts/start-webui.ts --watch"
+    "dev:webui": "bun run scripts/start-webui.ts --watch",
+    "lint": "eslint packages/*/src/**/*.ts packages/*/src/**/*.tsx",
+    "lint:fix": "eslint --fix packages/*/src/**/*.ts packages/*/src/**/*.tsx",
+    "lint:check": "eslint --max-warnings 0 packages/*/src/**/*.ts packages/*/src/**/*.tsx"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/semver": "^7.7.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "commander": "^12.1.0",
+    "eslint": "^8.57.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.31.0",
     "semver": "^7.6.3"
   },
   "peerDependencies": {
