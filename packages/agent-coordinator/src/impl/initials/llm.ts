@@ -23,8 +23,5 @@ export function initialLlm(): PerspectiveOfLlm {
 
     // LlmObWorkforce - 所有顶层任务详情
     topLevelTasks: {},
-
-    // LlmObToolkit - 工具调用请求（输出）
-    toolCallRequests: [],
   };
 }

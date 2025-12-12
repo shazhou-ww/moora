@@ -8,6 +8,7 @@ import {
   createReaction,
   createUserReaction,
   createLlmReaction,
+  createToolkitReaction,
   createWorkforceReaction,
 } from "../src";
 import type { Workforce } from "@moora/workforce";
@@ -41,6 +42,9 @@ describe("agent-coordinator", () => {
     const reaction = createReaction({
       user: createUserReaction({ notifyUser }),
       llm: createLlmReaction({ callLlm }),
+      toolkit: createToolkitReaction({
+        workforce: mockWorkforce as Workforce,
+      }),
       workforce: createWorkforceReaction({
         workforce: mockWorkforce as Workforce,
         notifyUser,
@@ -78,6 +82,9 @@ describe("agent-coordinator", () => {
     const reaction = createReaction({
       user: createUserReaction({ notifyUser }),
       llm: createLlmReaction({ callLlm }),
+      toolkit: createToolkitReaction({
+        workforce: mockWorkforce as Workforce,
+      }),
       workforce: createWorkforceReaction({
         workforce: mockWorkforce as Workforce,
         notifyUser,
@@ -125,6 +132,9 @@ describe("agent-coordinator", () => {
     const reaction = createReaction({
       user: createUserReaction({ notifyUser }),
       llm: createLlmReaction({ callLlm }),
+      toolkit: createToolkitReaction({
+        workforce: mockWorkforce as Workforce,
+      }),
       workforce: createWorkforceReaction({
         workforce: mockWorkforce as Workforce,
         notifyUser,

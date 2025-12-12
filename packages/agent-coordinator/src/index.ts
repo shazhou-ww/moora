@@ -59,7 +59,7 @@ export type {
   Workforce,
 } from "./decl";
 
-export { USER, LLM, WORKFORCE } from "./decl";
+export { USER, LLM, TOOLKIT, WORKFORCE } from "./decl";
 
 // ============================================================================
 // 实现导出
@@ -68,10 +68,12 @@ export {
   // Initials
   initialUser,
   initialLlm,
+  initialToolkit,
   initialWorkforce,
   // Transitions
   transitionUser,
   transitionLlm,
+  transitionToolkit,
   transitionWorkforce,
   // Agent
   initialAgent,
@@ -81,11 +83,13 @@ export {
   // Reactions
   createUserReaction,
   createLlmReaction,
+  createToolkitReaction,
   createWorkforceReaction,
 } from "./impl";
 
 export type {
   UserReactionDeps,
   LlmReactionDeps,
+  ToolkitReactionOptions,
   WorkforceReactionDeps,
 } from "./impl";

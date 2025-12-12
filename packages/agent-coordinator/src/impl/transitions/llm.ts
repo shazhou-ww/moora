@@ -73,9 +73,6 @@ function handleStartAssiMessageStream(
 
     // LlmObWorkforce - 保持不变
     topLevelTasks: appearance.topLevelTasks,
-
-    // 输出到 Toolkit
-    toolCallRequests: [],
   };
 }
 
@@ -116,7 +113,6 @@ function handleEndAssiMessageStream(
     topLevelTasks: appearance.topLevelTasks,
 
     // 输出到 Toolkit
-    toolCallRequests: [],
   };
 }
 
@@ -135,7 +131,6 @@ function handleRequestCreateTask(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: [],
   };
 }
 
@@ -152,7 +147,6 @@ function handleRequestAppendMessage(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: [],
   };
 }
 
@@ -169,7 +163,6 @@ function handleRequestCancelTasks(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: [],
   };
 }
 
@@ -178,7 +171,7 @@ function handleRequestCancelTasks(
  */
 function handleCallTool(
   appearance: AppearanceOfLlm,
-  action: CallTool
+  _action: CallTool
 ): PerspectiveOfLlm {
   return {
     userMessages: appearance.userMessages,
@@ -186,15 +179,6 @@ function handleCallTool(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
-    // 添加新的工具调用请求
-    toolCallRequests: [
-      {
-        toolCallId: action.toolCallId,
-        name: action.name,
-        arguments: action.arguments,
-        timestamp: action.timestamp,
-      },
-    ],
   };
 }
 

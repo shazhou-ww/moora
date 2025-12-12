@@ -28,7 +28,6 @@ export type PerspectiveOfLlm = {
   assiMessages: AssiMessage[];
   cutOff: number;
   topLevelTasks: Record<string, TaskMonitorInfo>;
-  toolCallRequests: ToolCallRequest[];
   toolResults: ToolResult[];
 };
 

@@ -72,8 +72,6 @@ function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
     toolResults: worldscape.toolResults,
     // LlmObWorkforce
     topLevelTasks: worldscape.topLevelTasks,
-    // LlmObToolkit - toolCallRequests (输出)
-    toolCallRequests: worldscape.toolCallRequests,
   };
 }
 
