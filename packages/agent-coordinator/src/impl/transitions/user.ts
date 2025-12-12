@@ -44,6 +44,9 @@ function handleSendUserMessage(
     // UserObLlm - 保持不变
     assiMessages: appearance.assiMessages,
 
+    // UserObToolkit - 保持不变
+    toolResults: appearance.toolResults,
+
     // UserObWorkforce - 保持不变
     ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
   };

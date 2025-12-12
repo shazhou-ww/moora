@@ -123,6 +123,31 @@ export const updateTaskStatusSchema = z.object({
 
 export type UpdateTaskStatus = z.infer<typeof updateTaskStatusSchema>;
 
+/**
+ * 调用工具 Action Schema
+ */
+export const callToolSchema = z.object({
+  type: z.literal("call-tool"),
+  toolCallId: z.string(),
+  name: z.string(),
+  arguments: z.string(),
+  timestamp: z.number(),
+});
+
+export type CallTool = z.infer<typeof callToolSchema>;
+
+/**
+ * 工具返回结果 Action Schema
+ */
+export const returnToolResultSchema = z.object({
+  type: z.literal("return-tool-result"),
+  toolCallId: z.string(),
+  result: z.string(),
+  timestamp: z.number(),
+});
+
+export type ReturnToolResult = z.infer<typeof returnToolResultSchema>;
+
 // ============================================================================
 // Actor Actions 聚合类型
 // ============================================================================
@@ -140,7 +165,13 @@ export type ActionFromLlm =
   | EndAssiMessageStream
   | RequestCreateTask
   | RequestAppendMessage
-  | RequestCancelTasks;
+  | RequestCancelTasks
+  | CallTool;
+
+/**
+ * Toolkit Actor 可以 dispatch 的 Action 类型
+ */
+export type ActionFromToolkit = ReturnToolResult;
 
 /**
  * Workforce Actor 可以 dispatch 的 Action 类型
@@ -151,4 +182,4 @@ export type ActionFromWorkforce = NotifyTaskCompletion | UpdateTaskStatus;
 // 所有 Actions 的联合类型
 // ============================================================================
 
-export type Actuation = ActionFromUser | ActionFromLlm | ActionFromWorkforce;
+export type Actuation = ActionFromUser | ActionFromLlm | ActionFromToolkit | ActionFromWorkforce;

@@ -7,17 +7,20 @@
 import type {
   ActionFromUser,
   ActionFromLlm,
+  ActionFromToolkit,
   ActionFromWorkforce,
 } from "./actions";
-import type { Actors, USER, LLM, WORKFORCE } from "./actors";
+import type { Actors, USER, LLM, TOOLKIT, WORKFORCE } from "./actors";
 import type {
   AppearanceOfUser,
   AppearanceOfLlm,
+  AppearanceOfToolkit,
   AppearanceOfWorkforce,
 } from "./appearances";
 import type {
   PerspectiveOfUser,
   PerspectiveOfLlm,
+  PerspectiveOfToolkit,
   PerspectiveOfWorkforce,
 } from "./perspectives";
 
@@ -32,9 +35,11 @@ export type AppearanceOf<Actor extends Actors> = Actor extends typeof USER
   ? AppearanceOfUser
   : Actor extends typeof LLM
     ? AppearanceOfLlm
-    : Actor extends typeof WORKFORCE
-      ? AppearanceOfWorkforce
-      : never;
+    : Actor extends typeof TOOLKIT
+      ? AppearanceOfToolkit
+      : Actor extends typeof WORKFORCE
+        ? AppearanceOfWorkforce
+        : never;
 
 /**
  * 根据 Actor 类型获取其 Perspective 类型
@@ -43,9 +48,11 @@ export type PerspectiveOf<Actor extends Actors> = Actor extends typeof USER
   ? PerspectiveOfUser
   : Actor extends typeof LLM
     ? PerspectiveOfLlm
-    : Actor extends typeof WORKFORCE
-      ? PerspectiveOfWorkforce
-      : never;
+    : Actor extends typeof TOOLKIT
+      ? PerspectiveOfToolkit
+      : Actor extends typeof WORKFORCE
+        ? PerspectiveOfWorkforce
+        : never;
 
 /**
  * 根据 Actor 类型获取其 Action 类型
@@ -54,9 +61,11 @@ export type ActionFrom<Actor extends Actors> = Actor extends typeof USER
   ? ActionFromUser
   : Actor extends typeof LLM
     ? ActionFromLlm
-    : Actor extends typeof WORKFORCE
-      ? ActionFromWorkforce
-      : never;
+    : Actor extends typeof TOOLKIT
+      ? ActionFromToolkit
+      : Actor extends typeof WORKFORCE
+        ? ActionFromWorkforce
+        : never;
 
 /**
  * 初始化函数类型

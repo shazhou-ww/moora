@@ -12,9 +12,13 @@ import type { Actors } from "./actors";
 import type {
   AppearanceOfUser,
   AppearanceOfLlm,
+  AppearanceOfToolkit,
   AppearanceOfWorkforce,
 } from "./appearances";
 import type { PerspectiveOf } from "./helpers";
+
+// Re-export for external use
+export type { Actuation } from "./actions";
 
 // ============================================================================
 // Agent 总类型
@@ -27,6 +31,7 @@ import type { PerspectiveOf } from "./helpers";
  */
 export type Worldscape = AppearanceOfUser &
   AppearanceOfLlm &
+  AppearanceOfToolkit &
   AppearanceOfWorkforce;
 
 /**

@@ -4,7 +4,7 @@
  * Perspective 是所有该 Actor 发出的 Observation 的并集（出边）
  */
 
-import type { UserMessage, AssiMessage, TaskMonitorInfo } from "./observations";
+import type { UserMessage, AssiMessage, TaskMonitorInfo, ToolCallRequest, ToolResult } from "./observations";
 
 /**
  * User 的 Perspective
@@ -15,6 +15,7 @@ export type PerspectiveOfUser = {
   userMessages: UserMessage[];
   assiMessages: AssiMessage[];
   ongoingTopLevelTasks: TaskMonitorInfo[];
+  toolResults: ToolResult[];
 };
 
 /**
@@ -27,6 +28,19 @@ export type PerspectiveOfLlm = {
   assiMessages: AssiMessage[];
   cutOff: number;
   topLevelTasks: Record<string, TaskMonitorInfo>;
+  toolCallRequests: ToolCallRequest[];
+  toolResults: ToolResult[];
+};
+
+/**
+ * Toolkit 的 Perspective
+ *
+ * Toolkit 输出的所有状态
+ */
+export type PerspectiveOfToolkit = {
+  toolCallRequests: ToolCallRequest[];
+  toolResults: ToolResult[];
+  allTasks: Record<string, TaskMonitorInfo>;
 };
 
 /**

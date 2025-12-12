@@ -3,7 +3,7 @@
  */
 
 import type { Worldscape } from "@/decl";
-import { initialUser, initialLlm, initialWorkforce } from "@/impl/initials";
+import { initialUser, initialLlm, initialToolkit, initialWorkforce } from "@/impl/initials";
 
 /**
  * 初始化整个 Agent 的状态
@@ -13,6 +13,7 @@ import { initialUser, initialLlm, initialWorkforce } from "@/impl/initials";
 export function initialAgent(): Worldscape {
   const userPerspective = initialUser();
   const llmPerspective = initialLlm();
+  const toolkitPerspective = initialToolkit();
   const workforcePerspective = initialWorkforce();
 
   return {
@@ -21,6 +22,9 @@ export function initialAgent(): Worldscape {
 
     // Llm's perspective
     ...llmPerspective,
+
+    // Toolkit's perspective
+    ...toolkitPerspective,
 
     // Workforce's perspective
     ...workforcePerspective,

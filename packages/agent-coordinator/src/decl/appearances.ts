@@ -4,7 +4,7 @@
  * Appearance 是所有指向该 Actor 的 Observation 的并集（入边）
  */
 
-import type { UserMessage, AssiMessage, TaskMonitorInfo } from "./observations";
+import type { UserMessage, AssiMessage, TaskMonitorInfo, ToolCallRequest, ToolResult } from "./observations";
 
 /**
  * User 的 Appearance
@@ -15,6 +15,7 @@ export type AppearanceOfUser = {
   userMessages: UserMessage[];
   assiMessages: AssiMessage[];
   ongoingTopLevelTasks: TaskMonitorInfo[];
+  toolResults: ToolResult[];
 };
 
 /**
@@ -27,6 +28,18 @@ export type AppearanceOfLlm = {
   assiMessages: AssiMessage[];
   cutOff: number;
   topLevelTasks: Record<string, TaskMonitorInfo>;
+  toolResults: ToolResult[];
+};
+
+/**
+ * Toolkit 的 Appearance
+ *
+ * Toolkit 能看到的所有状态
+ */
+export type AppearanceOfToolkit = {
+  toolCallRequests: ToolCallRequest[];
+  toolResults: ToolResult[];
+  allTasks: Record<string, TaskMonitorInfo>;
 };
 
 /**

@@ -11,6 +11,7 @@ import type {
   RequestCreateTask,
   RequestAppendMessage,
   RequestCancelTasks,
+  CallTool,
 } from "@/decl";
 
 /**
@@ -27,6 +28,8 @@ export function transitionLlm(
       return handleStartAssiMessageStream(appearance, action);
     case "end-assi-message-stream":
       return handleEndAssiMessageStream(appearance, action);
+    case "call-tool":
+      return handleCallTool(appearance, action);
     case "request-create-task":
       return handleRequestCreateTask(appearance, action);
     case "request-append-message":
@@ -65,8 +68,14 @@ function handleStartAssiMessageStream(
     ],
     cutOff: Math.max(cutOff, action.cutOff),
 
+    // LlmObToolkit - 保持不变
+    toolResults: appearance.toolResults,
+
     // LlmObWorkforce - 保持不变
     topLevelTasks: appearance.topLevelTasks,
+
+    // 输出到 Toolkit
+    toolCallRequests: [],
   };
 }
 
@@ -100,8 +109,14 @@ function handleEndAssiMessageStream(
     assiMessages: updatedMessages,
     cutOff: appearance.cutOff,
 
+    // LlmObToolkit - 保持不变
+    toolResults: appearance.toolResults,
+
     // LlmObWorkforce - 保持不变
     topLevelTasks: appearance.topLevelTasks,
+
+    // 输出到 Toolkit
+    toolCallRequests: [],
   };
 }
 
@@ -118,7 +133,9 @@ function handleRequestCreateTask(
     userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
+    toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: [],
   };
 }
 
@@ -133,7 +150,9 @@ function handleRequestAppendMessage(
     userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
+    toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: [],
   };
 }
 
@@ -148,6 +167,34 @@ function handleRequestCancelTasks(
     userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
+    toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: [],
   };
 }
+
+/**
+ * 处理工具调用
+ */
+function handleCallTool(
+  appearance: AppearanceOfLlm,
+  action: CallTool
+): PerspectiveOfLlm {
+  return {
+    userMessages: appearance.userMessages,
+    assiMessages: appearance.assiMessages,
+    cutOff: appearance.cutOff,
+    toolResults: appearance.toolResults,
+    topLevelTasks: appearance.topLevelTasks,
+    // 添加新的工具调用请求
+    toolCallRequests: [
+      {
+        toolCallId: action.toolCallId,
+        name: action.name,
+        arguments: action.arguments,
+        timestamp: action.timestamp,
+      },
+    ],
+  };
+}
+

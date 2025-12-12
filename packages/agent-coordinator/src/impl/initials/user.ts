@@ -17,6 +17,9 @@ export function initialUser(): PerspectiveOfUser {
     // UserObLlm - 助手消息列表
     assiMessages: [],
 
+    // UserObToolkit - 工具调用结果
+    toolResults: [],
+
     // UserObWorkforce - 正在进行的顶层任务
     ongoingTopLevelTasks: [],
   };

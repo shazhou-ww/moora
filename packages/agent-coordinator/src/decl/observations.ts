@@ -48,6 +48,43 @@ export const taskMonitorInfoSchema = z.object({
 export type TaskMonitorInfo = z.infer<typeof taskMonitorInfoSchema>;
 
 // ============================================================================
+// Tool 相关类型
+// ============================================================================
+
+/**
+ * 工具调用请求 Schema
+ */
+export const toolCallRequestSchema = z.object({
+  toolCallId: z.string(),
+  name: z.string(),
+  arguments: z.string(),
+  timestamp: z.number(),
+});
+
+export type ToolCallRequest = z.infer<typeof toolCallRequestSchema>;
+
+/**
+ * 工具执行结果 Schema
+ */
+export const toolResultSchema = z.object({
+  toolCallId: z.string(),
+  result: z.string(),
+  timestamp: z.number(),
+});
+
+export type ToolResult = z.infer<typeof toolResultSchema>;
+
+/**
+ * 工具调用请求列表类型
+ */
+export type ToolCallRequests = ToolCallRequest[];
+
+/**
+ * 工具执行结果列表类型
+ */
+export type ToolResults = ToolResult[];
+
+// ============================================================================
 // Observation Schema 定义
 // ============================================================================
 
@@ -178,3 +215,51 @@ export const workforceObUserSchema = z.object({
 });
 
 export type WorkforceObUser = z.infer<typeof workforceObUserSchema>;
+
+/**
+ * Llm 对 Toolkit 的观察 Schema
+ */
+export const llmObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type LlmObToolkit = z.infer<typeof llmObToolkitSchema>;
+
+/**
+ * Toolkit 对 Llm 的观察 Schema
+ */
+export const toolkitObLlmSchema = z.object({
+  toolCallRequests: z.array(toolCallRequestSchema),
+});
+
+export type ToolkitObLlm = z.infer<typeof toolkitObLlmSchema>;
+
+/**
+ * Toolkit 对自身的观察 Schema（自环）
+ */
+export const toolkitObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type ToolkitObToolkit = z.infer<typeof toolkitObToolkitSchema>;
+
+/**
+ * User 对 Toolkit 的观察 Schema
+ */
+export const userObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type UserObToolkit = z.infer<typeof userObToolkitSchema>;
+
+/**
+ * Toolkit 对 Workforce 的观察 Schema
+ *
+ * Toolkit 需要访问 Workforce 的信息来响应查询工具调用
+ */
+export const toolkitObWorkforceSchema = z.object({
+  /** 所有任务的详细信息（用于查询） */
+  allTasks: z.record(z.string(), taskMonitorInfoSchema),
+});
+
+export type ToolkitObWorkforce = z.infer<typeof toolkitObWorkforceSchema>;

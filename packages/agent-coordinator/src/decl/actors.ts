@@ -6,6 +6,7 @@
 
 export const USER = "user";
 export const LLM = "llm";
+export const TOOLKIT = "toolkit";
 export const WORKFORCE = "workforce";
 
-export type Actors = typeof USER | typeof LLM | typeof WORKFORCE;
+export type Actors = typeof USER | typeof LLM | typeof TOOLKIT | typeof WORKFORCE;

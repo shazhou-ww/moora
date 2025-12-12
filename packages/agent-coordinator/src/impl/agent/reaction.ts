@@ -10,9 +10,10 @@ import type {
   AgentReaction,
   PerspectiveOfUser,
   PerspectiveOfLlm,
+  PerspectiveOfToolkit,
   PerspectiveOfWorkforce,
 } from "@/decl";
-import { USER, LLM, WORKFORCE } from "@/decl";
+import { USER, LLM, TOOLKIT, WORKFORCE } from "@/decl";
 
 /**
  * 创建 Agent Reaction
@@ -26,11 +27,13 @@ export function createReaction(reactions: ReactionFns): AgentReaction {
       // 提取各个 Actor 的 Perspective
       const userPerspective = extractUserPerspective(worldscape);
       const llmPerspective = extractLlmPerspective(worldscape);
+      const toolkitPerspective = extractToolkitPerspective(worldscape);
       const workforcePerspective = extractWorkforcePerspective(worldscape);
 
       // 并行执行各个 Actor 的 reaction
       reactions[USER]({ perspective: userPerspective, dispatch });
       reactions[LLM]({ perspective: llmPerspective, dispatch });
+      reactions[TOOLKIT]({ perspective: toolkitPerspective, dispatch });
       reactions[WORKFORCE]({
         perspective: workforcePerspective,
         dispatch,
@@ -48,6 +51,8 @@ function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
     userMessages: worldscape.userMessages,
     // UserObLlm
     assiMessages: worldscape.assiMessages,
+    // UserObToolkit
+    toolResults: worldscape.toolResults,
     // UserObWorkforce
     ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
   };
@@ -63,8 +68,28 @@ function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
     // LlmObLlm
     assiMessages: worldscape.assiMessages,
     cutOff: worldscape.cutOff,
+    // LlmObToolkit
+    toolResults: worldscape.toolResults,
     // LlmObWorkforce
     topLevelTasks: worldscape.topLevelTasks,
+    // LlmObToolkit - toolCallRequests (输出)
+    toolCallRequests: worldscape.toolCallRequests,
+  };
+}
+
+/**
+ * 从 Worldscape 提取 Toolkit 的 Perspective
+ */
+function extractToolkitPerspective(
+  worldscape: Worldscape
+): PerspectiveOfToolkit {
+  return {
+    // ToolkitObLlm
+    toolCallRequests: worldscape.toolCallRequests,
+    // ToolkitObToolkit
+    toolResults: worldscape.toolResults,
+    // ToolkitObWorkforce
+    allTasks: worldscape.allTasks,
   };
 }
 
