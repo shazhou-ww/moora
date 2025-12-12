@@ -5,9 +5,8 @@
  * 使用 automata-based 状态机实现
  */
 
-import { v4 as uuidv4 } from "uuid";
-import { automata } from "@moora/automata";
-import { createPubSub } from "@moora/pub-sub";
+// import { v4 as uuidv4 } from "uuid"; // Currently not used
+
 import {
   createAgent,
   createReaction,
@@ -15,14 +14,12 @@ import {
   createToolkitReaction,
   createUserReaction,
 } from "@moora/agent-worker";
-import type { Agent, AgentUpdatePack } from "@moora/agent-worker";
-import type { Dispatch } from "@moora/automata";
-import type { Eff } from "@moora/effects";
+import { automata } from "@moora/automata";
+import { createPubSub } from "@moora/pub-sub";
 import { createToolkit } from "@moora/toolkit";
-import type { Toolkit, ToolDefinition } from "@moora/toolkit";
 
 import {
-  ROOT_TASK_ID,
+  // ROOT_TASK_ID, // Currently not used
   type TaskId,
   type Workforce,
   type WorkforceConfig,
@@ -33,15 +30,21 @@ import {
   type TaskEvent,
   type TaskDetailEvent,
 } from "../types";
+import { createAgentManager } from "./agent-manager";
+import { initial } from "./initial";
+import { output } from "./output";
 import {
   parsePseudoToolCall,
   createPseudoToolDefinitions,
 } from "./pseudo-tools";
-import { initial } from "./initial";
 import { transition } from "./transition";
-import { output } from "./output";
-import { createAgentManager } from "./agent-manager";
+
 import type { WorkforceState, WorkforceInput, OutputContext } from "./types";
+import type { Agent, AgentUpdatePack } from "@moora/agent-worker";
+import type { Dispatch } from "@moora/automata";
+import type { Eff } from "@moora/effects";
+import type { Toolkit, ToolDefinition } from "@moora/toolkit";
+
 
 // ============================================================================
 // Workforce 实现
@@ -154,7 +157,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
       llm: createLlmReaction({
         callLlm,
         tools: toolDefs,
-        onStart: (messageId: string) => {
+        onStart: (_messageId: string) => {
           // Worldscape 更新会通过 Agent 的 subscribe 同步
         },
         onChunk: (messageId: string, chunk: string) => {
@@ -167,7 +170,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
             timestamp: Date.now(),
           });
         },
-        onComplete: (messageId: string, content: string) => {
+        onComplete: (_messageId: string, _content: string) => {
           // Worldscape 更新会通过 Agent 的 subscribe 同步
         },
       }),
@@ -245,18 +248,18 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
 
           agentManager.create(taskId, agent, unsubscribe);
 
-          // 发送初始用户消息（从 Worldscape 获取）
+    // 发送初始用户消息（从 Worldscape 获取）
           const task = state.tasks[taskId];
-          if (task && task.worldscape.userMessages.length > 0) {
-            for (const msg of task.worldscape.userMessages) {
+    if (task && task.worldscape.userMessages.length > 0) {
+      for (const msg of task.worldscape.userMessages) {
               agent.dispatch({
-                type: "send-user-message",
-                id: msg.id,
-                content: msg.content,
-                timestamp: msg.timestamp,
-              });
-            }
-          }
+          type: "send-user-message",
+          id: msg.id,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        });
+      }
+    }
         }
       }
     }
@@ -267,7 +270,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
         agentManager.destroy(taskId);
         // dispatch agent-completed 输入
         machine.dispatch({ type: "agent-completed", taskId });
-      }
+  }
     }
   });
 
@@ -289,7 +292,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     machine.dispatch({ type: "append-message", input });
 
     // 如果 Task 正在被处理，通知 Agent
-    const state = machine.current();
+    const _state = machine.current();
     const { messageId, content, taskIds } = input;
     for (const taskId of taskIds) {
       const workingAgent = agentManager.get(taskId);

@@ -5,18 +5,20 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+
 import { ROOT_TASK_ID } from "../types";
-import type { WorkforceState, WorkforceInput } from "./types";
 import {
   createTaskInState,
   updateTaskStatus,
   appendUserMessageToTask,
-  appendAssistantMessageToTask,
-  completeAssistantMessageInTask,
-  appendToolCallRequestToTask,
-  appendToolCallResponseToTask,
+  // appendAssistantMessageToTask, // Currently not used
+  // completeAssistantMessageInTask, // Currently not used
+  // appendToolCallRequestToTask, // Currently not used
+  // appendToolCallResponseToTask, // Currently not used
   checkAndUpdateParentStatus,
 } from "./task-tree-helpers";
+
+import type { WorkforceState, WorkforceInput } from "./types";
 
 /**
  * Workforce 状态转换函数
@@ -86,7 +88,7 @@ export function transition(
         let newState = state;
 
         switch (call.type) {
-          case "succeed":
+          case "succeed": {
             newState = updateTaskStatus(newState, taskId, "succeeded", {
               success: true,
               conclusion: call.params.conclusion,
@@ -97,8 +99,9 @@ export function transition(
             // 检查父任务状态
             newState = checkAndUpdateParentStatus(newState, task.parentId);
             break;
+          }
 
-          case "fail":
+          case "fail": {
             newState = updateTaskStatus(newState, taskId, "failed", {
               success: false,
               error: call.params.error,
@@ -109,8 +112,9 @@ export function transition(
             // 检查父任务状态
             newState = checkAndUpdateParentStatus(newState, task.parentId);
             break;
+          }
 
-          case "breakdown":
+          case "breakdown": {
             // 创建子任务
             for (const subtask of call.params.subtasks) {
               const subtaskId = uuidv4();
@@ -130,6 +134,7 @@ export function transition(
             const { [taskId]: ___, ...workingAgents3 } = newState.workingAgents;
             newState = { ...newState, workingAgents: workingAgents3 };
             break;
+          }
         }
 
         return newState;

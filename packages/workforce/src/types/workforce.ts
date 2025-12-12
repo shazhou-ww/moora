@@ -2,17 +2,17 @@
  * Workforce 相关类型定义
  */
 
-import type { CallLlm } from "@moora/agent-common";
-import type { Toolkit } from "@moora/toolkit";
 import type {
   TaskId,
   MessageId,
-  TaskInput,
+  // TaskInput, // Currently not used
   Task,
   TaskRuntimeStatus,
   SubscribeTaskEvent,
   SubscribeTaskDetailEvent,
 } from "./task";
+import type { CallLlm } from "@moora/agent-common";
+import type { Toolkit } from "@moora/toolkit";
 
 // ============================================================================
 // Workforce 配置

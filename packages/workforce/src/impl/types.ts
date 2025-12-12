@@ -4,19 +4,19 @@
  * 用于 automata-based 实现的类型定义
  */
 
-import type { Dispatch } from "@moora/automata";
-import type { Eff } from "@moora/effects";
-import type { Agent } from "@moora/agent-worker";
-import type { Worldscape } from "@moora/agent-worker";
 import type {
   TaskId,
   Task,
   TaskEvent,
   TaskDetailEvent,
-  TaskStatus,
+  // TaskStatus, // Currently not used
 } from "../types";
 import type { WorkforceConfig, CreateTaskInput, AppendMessageInput } from "../types";
 import type { PseudoToolCall } from "./pseudo-tools";
+import type { Worldscape } from "@moora/agent-worker";
+import type { Agent } from "@moora/agent-worker";
+// import type { Dispatch } from "@moora/automata";
+// import type { Eff } from "@moora/effects";
 
 // ============================================================================
 // Workforce 状态定义
