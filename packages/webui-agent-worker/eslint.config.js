@@ -19,6 +19,7 @@ export default [
       },
       globals: {
         console: "readonly",
+        document: "readonly",
         fetch: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
@@ -32,6 +33,7 @@ export default [
         NodeJS: "readonly",
         React: "readonly",
         EventSource: "readonly",
+        window: "readonly",
       },
     },
     plugins: {

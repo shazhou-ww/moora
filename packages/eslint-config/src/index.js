@@ -153,6 +153,7 @@ export const browser = [
     languageOptions: {
       globals: {
         console: "readonly",
+        document: "readonly",
         fetch: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
@@ -166,6 +167,7 @@ export const browser = [
         NodeJS: "readonly",
         React: "readonly",
         EventSource: "readonly",
+        window: "readonly",
       },
     },
   },
