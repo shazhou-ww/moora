@@ -183,11 +183,6 @@ async function processStream(
     console.log('[llm-openai] Full content:', fullContent);
   }
 
-  // Call onComplete if we received any content
-  if (!isFirstChunk) {
-    callbacks.onComplete(fullContent);
-  }
-
   // Emit tool calls from OpenAI format
   const completedToolCalls = Array.from(toolCallsAccumulator.values()).filter(
     (tc) => tc.id && tc.name
@@ -202,6 +197,16 @@ async function processStream(
       name: tc.name,
       arguments: tc.arguments,
     });
+  }
+
+  // Call onComplete if we received any content
+  if (!isFirstChunk) {
+    callbacks.onComplete(fullContent);
+  } else if (toolCallsAccumulator.size > 0) {
+    // 只有 tool_call 没有 content 的情况
+    // 也需要通知完成，以便清理 llmCalls 状态
+    // 但不调用 onStart，因为没有消息需要流式输出
+    callbacks.onComplete("");
   }
 }
 
