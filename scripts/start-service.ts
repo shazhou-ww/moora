@@ -4,6 +4,9 @@
  * 启动 Agent Service
  * 
  * 从根目录运行以避免 bun --watch 在 monorepo 中的警告
+ * 
+ * Usage:
+ *   bun run scripts/start-service.ts [--type worker|coordinator] [--watch|-w]
  */
 
 import { join } from "path";
@@ -12,13 +15,24 @@ import { $ } from "bun";
 const args = process.argv.slice(2);
 const watch = args.includes("--watch") || args.includes("-w");
 
+// 获取 agent 类型参数
+const typeIndex = args.indexOf("--type");
+const agentType = typeIndex >= 0 ? args[typeIndex + 1] : "worker";
+
+if (agentType !== "worker" && agentType !== "coordinator") {
+  console.error(`❌ Invalid agent type: ${agentType}`);
+  console.error(`   Supported types: worker, coordinator`);
+  process.exit(1);
+}
+
 const rootDir = process.cwd();
-const serviceEntry = join(rootDir, "packages", "service-agent-worker", "src", "index.ts");
+const packageName = `service-agent-${agentType}`;
+const serviceEntry = join(rootDir, "packages", packageName, "src", "index.ts");
 
 async function startService() {
   try {
-    console.log(`🚀 Starting Agent Service (${watch ? "watch" : "production"} mode)...`);
-    console.log(`📦 Package: @moora/service-agent-worker`);
+    console.log(`🚀 Starting Agent Service [${agentType.toUpperCase()}] (${watch ? "watch" : "production"} mode)...`);
+    console.log(`📦 Package: @moora/${packageName}`);
     console.log(`📁 Entry: ${serviceEntry}\n`);
 
     // 从根目录运行，这样所有 workspace 包都在项目目录内
