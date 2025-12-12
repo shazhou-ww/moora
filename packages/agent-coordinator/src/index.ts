@@ -24,7 +24,6 @@ export type {
   WorkforceObWorkforce,
   WorkforceObLlm,
   WorkforceObUser,
-  WorkforceObToolkit,
   // Appearances
   AppearanceOfUser,
   AppearanceOfLlm,

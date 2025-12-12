@@ -251,15 +251,3 @@ export const toolkitObUserSchema = z.object({
 });
 
 export type ToolkitObUser = z.infer<typeof toolkitObUserSchema>;
-
-/**
- * Workforce 对 Toolkit 的观察 Schema
- *
- * WorkforceObToolkit: Workforce 发给 Toolkit 的任务信息
- */
-export const workforceObToolkitSchema = z.object({
-  /** 所有任务的详细信息（用于查询） */
-  allTasks: z.record(z.string(), taskMonitorInfoSchema),
-});
-
-export type WorkforceObToolkit = z.infer<typeof workforceObToolkitSchema>;

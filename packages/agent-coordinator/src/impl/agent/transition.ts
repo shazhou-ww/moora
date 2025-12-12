@@ -145,7 +145,6 @@ function extractAppearance(
     return {
       toolCallRequests: worldscape.toolCallRequests,
       toolResults: worldscape.toolResults,
-      allTasks: worldscape.allTasks,
     } as AppearanceOfToolkit;
   }
 

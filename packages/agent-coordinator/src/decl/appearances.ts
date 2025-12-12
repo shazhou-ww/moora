@@ -16,7 +16,6 @@ import type {
   ToolkitObToolkit,
   WorkforceObUser,
   WorkforceObLlm,
-  WorkforceObToolkit,
   WorkforceObWorkforce,
 } from "./observations";
 
@@ -39,9 +38,11 @@ export type AppearanceOfLlm = UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObL
  * Toolkit 的 Appearance
  *
  * AppearanceOfToolkit = Toolkit 的输入（其他 Actor 发送给 Toolkit 的数据）
- *  = LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit
+ *  = LlmObToolkit & ToolkitObToolkit
+ *
+ * 注意：Toolkit 持有 Workforce 实例并直接调用其方法，不通过 Observation
  */
-export type AppearanceOfToolkit = LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit;
+export type AppearanceOfToolkit = LlmObToolkit & ToolkitObToolkit;
 
 /**
  * Workforce 的 Appearance

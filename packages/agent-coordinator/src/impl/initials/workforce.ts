@@ -18,9 +18,6 @@ export function initialWorkforce(): PerspectiveOfWorkforce {
     // WorkforceObLlm - 发给 Llm 的任务详情
     topLevelTasks: {},
 
-    // WorkforceObToolkit - 发给 Toolkit 的所有任务
-    allTasks: {},
-
     // WorkforceObWorkforce - 自己维护的任务状态
     topLevelTaskIds: [],
     taskCache: {},

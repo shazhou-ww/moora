@@ -16,7 +16,6 @@ import type {
   ToolkitObToolkit,
   WorkforceObUser,
   WorkforceObLlm,
-  WorkforceObToolkit,
   WorkforceObWorkforce,
 } from "./observations";
 
@@ -66,12 +65,13 @@ export type PerspectiveOfToolkit = ToolkitObUser & ToolkitObLlm & ToolkitObToolk
  * Workforce 的 Perspective
  *
  * PerspectiveOfWorkforce = Workforce 的输出（Workforce 发送给其他 Actor 的数据）
- *  = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & WorkforceObWorkforce
+ *  = WorkforceObUser & WorkforceObLlm & WorkforceObWorkforce
  *
  * 包含：
  * - WorkforceObUser: 发给 User 的任务信息
  * - WorkforceObLlm: 发给 Llm 的任务详情
- * - WorkforceObToolkit: 发给 Toolkit 的所有任务
  * - WorkforceObWorkforce: 自己维护的状态
+ *
+ * 注意：Workforce 不发送数据给 Toolkit，Toolkit 通过持有的 Workforce 实例直接调用方法
  */
-export type PerspectiveOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & WorkforceObWorkforce;
+export type PerspectiveOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObWorkforce;

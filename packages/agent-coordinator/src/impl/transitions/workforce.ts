@@ -50,9 +50,6 @@ function handleNotifyTaskCompletion(
     // WorkforceObLlm - 保持不变
     topLevelTasks: state.topLevelTasks,
 
-    // WorkforceObToolkit - 保持不变
-    allTasks: state.allTasks,
-
     // WorkforceObWorkforce - 保持不变
     topLevelTaskIds: state.topLevelTaskIds,
     taskCache: state.taskCache,
@@ -107,9 +104,6 @@ function handleUpdateTaskStatus(
 
     // WorkforceObLlm - 保持不变
     topLevelTasks: state.topLevelTasks,
-
-    // WorkforceObToolkit - 保持不变
-    allTasks: state.allTasks,
 
     // WorkforceObWorkforce - 更新任务缓存和列表
     topLevelTaskIds: updatedTopLevelTaskIds,

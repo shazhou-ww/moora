@@ -82,8 +82,6 @@ function extractToolkitPerspective(
     toolCallRequests: worldscape.toolCallRequests,
     // ToolkitObToolkit - 自己维护的结果
     toolResults: worldscape.toolResults,
-    // WorkforceObToolkit - 从 Workforce 接收的任务
-    allTasks: worldscape.allTasks,
   } as unknown as PerspectiveOfToolkit;
 }
 
