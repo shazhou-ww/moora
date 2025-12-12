@@ -126,11 +126,11 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
     const { toolCallRequests, toolResults } = p;
 
     // 找出已经有结果的 tool call IDs
-    const completedToolCallIds = new Set(toolResults.map((r) => r.toolCallId));
+    const completedToolCallIds = new Set(toolResults.map((r: any) => r.toolCallId));
 
     // 找出需要执行的 tool calls（没有结果且不在执行中）
     const pendingToolCalls = toolCallRequests.filter(
-      (req) =>
+      (req: any) =>
         !completedToolCallIds.has(req.toolCallId) &&
         !state.executingToolCalls.includes(req.toolCallId)
     );
@@ -143,7 +143,7 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
     setState((prev) => ({
       executingToolCalls: [
         ...prev.executingToolCalls,
-        ...pendingToolCalls.map((t) => t.toolCallId),
+        ...pendingToolCalls.map((t: any) => t.toolCallId),
       ],
     }));
 

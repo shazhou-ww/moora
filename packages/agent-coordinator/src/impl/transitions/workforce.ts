@@ -92,7 +92,7 @@ function handleUpdateTaskStatus(
   const shouldRemove =
     action.status === "succeeded" || action.status === "failed";
   const updatedTopLevelTaskIds = shouldRemove
-    ? topLevelTaskIds.filter((id) => id !== action.taskId)
+    ? topLevelTaskIds.filter((id: string) => id !== action.taskId)
     : topLevelTaskIds.includes(action.taskId)
       ? topLevelTaskIds
       : [...topLevelTaskIds, action.taskId];

@@ -65,11 +65,11 @@ export function createLlmReaction(
       }
 
       // 检查是否有新的用户消息需要处理
-      const hasNewMessages = userMessages.some((msg) => msg.timestamp > cutOff);
+      const hasNewMessages = userMessages.some((msg: any) => msg.timestamp > cutOff);
 
       // 检查是否有流式消息正在生成
-      const hasStreamingMessage = assiMessages.some(
-        (msg) => msg.streaming === true
+      const hasStreamingMessage = userMessages.some(
+        (msg: any) => msg.streaming === true
       );
 
       if (!hasNewMessages || hasStreamingMessage) {
@@ -79,7 +79,7 @@ export function createLlmReaction(
       // 获取最新的用户消息时间戳
       const latestUserMessageTimestamp = Math.max(
         0,
-        ...userMessages.map((m) => m.timestamp)
+        ...userMessages.map((m: any) => m.timestamp)
       );
 
       // 开始新的 LLM 调用
@@ -91,15 +91,15 @@ export function createLlmReaction(
 
       // 构建消息列表
       const messages: Array<{ role: "user"; id: string; content: string; timestamp: number } | { role: "assistant"; id: string; streaming: false; content: string; timestamp: number }> = [
-        ...userMessages.map((m) => ({
+        ...userMessages.map((m: any) => ({
           role: "user" as const,
           id: m.id,
           content: m.content,
           timestamp: m.timestamp,
         })),
         ...assiMessages
-          .filter((m) => !m.streaming)
-          .map((m) => ({
+          .filter((m: any) => !m.streaming)
+          .map((m: any) => ({
             role: "assistant" as const,
             id: m.id,
             streaming: false as const,
@@ -111,7 +111,7 @@ export function createLlmReaction(
       // 构建系统提示，包含任务信息
       const taskInfo = Object.values(topLevelTasks)
         .map(
-          (task) =>
+          (task: any) =>
             `- Task "${task.title}" (${task.id}): ${task.status}${
               task.result
                 ? task.result.success
