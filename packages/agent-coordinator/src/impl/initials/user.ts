@@ -11,17 +11,7 @@ import type { PerspectiveOfUser } from "@/decl";
  */
 export function initialUser(): PerspectiveOfUser {
   return {
-    // UserObUser - 用户消息列表
+    // UserObUser & UserObLlm - 用户消息列表
     userMessages: [],
-
-    // LlmObUser - 助手消息列表
-    assiMessages: [],
-
-    // ToolkitObUser - 工具调用结果
-    toolResults: [],
-
-    // WorkforceObUser - 正在进行的顶层任务和通知状态
-    ongoingTopLevelTasks: [],
-    notifiedTaskCompletions: [],
   };
 }

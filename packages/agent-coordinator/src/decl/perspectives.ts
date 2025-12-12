@@ -23,17 +23,17 @@ import type {
 /**
  * User 的 Perspective
  *
- * PerspectiveOfUser = AppearanceOfUser (User 的完整状态)
- *  = UserObUser & UserObLlm & LlmObUser & ToolkitObUser & WorkforceObUser
+ * PerspectiveOfUser = User 的输出（User 发送给其他 Actor 的数据）
+ *  = UserObUser & UserObLlm
  *
  * 包含：
- * - UserObUser: userMessages (User 自己维护)
- * - UserObLlm: userMessages (User 发给 Llm，与 UserObUser 重叠)
- * - LlmObUser: assiMessages (从 Llm 接收)
- * - ToolkitObUser: toolResults (从 Toolkit 接收)
- * - WorkforceObUser: ongoingTopLevelTasks, notifiedTaskCompletions (从 Workforce 接收)
+ * - UserObUser: userMessages (User 自己维护的状态)
+ * - UserObLlm: userMessages (User 发给 Llm 的消息，与 UserObUser 字段相同)
+ *
+ * 注意：UserObUser 和 UserObLlm 的字段完全相同（都是 userMessages），
+ * 因为 User 维护的状态就是它发给 Llm 的消息列表。
  */
-export type PerspectiveOfUser = UserObUser & UserObLlm & LlmObUser & ToolkitObUser & WorkforceObUser;
+export type PerspectiveOfUser = UserObUser & UserObLlm;
 
 /**
  * Llm 的 Perspective

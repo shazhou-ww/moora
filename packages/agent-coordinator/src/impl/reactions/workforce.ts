@@ -40,6 +40,11 @@ export function createWorkforceReaction(
   });
 
   return async ({ perspective, dispatch }) => {
+    // 防御性检查：确保 perspective 存在且完整
+    if (!perspective || !perspective.taskCreateRequests) {
+      return;
+    }
+    
     const {
       taskCreateRequests,
       messageAppendRequests,

@@ -47,15 +47,8 @@ export function createReaction(reactions: ReactionFns): AgentReaction {
  */
 function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
   return {
-    // UserObUser
+    // UserObUser & UserObLlm
     userMessages: worldscape.userMessages,
-    // LlmObUser
-    assiMessages: worldscape.assiMessages,
-    // ToolkitObUser
-    toolResults: worldscape.toolResults,
-    // WorkforceObUser
-    ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
-    notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
   };
 }
 

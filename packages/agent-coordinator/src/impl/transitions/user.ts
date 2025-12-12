@@ -30,7 +30,7 @@ function handleSendUserMessage(
   action: SendUserMessage
 ): PerspectiveOfUser {
   return {
-    // UserObUser - 追加新的用户消息
+    // UserObUser & UserObLlm - 追加新的用户消息
     userMessages: [
       ...appearance.userMessages,
       {
@@ -40,15 +40,5 @@ function handleSendUserMessage(
         timestamp: action.timestamp,
       },
     ],
-
-    // UserObLlm - 保持不变
-    assiMessages: appearance.assiMessages,
-
-    // ToolkitObUser - 保持不变
-    toolResults: appearance.toolResults,
-
-    // WorkforceObUser - 保持不变
-    ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
-    notifiedTaskCompletions: appearance.notifiedTaskCompletions,
   };
 }
