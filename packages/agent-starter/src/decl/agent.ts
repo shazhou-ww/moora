@@ -2,12 +2,12 @@
  * Agent 总的 Worldscape 和 Actuation 定义
  */
 
-import type { Dispatch, UpdatePack, StatefulTransferer } from "@moora/automata";
-import type { Eff } from "@moora/effects";
-import type { AppearanceOfUser, AppearanceOfLlm } from "./appearances";
 import type { ActionFromUser, ActionFromLlm } from "./actions";
 import type { Actors } from "./actors";
+import type { AppearanceOfUser, AppearanceOfLlm } from "./appearances";
 import type { ReactionFnOf } from "./helpers";
+import type { Dispatch, UpdatePack, StatefulTransferer } from "@moora/automata";
+import type { Eff } from "@moora/effects";
 
 // ============================================================================
 // Agent 统合类型

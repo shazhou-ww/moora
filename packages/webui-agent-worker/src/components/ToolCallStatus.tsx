@@ -4,7 +4,12 @@
  * 显示工具调用的状态，包括正在执行和已完成的工具调用
  */
 
-import { useState } from "react";
+import {
+  Build,
+  CheckCircle,
+  ExpandMore,
+  ExpandLess,
+} from "@mui/icons-material";
 import {
   Box,
   Typography,
@@ -13,13 +18,8 @@ import {
   CircularProgress,
   Chip,
 } from "@mui/material";
-import {
-  Build,
-  CheckCircle,
-  ExpandMore,
-  ExpandLess,
-} from "@mui/icons-material";
-import type { ToolCallRequest, ToolResult } from "@/types";
+import { useState } from "react";
+
 import {
   toolCallContainerStyles,
   toolCallItemStyles,
@@ -30,6 +30,8 @@ import {
   toolCallDetailsStyles,
   toolCallCodeBlockStyles,
 } from "./ToolCallStatus.styles";
+
+import type { ToolCallRequest, ToolResult } from "@/types";
 
 /**
  * 工具调用项，包含请求和可能的结果

@@ -4,17 +4,18 @@
  * 根据状态转换信息计算输出，返回副作用函数
  */
 
-import type { Dispatch } from "@moora/automata";
-import type { Eff } from "@moora/effects";
-import type { UpdatePack } from "@moora/automata";
+import { ROOT_TASK_ID } from "../types";
+import { getNextReadyTask } from "./task-tree-helpers";
+
 import type {
   WorkforceState,
   WorkforceInput,
   OutputContext,
 } from "./types";
 import type { TaskEvent, TaskDetailEvent, TaskInput } from "../types";
-import { ROOT_TASK_ID } from "../types";
-import { getNextReadyTask } from "./task-tree-helpers";
+import type { Dispatch } from "@moora/automata";
+import type { UpdatePack } from "@moora/automata";
+import type { Eff } from "@moora/effects";
 
 /**
  * 计算状态变化产生的事件

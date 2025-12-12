@@ -2,8 +2,8 @@
  * Task 相关类型定义
  */
 
-import type { Unsubscribe } from "@moora/pub-sub";
 import type { Worldscape } from "@moora/agent-worker";
+import type { Unsubscribe } from "@moora/pub-sub";
 
 // ============================================================================
 // 基础类型

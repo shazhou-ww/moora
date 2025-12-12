@@ -5,9 +5,9 @@
  * 这些类型用于创建 reaction 函数，使 @moora/agent-worker 与具体实现解耦。
  */
 
-import type { CallLlm, CallLlmToolDefinition } from "@moora/agent-common";
 import type { ToolCallRequest } from "./observations";
 import type { PerspectiveOfUser } from "./perspectives";
+import type { CallLlm, CallLlmToolDefinition } from "@moora/agent-common";
 
 // Re-export CallLlm types from @moora/agent-common
 export type {

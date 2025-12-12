@@ -2,16 +2,14 @@
  * 消息列表组件
  */
 
-import { Box, Avatar, Paper, Typography, Fade } from "@mui/material";
 import { Person } from "@mui/icons-material";
+import { Box, Avatar, Paper, Typography, Fade } from "@mui/material";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
 import "highlight.js/styles/github-dark.css";
 import { useEffect, useState } from "react";
-import type { Message, AssiMessage, UserMessage } from "@/types";
-import { ToolCallStatus, ToolCallItemView, type ToolCallItem } from "./ToolCallStatus";
-import type { RenderItem } from "@/hooks";
+
 import {
   containerStyles,
   emptyStateStyles,
@@ -26,6 +24,10 @@ import {
   inlineCodeStyles,
   timestampStyles,
 } from "./MessageList.styles";
+import { ToolCallStatus, ToolCallItemView, type ToolCallItem } from "./ToolCallStatus";
+
+import type { RenderItem } from "@/hooks";
+import type { Message, AssiMessage, UserMessage } from "@/types";
 
 type MessageListProps = {
   messages: Message[];

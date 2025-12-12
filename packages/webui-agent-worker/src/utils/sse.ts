@@ -3,6 +3,7 @@
  */
 
 import { applyPatch, type Operation } from "rfc6902";
+
 import type { ContextOfUser, SSEMessage, PatchOperation } from "@/types";
 
 /**

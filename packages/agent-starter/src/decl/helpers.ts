@@ -4,12 +4,12 @@
  * 用于类型推导的辅助类型
  */
 
-import type { Actors } from "./actors";
-import type { AppearanceOfUser, AppearanceOfLlm } from "./appearances";
-import type { PerspectiveOfUser, PerspectiveOfLlm } from "./perspectives";
 import type { ActionFromUser, ActionFromLlm } from "./actions";
+import type { Actors } from "./actors";
 import type { USER, LLM } from "./actors";
 import type { Actuation } from "./agent";
+import type { AppearanceOfUser, AppearanceOfLlm } from "./appearances";
+import type { PerspectiveOfUser, PerspectiveOfLlm } from "./perspectives";
 import type { Dispatch } from "@moora/automata";
 import type { Eff } from "@moora/effects";
 

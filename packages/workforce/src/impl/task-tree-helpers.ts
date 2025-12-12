@@ -5,6 +5,7 @@
  */
 
 import { ROOT_TASK_ID } from "../types";
+
 import type {
   TaskId,
   Task,
@@ -13,9 +14,9 @@ import type {
   TaskInput,
   MessageId,
 } from "../types";
+import type { WorkforceState } from "./types";
 import type { UserMessage, AssiMessage } from "@moora/agent-common";
 import type { Worldscape } from "@moora/agent-worker";
-import type { WorkforceState } from "./types";
 
 // ============================================================================
 // 辅助函数

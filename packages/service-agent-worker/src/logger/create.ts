@@ -4,6 +4,7 @@
 
 import { createBaseLogger } from "./base";
 import { createCategoryLogger } from "./category";
+
 import type { CategoryLogger, LogCategory, Logger, LoggerOptions } from "./types";
 
 /**

@@ -2,9 +2,10 @@
  * 消息输入组件
  */
 
-import { Box, Button, TextField, Paper } from "@mui/material";
 import { Send } from "@mui/icons-material";
+import { Box, Button, TextField, Paper } from "@mui/material";
 import { useState, useRef, useEffect } from "react";
+
 import {
   paperStyles,
   containerStyles,

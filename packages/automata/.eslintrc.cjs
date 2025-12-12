@@ -1,5 +1,5 @@
 module.exports = {
-  extends: ["@moora/eslint-config/browser"],
+  extends: ["@moora/eslint-config/base"],
   parserOptions: {
     project: "./tsconfig.json",
   },

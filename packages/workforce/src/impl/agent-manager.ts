@@ -4,9 +4,9 @@
  * 管理 Agent 实例的外部存储
  */
 
-import type { Agent } from "@moora/agent-worker";
 import type { TaskId } from "../types";
 import type { WorkingAgent } from "./types";
+import type { Agent } from "@moora/agent-worker";
 
 /**
  * Agent 管理器接口

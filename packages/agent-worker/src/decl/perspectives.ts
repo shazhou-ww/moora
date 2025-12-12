@@ -5,16 +5,7 @@
  */
 
 import { z } from "zod";
-import type {
-  UserObUser,
-  UserObLlm,
-  LlmObUser,
-  LlmObLlm,
-  LlmObToolkit,
-  ToolkitObLlm,
-  ToolkitObToolkit,
-  UserObToolkit,
-} from "./observations";
+
 import {
   userObUserSchema,
   userObLlmSchema,
@@ -24,6 +15,17 @@ import {
   toolkitObLlmSchema,
   toolkitObToolkitSchema,
   userObToolkitSchema,
+} from "./observations";
+
+import type {
+  UserObUser,
+  UserObLlm,
+  LlmObUser,
+  LlmObLlm,
+  LlmObToolkit,
+  ToolkitObLlm,
+  ToolkitObToolkit,
+  UserObToolkit,
 } from "./observations";
 
 // ============================================================================

@@ -5,9 +5,7 @@
  */
 
 import { createPubSub } from "@moora/pub-sub";
-import type { PubSub } from "@moora/pub-sub";
-import type { Worldscape } from "@moora/agent-worker";
-import type { UserMessage, AssiMessage } from "@moora/agent-common";
+
 import {
   ROOT_TASK_ID,
   type TaskId,
@@ -19,6 +17,10 @@ import {
   type TaskEvent,
   type TaskDetailEvent,
 } from "../types";
+
+import type { UserMessage, AssiMessage } from "@moora/agent-common";
+import type { Worldscape } from "@moora/agent-worker";
+import type { PubSub } from "@moora/pub-sub";
 
 // ============================================================================
 // TaskTree 类型

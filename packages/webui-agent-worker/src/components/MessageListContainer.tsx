@@ -3,13 +3,16 @@
  * 负责管理消息列表的自动滚动逻辑
  */
 
-import { useEffect, useLayoutEffect, useState, useRef, useCallback } from "react";
 import { Box } from "@mui/material";
+import { useEffect, useLayoutEffect, useState, useRef, useCallback } from "react";
+
 import { MessageList } from "./MessageList";
-import { contentBoxStyles } from "@/styles/app";
-import type { Message } from "@/types";
+
 import type { ToolCallItem } from "./ToolCallStatus";
 import type { RenderItem } from "@/hooks";
+import type { Message } from "@/types";
+
+import { contentBoxStyles } from "@/styles/app";
 
 type MessageListContainerProps = {
   messages: Message[];

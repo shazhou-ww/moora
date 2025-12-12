@@ -5,8 +5,8 @@
  * 这些类型用于创建 reaction 函数，使 @moora/agent-starter 与具体实现解耦。
  */
 
-import type { CallLlm } from "@moora/agent-common";
 import type { PerspectiveOfUser } from "./perspectives";
+import type { CallLlm } from "@moora/agent-common";
 
 // Re-export CallLlm types from @moora/agent-common
 export type {

@@ -3,6 +3,7 @@
  */
 
 import pino from "pino";
+
 import type { LogLevel, LoggerOptions } from "./types";
 
 /**

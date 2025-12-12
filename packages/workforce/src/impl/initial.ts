@@ -3,6 +3,7 @@
  */
 
 import { ROOT_TASK_ID } from "../types";
+
 import type { WorkforceConfig } from "../types";
 import type { WorkforceState } from "./types";
 

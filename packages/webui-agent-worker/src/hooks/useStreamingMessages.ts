@@ -3,9 +3,11 @@
  */
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { createStreamConnection } from "@/utils/stream";
-import type { ContextOfUser, Message, ToolCallRequest, ToolResult } from "@/types";
+
 import type { ToolCallItem } from "@/components/ToolCallStatus";
+import type { ContextOfUser, Message, ToolCallRequest, ToolResult } from "@/types";
+
+import { createStreamConnection } from "@/utils/stream";
 
 /**
  * 渲染列表项类型：消息或工具调用

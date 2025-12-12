@@ -5,8 +5,10 @@
  */
 
 import { z } from "zod";
-import type { UserObUser, UserObLlm, LlmObUser, LlmObLlm } from "./observations";
+
 import { userObUserSchema, userObLlmSchema, llmObUserSchema, llmObLlmSchema } from "./observations";
+
+import type { UserObUser, UserObLlm, LlmObUser, LlmObLlm } from "./observations";
 
 // ============================================================================
 // Perspective Schema 定义

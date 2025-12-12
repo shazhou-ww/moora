@@ -3,6 +3,7 @@
  */
 
 import { Elysia } from "elysia";
+
 import {
   createAgent,
   createReaction,
@@ -10,9 +11,19 @@ import {
   createLlmReaction,
   createToolkitReaction,
 } from "@moora/agent-worker";
-import type { AgentUpdatePack } from "@moora/agent-worker";
 import { createPubSub } from "@moora/pub-sub";
+
+import {
+  createAgentSSEHandler,
+  createPostSendHandler,
+  createStreamSSEHandler,
+} from "./handlers";
+
+import type { CreateServiceOptions } from "@/types";
+import type { AgentUpdatePack } from "@moora/agent-worker";
 import type { Toolkit } from "@moora/toolkit";
+
+import { getLogger } from "@/logger";
 import {
   createNotifyUserCallback,
   createCallLlmCallback,
@@ -20,13 +31,6 @@ import {
   createDefaultToolkit,
 } from "@/reactions";
 import { createStreamManager } from "@/streams";
-import { getLogger } from "@/logger";
-import type { CreateServiceOptions } from "@/types";
-import {
-  createAgentSSEHandler,
-  createPostSendHandler,
-  createStreamSSEHandler,
-} from "./handlers";
 
 const logger = getLogger();
 

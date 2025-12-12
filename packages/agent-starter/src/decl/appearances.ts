@@ -5,8 +5,10 @@
  */
 
 import { z } from "zod";
-import type { UserObUser, LlmObUser, UserObLlm, LlmObLlm } from "./observations";
+
 import { userObUserSchema, llmObUserSchema, userObLlmSchema, llmObLlmSchema } from "./observations";
+
+import type { UserObUser, LlmObUser, UserObLlm, LlmObLlm } from "./observations";
 
 // ============================================================================
 // Appearance Schema 定义
