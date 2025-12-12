@@ -114,6 +114,12 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
     ToolkitReactionInternalState
   >({ executingToolCalls: [] }, ({ context: ctx, state, setState }) => {
     const { perspective, dispatch } = ctx;
+    
+    // 防御性检查：确保 perspective 存在且完整
+    if (!perspective || !perspective.toolCallRequests || !perspective.toolResults) {
+      return;
+    }
+    
     const { toolCallRequests, toolResults } = perspective;
 
     // 找出已经有结果的 tool call IDs

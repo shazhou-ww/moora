@@ -42,9 +42,16 @@ function handleNotifyTaskCompletion(
 
   return {
     // WorkforceObUser - 记录已通知的任务
+    ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
     notifiedTaskCompletions: [...notifiedTaskCompletions, action.taskId],
 
     // WorkforceObLlm - 保持不变
+    topLevelTasks: appearance.topLevelTasks,
+
+    // WorkforceObToolkit - 保持不变
+    allTasks: appearance.allTasks,
+
+    // LlmObWorkforce - 保持不变
     taskCreateRequests: appearance.taskCreateRequests,
     messageAppendRequests: appearance.messageAppendRequests,
     taskCancelRequests: appearance.taskCancelRequests,
@@ -96,9 +103,16 @@ function handleUpdateTaskStatus(
 
   return {
     // WorkforceObUser - 保持不变
+    ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
     notifiedTaskCompletions: appearance.notifiedTaskCompletions,
 
     // WorkforceObLlm - 保持不变
+    topLevelTasks: appearance.topLevelTasks,
+
+    // WorkforceObToolkit - 保持不变
+    allTasks: appearance.allTasks,
+
+    // LlmObWorkforce - 保持不变
     taskCreateRequests: appearance.taskCreateRequests,
     messageAppendRequests: appearance.messageAppendRequests,
     taskCancelRequests: appearance.taskCancelRequests,

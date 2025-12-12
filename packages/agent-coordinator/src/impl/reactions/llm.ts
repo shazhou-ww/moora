@@ -48,6 +48,12 @@ export function createLlmReaction(
     { ongoingCallId: null },
     ({ context: ctx, state, setState }) => {
       const { perspective, dispatch } = ctx;
+      
+      // 防御性检查：确保 perspective 存在且完整
+      if (!perspective || !perspective.userMessages || !perspective.assiMessages) {
+        return;
+      }
+      
       const { userMessages, assiMessages, cutOff, topLevelTasks } = perspective;
 
       // 如果有正在进行的调用，跳过

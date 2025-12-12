@@ -49,12 +49,13 @@ function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
   return {
     // UserObUser
     userMessages: worldscape.userMessages,
-    // UserObLlm
+    // LlmObUser
     assiMessages: worldscape.assiMessages,
-    // UserObToolkit
+    // ToolkitObUser
     toolResults: worldscape.toolResults,
-    // UserObWorkforce
+    // WorkforceObUser
     ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
+    notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
   };
 }
 
@@ -63,14 +64,20 @@ function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
  */
 function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
   return {
-    // LlmObUser
+    // UserObLlm
     userMessages: worldscape.userMessages,
-    // LlmObLlm
+    // LlmObUser & LlmObLlm
     assiMessages: worldscape.assiMessages,
     cutOff: worldscape.cutOff,
     // LlmObToolkit
+    toolCallRequests: worldscape.toolCallRequests,
+    // ToolkitObLlm
     toolResults: worldscape.toolResults,
     // LlmObWorkforce
+    taskCreateRequests: worldscape.taskCreateRequests,
+    messageAppendRequests: worldscape.messageAppendRequests,
+    taskCancelRequests: worldscape.taskCancelRequests,
+    // WorkforceObLlm
     topLevelTasks: worldscape.topLevelTasks,
   };
 }
@@ -99,8 +106,13 @@ function extractWorkforcePerspective(
 ): PerspectiveOfWorkforce {
   return {
     // WorkforceObUser
+    ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
     notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
     // WorkforceObLlm
+    topLevelTasks: worldscape.topLevelTasks,
+    // WorkforceObToolkit
+    allTasks: worldscape.allTasks,
+    // LlmObWorkforce
     taskCreateRequests: worldscape.taskCreateRequests,
     messageAppendRequests: worldscape.messageAppendRequests,
     taskCancelRequests: worldscape.taskCancelRequests,

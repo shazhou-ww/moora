@@ -68,11 +68,19 @@ function handleStartAssiMessageStream(
     ],
     cutOff: Math.max(cutOff, action.cutOff),
 
-    // LlmObToolkit - 保持不变
+    // ToolkitObLlm - 保持不变
     toolResults: appearance.toolResults,
 
-    // LlmObWorkforce - 保持不变
+    // WorkforceObLlm - 保持不变
     topLevelTasks: appearance.topLevelTasks,
+
+    // LlmObToolkit - 保持不变
+    toolCallRequests: appearance.toolCallRequests,
+
+    // LlmObWorkforce - 保持不变
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
@@ -106,13 +114,19 @@ function handleEndAssiMessageStream(
     assiMessages: updatedMessages,
     cutOff: appearance.cutOff,
 
-    // LlmObToolkit - 保持不变
+    // ToolkitObLlm - 保持不变
     toolResults: appearance.toolResults,
 
-    // LlmObWorkforce - 保持不变
+    // WorkforceObLlm - 保持不变
     topLevelTasks: appearance.topLevelTasks,
 
-    // 输出到 Toolkit
+    // LlmObToolkit - 保持不变
+    toolCallRequests: appearance.toolCallRequests,
+
+    // LlmObWorkforce - 保持不变
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
@@ -131,6 +145,10 @@ function handleRequestCreateTask(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: appearance.toolCallRequests,
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
@@ -147,6 +165,10 @@ function handleRequestAppendMessage(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: appearance.toolCallRequests,
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
@@ -163,6 +185,10 @@ function handleRequestCancelTasks(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: appearance.toolCallRequests,
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
@@ -179,6 +205,10 @@ function handleCallTool(
     cutOff: appearance.cutOff,
     toolResults: appearance.toolResults,
     topLevelTasks: appearance.topLevelTasks,
+    toolCallRequests: appearance.toolCallRequests,
+    taskCreateRequests: appearance.taskCreateRequests,
+    messageAppendRequests: appearance.messageAppendRequests,
+    taskCancelRequests: appearance.taskCancelRequests,
   };
 }
 
