@@ -11,3 +11,6 @@ export type { CreateCallLlmCallbackOptions } from "./llm.js";
 
 export { createCallToolCallback, createDefaultToolkit } from "./toolkit.js";
 export type { CreateDefaultToolkitOptions } from "./toolkit.js";
+
+export { createReactions } from "./create-reactions.js";
+export type { CreateReactionsOptions } from "./create-reactions.js";

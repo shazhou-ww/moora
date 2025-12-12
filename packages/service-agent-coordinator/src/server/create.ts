@@ -4,16 +4,16 @@
 
 import { Elysia } from "elysia";
 
-import type { Actuation, ReactionFns } from "@moora/agent-coordinator";
-import { createAgent, createReaction, USER, LLM, TOOLKIT, WORKFORCE } from "@moora/agent-coordinator";
+import type { Actuation } from "@moora/agent-coordinator";
+import { createAgent, createReaction } from "@moora/agent-coordinator";
 import { createPubSub } from "@moora/pub-sub";
 import type { Toolkit } from "@moora/toolkit";
+import { createWorkforce } from "@moora/workforce";
 import { getLogger } from "@/logger";
 import {
-  createNotifyUserCallback,
   createCallLlmCallback,
-  createCallToolCallback,
   createDefaultToolkit,
+  createReactions,
 } from "@/reactions";
 import { createStreamManager } from "@/streams";
 import type { CreateServiceOptions } from "@/types";
@@ -99,34 +99,41 @@ export function createService(options: CreateServiceOptions) {
   // 使用提供的 toolkit 或创建默认 toolkit（包含 Tavily 等内置工具）
   const toolkit: Toolkit = providedToolkit ?? createDefaultToolkit({ tavilyApiKey });
 
+  // 创建 callLlm 回调
+  const callLlm = createCallLlmCallback({
+    openai,
+    prompt,
+  });
+
+  // 创建 Workforce 实例
+  const workforce = createWorkforce({
+    maxAgents: 5,
+    toolkit,
+    callLlm,
+  });
+
   // 创建 Patch PubSub（用于 /agent 路由的 SSE 推送）
   const patchPubSub = createPubSub<string>();
 
   // 创建 StreamManager 实例
   const streamManager = createStreamManager();
 
-  // TODO: 创建各个 Actor 的 ReactionFn
-  // 注意：agent-coordinator 的 reaction 结构与 agent-worker 不同
-  // 需要为每个 Actor 提供 ReactionFnOf<Actor> 函数
-  
-  const reactions: ReactionFns = {
-    [USER]: async () => {
-      // User Actor 本身不需要主动做任何事
-      // 所有对用户的通知都在 transition 中处理
+  // 创建所有 Actor 的 reactions
+  const reactions = createReactions({
+    callLlm,
+    toolkit,
+    workforce,
+    publishPatch: patchPubSub.pub,
+    onStreamStart: (messageId: string) => {
+      streamManager.startStream(messageId);
     },
-    [LLM]: async () => {
-      // LLM Reaction - 调用 LLM，处理用户消息
-      // TODO: 实现 LLM reaction 逻辑
+    onStreamChunk: (messageId: string, chunk: string) => {
+      streamManager.appendChunk(messageId, chunk);
     },
-    [TOOLKIT]: async () => {
-      // Toolkit Reaction - 执行工具调用
-      // TODO: 实现 Toolkit reaction 逻辑
+    onStreamComplete: (messageId: string, content: string) => {
+      streamManager.endStream(messageId, content);
     },
-    [WORKFORCE]: async () => {
-      // Workforce Reaction - 处理任务管理
-      // TODO: 实现 Workforce reaction 逻辑
-    },
-  };
+  });
 
   // 创建 agent reaction
   const reaction = createReaction(reactions);
