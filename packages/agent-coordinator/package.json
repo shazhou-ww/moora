@@ -1,0 +1,38 @@
+{
+  "name": "@moora/agent-coordinator",
+  "version": "0.1.0",
+  "description": "Agent coordinator for managing workforce tasks",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moora.git",
+    "directory": "packages/agent-coordinator"
+  },
+  "dependencies": {
+    "@moora/agent-common": "workspace:*",
+    "@moora/automata": "workspace:*",
+    "@moora/effects": "workspace:*",
+    "@moora/workforce": "workspace:*",
+    "uuid": "^13.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@moora/eslint-config": "workspace:*",
+    "@types/bun": "latest",
+    "@types/uuid": "^11.0.0",
+    "typescript": "^5",
+    "vitest": "^4.0.12"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "test": "vitest --run --no-ui",
+    "test:coverage": "vitest --run --coverage --no-ui",
+    "test:ci": "vitest --run --coverage --no-ui"
+  }
+}
