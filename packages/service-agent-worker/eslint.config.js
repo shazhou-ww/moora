@@ -18,6 +18,7 @@ export default [
       },
     },
   },
+  node[1], // Include Node.js globals
   {
     ignores: ["dist", "node_modules", "*.config.*", "*.d.ts"],
   },
