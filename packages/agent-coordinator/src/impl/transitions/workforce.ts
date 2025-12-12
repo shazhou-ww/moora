@@ -38,27 +38,24 @@ function handleNotifyTaskCompletion(
   appearance: AppearanceOfWorkforce,
   action: NotifyTaskCompletion
 ): PerspectiveOfWorkforce {
-  const { notifiedTaskCompletions } = appearance;
+  // 类型断言：Appearance 实际包含了完整的 Worldscape 状态
+  const state = appearance as any;
+  const { notifiedTaskCompletions } = state;
 
   return {
     // WorkforceObUser - 记录已通知的任务
-    ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
+    ongoingTopLevelTasks: state.ongoingTopLevelTasks,
     notifiedTaskCompletions: [...notifiedTaskCompletions, action.taskId],
 
     // WorkforceObLlm - 保持不变
-    topLevelTasks: appearance.topLevelTasks,
+    topLevelTasks: state.topLevelTasks,
 
     // WorkforceObToolkit - 保持不变
-    allTasks: appearance.allTasks,
-
-    // LlmObWorkforce - 保持不变
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    allTasks: state.allTasks,
 
     // WorkforceObWorkforce - 保持不变
-    topLevelTaskIds: appearance.topLevelTaskIds,
-    taskCache: appearance.taskCache,
+    topLevelTaskIds: state.topLevelTaskIds,
+    taskCache: state.taskCache,
   };
 }
 
@@ -69,7 +66,9 @@ function handleUpdateTaskStatus(
   appearance: AppearanceOfWorkforce,
   action: UpdateTaskStatus
 ): PerspectiveOfWorkforce {
-  const { taskCache, topLevelTaskIds } = appearance;
+  // 类型断言：Appearance 实际包含了完整的 Worldscape 状态
+  const state = appearance as any;
+  const { taskCache, topLevelTaskIds } = state;
 
   // 更新任务缓存
   const existingTask = taskCache[action.taskId];
@@ -103,19 +102,14 @@ function handleUpdateTaskStatus(
 
   return {
     // WorkforceObUser - 保持不变
-    ongoingTopLevelTasks: appearance.ongoingTopLevelTasks,
-    notifiedTaskCompletions: appearance.notifiedTaskCompletions,
+    ongoingTopLevelTasks: state.ongoingTopLevelTasks,
+    notifiedTaskCompletions: state.notifiedTaskCompletions,
 
     // WorkforceObLlm - 保持不变
-    topLevelTasks: appearance.topLevelTasks,
+    topLevelTasks: state.topLevelTasks,
 
     // WorkforceObToolkit - 保持不变
-    allTasks: appearance.allTasks,
-
-    // LlmObWorkforce - 保持不变
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    allTasks: state.allTasks,
 
     // WorkforceObWorkforce - 更新任务缓存和列表
     topLevelTaskIds: updatedTopLevelTaskIds,

@@ -40,8 +40,11 @@ export function createWorkforceReaction(
   });
 
   return async ({ perspective, dispatch }) => {
+    // 类型断言：perspective 实际是 Appearance，包含输入字段
+    const p = perspective as any;
+    
     // 防御性检查：确保 perspective 存在且完整
-    if (!perspective || !perspective.taskCreateRequests) {
+    if (!p || !p.taskCreateRequests) {
       return;
     }
     
@@ -52,7 +55,7 @@ export function createWorkforceReaction(
       notifiedTaskCompletions,
       topLevelTaskIds,
       taskCache,
-    } = perspective;
+    } = p;
 
     // 处理任务创建请求
     for (const request of taskCreateRequests) {

@@ -49,12 +49,15 @@ export function createLlmReaction(
     ({ context: ctx, state, setState }) => {
       const { perspective, dispatch } = ctx;
       
+      // 类型断言：perspective 实际是 Appearance，包含输入字段
+      const p = perspective as any;
+      
       // 防御性检查：确保 perspective 存在且完整
-      if (!perspective || !perspective.userMessages || !perspective.assiMessages) {
+      if (!p || !p.userMessages || !p.assiMessages) {
         return;
       }
       
-      const { userMessages, assiMessages, cutOff, topLevelTasks } = perspective;
+      const { userMessages, assiMessages, cutOff, topLevelTasks } = p;
 
       // 如果有正在进行的调用，跳过
       if (state.ongoingCallId !== null) {

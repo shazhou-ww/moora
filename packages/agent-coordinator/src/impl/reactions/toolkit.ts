@@ -115,12 +115,15 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
   >({ executingToolCalls: [] }, ({ context: ctx, state, setState }) => {
     const { perspective, dispatch } = ctx;
     
+    // 类型断言：perspective 实际是 Appearance，包含输入字段
+    const p = perspective as any;
+    
     // 防御性检查：确保 perspective 存在且完整
-    if (!perspective || !perspective.toolCallRequests || !perspective.toolResults) {
+    if (!p || !p.toolCallRequests || !p.toolResults) {
       return;
     }
     
-    const { toolCallRequests, toolResults } = perspective;
+    const { toolCallRequests, toolResults } = p;
 
     // 找出已经有结果的 tool call IDs
     const completedToolCallIds = new Set(toolResults.map((r) => r.toolCallId));

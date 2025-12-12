@@ -30,10 +30,7 @@ function handleReturnToolResult(
   action: ReturnToolResult
 ): PerspectiveOfToolkit {
   return {
-    // ToolkitObLlm - 保持不变
-    toolCallRequests: appearance.toolCallRequests,
-
-    // ToolkitObToolkit - 追加新的工具结果
+    // ToolkitObUser & ToolkitObLlm & ToolkitObToolkit - 追加新的工具结果
     toolResults: [
       ...appearance.toolResults,
       {
@@ -42,8 +39,5 @@ function handleReturnToolResult(
         timestamp: action.timestamp,
       },
     ],
-
-    // ToolkitObWorkforce - 保持不变
-    allTasks: appearance.allTasks,
   };
 }

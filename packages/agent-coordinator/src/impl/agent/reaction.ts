@@ -54,63 +54,53 @@ function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
 
 /**
  * 从 Worldscape 提取 Llm 的 Perspective
+ * 注意：实际提取的是 Appearance（输入），因为 reaction 需要基于输入触发副作用
  */
 function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
   return {
-    // UserObLlm
+    // UserObLlm - 从 User 接收的消息
     userMessages: worldscape.userMessages,
-    // LlmObUser & LlmObLlm
+    // LlmObLlm - 自己维护的状态
     assiMessages: worldscape.assiMessages,
     cutOff: worldscape.cutOff,
-    // LlmObToolkit
-    toolCallRequests: worldscape.toolCallRequests,
-    // ToolkitObLlm
+    // ToolkitObLlm - 从 Toolkit 接收的结果
     toolResults: worldscape.toolResults,
-    // LlmObWorkforce
-    taskCreateRequests: worldscape.taskCreateRequests,
-    messageAppendRequests: worldscape.messageAppendRequests,
-    taskCancelRequests: worldscape.taskCancelRequests,
-    // WorkforceObLlm
+    // WorkforceObLlm - 从 Workforce 接收的任务
     topLevelTasks: worldscape.topLevelTasks,
-  };
+  } as unknown as PerspectiveOfLlm;
 }
 
 /**
  * 从 Worldscape 提取 Toolkit 的 Perspective
+ * 注意：实际提取的是 Appearance（输入）
  */
 function extractToolkitPerspective(
   worldscape: Worldscape
 ): PerspectiveOfToolkit {
   return {
-    // ToolkitObLlm
+    // LlmObToolkit - 从 Llm 接收的请求
     toolCallRequests: worldscape.toolCallRequests,
-    // ToolkitObToolkit
+    // ToolkitObToolkit - 自己维护的结果
     toolResults: worldscape.toolResults,
-    // ToolkitObWorkforce
+    // WorkforceObToolkit - 从 Workforce 接收的任务
     allTasks: worldscape.allTasks,
-  };
+  } as unknown as PerspectiveOfToolkit;
 }
 
 /**
  * 从 Worldscape 提取 Workforce 的 Perspective
+ * 注意：实际提取的是 Appearance（输入）
  */
 function extractWorkforcePerspective(
   worldscape: Worldscape
 ): PerspectiveOfWorkforce {
   return {
-    // WorkforceObUser
-    ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
-    notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
-    // WorkforceObLlm
-    topLevelTasks: worldscape.topLevelTasks,
-    // WorkforceObToolkit
-    allTasks: worldscape.allTasks,
-    // LlmObWorkforce
+    // LlmObWorkforce - 从 Llm 接收的请求
     taskCreateRequests: worldscape.taskCreateRequests,
     messageAppendRequests: worldscape.messageAppendRequests,
     taskCancelRequests: worldscape.taskCancelRequests,
-    // WorkforceObWorkforce
+    // WorkforceObWorkforce - 自己维护的状态
     topLevelTaskIds: worldscape.topLevelTaskIds,
     taskCache: worldscape.taskCache,
-  };
+  } as unknown as PerspectiveOfWorkforce;
 }

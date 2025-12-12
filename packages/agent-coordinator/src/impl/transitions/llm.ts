@@ -53,10 +53,7 @@ function handleStartAssiMessageStream(
   const { assiMessages, cutOff } = appearance;
 
   return {
-    // LlmObUser - 保持不变
-    userMessages: appearance.userMessages,
-
-    // LlmObLlm - 添加新的流式消息，更新 cutOff
+    // LlmObUser & LlmObLlm - 添加新的流式消息，更新 cutOff
     assiMessages: [
       ...assiMessages,
       {
@@ -68,19 +65,13 @@ function handleStartAssiMessageStream(
     ],
     cutOff: Math.max(cutOff, action.cutOff),
 
-    // ToolkitObLlm - 保持不变
-    toolResults: appearance.toolResults,
-
-    // WorkforceObLlm - 保持不变
-    topLevelTasks: appearance.topLevelTasks,
-
     // LlmObToolkit - 保持不变
-    toolCallRequests: appearance.toolCallRequests,
+    toolCallRequests: [],
 
     // LlmObWorkforce - 保持不变
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 
@@ -107,26 +98,17 @@ function handleEndAssiMessageStream(
   );
 
   return {
-    // LlmObUser - 保持不变
-    userMessages: appearance.userMessages,
-
-    // LlmObLlm - 更新消息状态
+    // LlmObUser & LlmObLlm - 更新消息状态
     assiMessages: updatedMessages,
     cutOff: appearance.cutOff,
 
-    // ToolkitObLlm - 保持不变
-    toolResults: appearance.toolResults,
-
-    // WorkforceObLlm - 保持不变
-    topLevelTasks: appearance.topLevelTasks,
-
     // LlmObToolkit - 保持不变
-    toolCallRequests: appearance.toolCallRequests,
+    toolCallRequests: [],
 
     // LlmObWorkforce - 保持不变
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 
@@ -140,15 +122,12 @@ function handleRequestCreateTask(
   // Llm 的 Perspective 中不需要记录请求，这些请求会被 Workforce 处理
   // 这里只需要保持状态不变
   return {
-    userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
-    toolResults: appearance.toolResults,
-    topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: appearance.toolCallRequests,
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    toolCallRequests: [],
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 
@@ -160,15 +139,12 @@ function handleRequestAppendMessage(
   _action: RequestAppendMessage
 ): PerspectiveOfLlm {
   return {
-    userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
-    toolResults: appearance.toolResults,
-    topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: appearance.toolCallRequests,
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    toolCallRequests: [],
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 
@@ -180,15 +156,12 @@ function handleRequestCancelTasks(
   _action: RequestCancelTasks
 ): PerspectiveOfLlm {
   return {
-    userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
-    toolResults: appearance.toolResults,
-    topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: appearance.toolCallRequests,
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    toolCallRequests: [],
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 
@@ -200,15 +173,12 @@ function handleCallTool(
   _action: CallTool
 ): PerspectiveOfLlm {
   return {
-    userMessages: appearance.userMessages,
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
-    toolResults: appearance.toolResults,
-    topLevelTasks: appearance.topLevelTasks,
-    toolCallRequests: appearance.toolCallRequests,
-    taskCreateRequests: appearance.taskCreateRequests,
-    messageAppendRequests: appearance.messageAppendRequests,
-    taskCancelRequests: appearance.taskCancelRequests,
+    toolCallRequests: [],
+    taskCreateRequests: [],
+    messageAppendRequests: [],
+    taskCancelRequests: [],
   };
 }
 

@@ -38,46 +38,40 @@ export type PerspectiveOfUser = UserObUser & UserObLlm;
 /**
  * Llm 的 Perspective
  *
- * PerspectiveOfLlm = AppearanceOfLlm
- *  = LlmObUser & LlmObToolkit & LlmObWorkforce & UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm
+ * PerspectiveOfLlm = Llm 的输出（Llm 发送给其他 Actor 的数据）
+ *  = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce
  *
  * 包含：
  * - LlmObUser: 发给 User 的助手消息
+ * - LlmObLlm: 自己维护的状态（assiMessages, cutOff）
  * - LlmObToolkit: 发给 Toolkit 的工具调用请求
  * - LlmObWorkforce: 发给 Workforce 的任务请求
- * - UserObLlm: 从 User 接收的用户消息
- * - LlmObLlm: 自己维护的状态（assiMessages, cutOff）
- * - ToolkitObLlm: 从 Toolkit 接收的工具结果
- * - WorkforceObLlm: 从 Workforce 接收的任务详情
  */
-export type PerspectiveOfLlm = LlmObUser & LlmObToolkit & LlmObWorkforce & UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm;
+export type PerspectiveOfLlm = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce;
 
 /**
  * Toolkit 的 Perspective
  *
- * PerspectiveOfToolkit = AppearanceOfToolkit
- *  = ToolkitObUser & ToolkitObLlm & LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit
+ * PerspectiveOfToolkit = Toolkit 的输出（Toolkit 发送给其他 Actor 的数据）
+ *  = ToolkitObUser & ToolkitObLlm & ToolkitObToolkit
  *
  * 包含：
  * - ToolkitObUser: 发给 User 的工具结果
  * - ToolkitObLlm: 发给 Llm 的工具结果
- * - LlmObToolkit: 从 Llm 接收的工具调用请求
  * - ToolkitObToolkit: 自己维护的工具结果缓存
- * - WorkforceObToolkit: 从 Workforce 接收的任务信息
  */
-export type PerspectiveOfToolkit = ToolkitObUser & ToolkitObLlm & LlmObToolkit & ToolkitObToolkit & WorkforceObToolkit;
+export type PerspectiveOfToolkit = ToolkitObUser & ToolkitObLlm & ToolkitObToolkit;
 
 /**
  * Workforce 的 Perspective
  *
- * PerspectiveOfWorkforce = AppearanceOfWorkforce
- *  = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & LlmObWorkforce & WorkforceObWorkforce
+ * PerspectiveOfWorkforce = Workforce 的输出（Workforce 发送给其他 Actor 的数据）
+ *  = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & WorkforceObWorkforce
  *
  * 包含：
  * - WorkforceObUser: 发给 User 的任务信息
  * - WorkforceObLlm: 发给 Llm 的任务详情
  * - WorkforceObToolkit: 发给 Toolkit 的所有任务
- * - LlmObWorkforce: 从 Llm 接收的请求
  * - WorkforceObWorkforce: 自己维护的状态
  */
-export type PerspectiveOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & LlmObWorkforce & WorkforceObWorkforce;
+export type PerspectiveOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObToolkit & WorkforceObWorkforce;

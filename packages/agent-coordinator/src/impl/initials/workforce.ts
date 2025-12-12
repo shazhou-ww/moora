@@ -7,19 +7,10 @@ import type { PerspectiveOfWorkforce } from "@/decl";
 /**
  * 初始化 Workforce Actor 的状态
  *
- * @returns Workforce 的初始 Perspective
+ * @returns Workforce 的初始 Perspective（只包含 Workforce 的输出）
  */
 export function initialWorkforce(): PerspectiveOfWorkforce {
   return {
-    // LlmObWorkforce - 从 Llm 接收的任务请求
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
-
-    // WorkforceObWorkforce - 自己维护的任务状态
-    topLevelTaskIds: [],
-    taskCache: {},
-
     // WorkforceObUser - 发给 User 的任务信息
     ongoingTopLevelTasks: [],
     notifiedTaskCompletions: [],
@@ -29,5 +20,9 @@ export function initialWorkforce(): PerspectiveOfWorkforce {
 
     // WorkforceObToolkit - 发给 Toolkit 的所有任务
     allTasks: {},
+
+    // WorkforceObWorkforce - 自己维护的任务状态
+    topLevelTaskIds: [],
+    taskCache: {},
   };
 }
