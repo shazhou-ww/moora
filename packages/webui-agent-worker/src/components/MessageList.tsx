@@ -4,11 +4,11 @@
 
 import { Person } from "@mui/icons-material";
 import { Box, Avatar, Paper, Typography, Fade } from "@mui/material";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import "highlight.js/styles/github-dark.css";
-import { useEffect, useState } from "react";
 
 import {
   containerStyles,
