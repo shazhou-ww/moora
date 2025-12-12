@@ -213,7 +213,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
             }
           );
         } catch (error) {
-          logger.llm.error("LLM call failed", error);
+          logger.llm.error("LLM call failed", error as unknown as Record<string, unknown>);
           setState(() => ({ ongoingCallId: null }));
         }
       })();
@@ -285,7 +285,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
                 timestamp: Date.now(),
               });
             } catch (error) {
-              logger.toolkit.error(`Tool execution failed: ${t.name}`, error);
+              logger.toolkit.error(`Tool execution failed: ${t.name}`, error as unknown as Record<string, unknown>);
               dispatch({
                 type: "return-tool-result",
                 toolCallId: t.toolCallId,
@@ -341,7 +341,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
           logger.server.info(`Task created: ${request.taskId}`);
         }
       } catch (error) {
-        logger.server.error(`Failed to create task: ${request.taskId}`, error);
+        logger.server.error(`Failed to create task: ${request.taskId}`, error as unknown as Record<string, unknown>);
       }
     }
 
@@ -355,7 +355,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
         });
         logger.server.debug(`Message appended: ${request.messageId}`);
       } catch (error) {
-        logger.server.error(`Failed to append message: ${request.messageId}`, error);
+        logger.server.error(`Failed to append message: ${request.messageId}`, error as unknown as Record<string, unknown>);
       }
     }
 
@@ -365,7 +365,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
         workforce.cancelTasks(request.taskIds);
         logger.server.info(`Tasks cancelled: ${request.taskIds.join(", ")}`);
       } catch (error) {
-        logger.server.error(`Failed to cancel tasks`, error);
+        logger.server.error(`Failed to cancel tasks`, error as unknown as Record<string, unknown>);
       }
     }
   };
