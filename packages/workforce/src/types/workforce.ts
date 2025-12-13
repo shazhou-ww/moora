@@ -14,6 +14,43 @@ import type {
 import type { CallLlm } from "@moora/agent-common";
 import type { Toolkit } from "@moora/toolkit";
 
+/**
+ * Nullable 工具类型
+ */
+type Nullable<T> = T | null;
+
+// ============================================================================
+// Workforce Logger 类型
+// ============================================================================
+
+/**
+ * Workforce 日志级别
+ */
+export type WorkforceLogLevel = "debug" | "info" | "warn" | "error";
+
+/**
+ * Workforce 日志条目
+ */
+export type WorkforceLogEntry = {
+  /** 日志级别 */
+  level: WorkforceLogLevel;
+  /** 日志消息 */
+  message: string;
+  /** 时间戳 */
+  timestamp: number;
+  /** 相关的 Task ID（如果有） */
+  taskId: Nullable<TaskId>;
+  /** 额外的上下文数据 */
+  data: Record<string, unknown>;
+};
+
+/**
+ * Workforce Logger 函数类型
+ *
+ * 用于接收 Workforce 内部的日志输出
+ */
+export type WorkforceLogger = (entry: WorkforceLogEntry) => void;
+
 // ============================================================================
 // Workforce 配置
 // ============================================================================
@@ -28,6 +65,8 @@ export type WorkforceConfig = {
   toolkit: Toolkit;
   /** LLM 调用函数 */
   callLlm: CallLlm;
+  /** 可选的日志函数，用于调试 */
+  logger: Nullable<WorkforceLogger>;
 };
 
 // ============================================================================

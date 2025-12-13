@@ -108,6 +108,24 @@ export function createService(options: CreateServiceOptions) {
     maxAgents: 5,
     toolkit,
     callLlm,
+    logger: (entry) => {
+      const taskInfo = entry.taskId ? `[Task:${entry.taskId.slice(0, 8)}]` : "";
+      const msg = `[Workforce]${taskInfo} ${entry.message}`;
+      switch (entry.level) {
+        case "debug":
+          logger.agent.debug(msg, entry.data);
+          break;
+        case "info":
+          logger.agent.info(msg, entry.data);
+          break;
+        case "warn":
+          logger.agent.warn(msg, entry.data);
+          break;
+        case "error":
+          logger.agent.error(msg, entry.data);
+          break;
+      }
+    },
   });
 
   // 创建 Patch PubSub（用于 /agent 路由的 SSE 推送）

@@ -48,6 +48,8 @@ export const taskMonitorInfoSchema = z.object({
       z.object({ success: z.literal(false), error: z.string() }),
     ])
     .optional(),
+  /** 任务完成时间戳（仅在 succeeded 或 failed 时更新，其他状态为 0） */
+  completionUpdatedAt: z.number(),
 });
 
 export type TaskMonitorInfo = z.infer<typeof taskMonitorInfoSchema>;
@@ -191,14 +193,14 @@ export type UserObWorkforce = z.infer<typeof userObWorkforceSchema>;
  *
  * Llm 能看到自己主动控制的状态
  * - 助手消息
- * - 处理用户消息的截止时间戳
+ * - 处理用户消息的截止时间戳（也用于处理任务完成）
  * - 工具调用请求
  * - 有效任务列表（发起但未取消的）
  */
 export const llmObLlmSchema = z.object({
   assiMessages: z.array(assiMessageSchema),
   /**
-   * LLM 处理截止时间戳，表示截止到这个时间之前（包括这个时间）的 user message 都已经发给 LLM 处理过了
+   * LLM 处理截止时间戳，表示截止到这个时间之前（包括这个时间）的 user message 和任务完成都已经发给 LLM 处理过了
    */
   llmProceedCutOff: z.number(),
   toolCallRequests: z.array(toolCallRequestSchema),

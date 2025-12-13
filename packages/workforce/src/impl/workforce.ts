@@ -29,7 +29,14 @@ import {
   type TaskRuntimeStatus,
   type TaskEvent,
   type TaskDetailEvent,
+  type WorkforceLogLevel,
+  type WorkforceLogEntry,
+  type WorkforceLogger,
 } from "../types";
+/**
+ * Nullable 工具类型
+ */
+type Nullable<T> = T | null;
 import { createAgentManager } from "./agent-manager";
 import { initial } from "./initial";
 import { output } from "./output";
@@ -47,6 +54,36 @@ import type { Toolkit, ToolDefinition } from "@moora/toolkit";
 
 
 // ============================================================================
+// 日志辅助函数
+// ============================================================================
+
+/**
+ * 创建日志记录器
+ *
+ * @param logger - 外部传入的日志函数
+ * @returns 日志记录辅助函数
+ */
+function createLogHelper(logger: Nullable<WorkforceLogger>) {
+  return (
+    level: WorkforceLogLevel,
+    message: string,
+    taskId: Nullable<TaskId>,
+    data: Record<string, unknown> = {}
+  ) => {
+    if (logger) {
+      const entry: WorkforceLogEntry = {
+        level,
+        message,
+        timestamp: Date.now(),
+        taskId,
+        data,
+      };
+      logger(entry);
+    }
+  };
+}
+
+// ============================================================================
 // Workforce 实现
 // ============================================================================
 
@@ -57,7 +94,17 @@ import type { Toolkit, ToolDefinition } from "@moora/toolkit";
  * @returns Workforce 实例
  */
 export function createWorkforce(config: WorkforceConfig): Workforce {
-  const { toolkit: userToolkit, callLlm } = config;
+  const { toolkit: userToolkit, callLlm, logger } = config;
+
+  console.log("[Workforce DEBUG] createWorkforce called", {
+    maxAgents: config.maxAgents,
+    hasLogger: logger !== null,
+  });
+
+  // 创建日志辅助函数
+  const log = createLogHelper(logger);
+
+  log("info", "Workforce 创建", null, { maxAgents: config.maxAgents });
 
   // 创建事件 PubSub
   const taskEventPubSub = createPubSub<TaskEvent>();
@@ -71,6 +118,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     taskEventPubSub,
     taskDetailEventPubSub,
     agentManager,
+    log,
   };
 
   // 创建状态机
@@ -124,9 +172,19 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
       name: string;
       arguments: string;
     }) => {
+      console.log("[Workforce DEBUG] Tool call received", {
+        taskId: taskId.slice(0, 8),
+        toolName: request.name,
+        argsPreview: request.arguments.slice(0, 100),
+      });
+      
       const pseudoCall = parsePseudoToolCall(request.name, request.arguments);
 
       if (pseudoCall) {
+        console.log("[Workforce DEBUG] Pseudo tool call detected", {
+          taskId: taskId.slice(0, 8),
+          pseudoToolType: pseudoCall.type,
+        });
         // 伪工具调用，dispatch 伪工具调用输入
         machine.dispatch({
           type: "pseudo-tool-call",
@@ -137,6 +195,10 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
       }
 
       // 普通工具调用
+      console.log("[Workforce DEBUG] Invoking real tool", {
+        taskId: taskId.slice(0, 8),
+        toolName: request.name,
+      });
       return combinedToolkit.invoke(request.name, request.arguments);
     };
 
@@ -234,10 +296,38 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     // 创建新的 Agent
     for (const taskId of workingAgentTaskIds) {
       if (!agentManagerTaskIds.has(taskId)) {
+        console.log("[Workforce DEBUG] Creating Worker Agent for task", taskId);
+        log("info", "创建 Worker Agent", taskId, {
+          workingAgentCount: workingAgentTaskIds.size,
+        });
         const agent = createWorkerAgent(taskId);
         if (agent) {
+          console.log("[Workforce DEBUG] Worker Agent created successfully for task", taskId);
+          
           // 订阅 Agent 更新，同步 Worldscape 到状态
           const unsubscribe = agent.subscribe((update: AgentUpdatePack) => {
+            const prevInput = update.prev?.input;
+            console.log("[Workforce DEBUG] Worker Agent worldscape updated", {
+              taskId: taskId.slice(0, 8),
+              inputType: prevInput?.type ?? "initial",
+              userMsgCount: update.state.userMessages.length,
+              assiMsgCount: update.state.assiMessages.length,
+              toolCallCount: update.state.toolCallRequests.length,
+              toolResultCount: update.state.toolResults.length,
+              cutOff: update.state.cutOff,
+              // 最后一条助手消息的状态
+              lastAssiMsg: update.state.assiMessages.length > 0
+                ? {
+                    id: update.state.assiMessages[update.state.assiMessages.length - 1]?.id,
+                    streaming: update.state.assiMessages[update.state.assiMessages.length - 1]?.streaming,
+                  }
+                : null,
+            });
+            log("debug", "Agent Worldscape 更新", taskId, {
+              assiMessageCount: update.state.assiMessages.length,
+              userMessageCount: update.state.userMessages.length,
+              toolCallRequestCount: update.state.toolCallRequests.length,
+            });
             // 同步 Worldscape 到状态
             machine.dispatch({
               type: "update-worldscape",
@@ -247,10 +337,18 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
           });
 
           agentManager.create(taskId, agent, unsubscribe);
+          log("info", "Worker Agent 已创建", taskId, {});
 
           // 发送初始用户消息（从 Worldscape 获取）
           const task = state.tasks[taskId];
           if (task && task.worldscape.userMessages.length > 0) {
+            console.log("[Workforce DEBUG] Sending initial user messages to agent", {
+              taskId: taskId.slice(0, 8),
+              messageCount: task.worldscape.userMessages.length,
+            });
+            log("debug", "发送初始用户消息", taskId, {
+              messageCount: task.worldscape.userMessages.length,
+            });
             for (const msg of task.worldscape.userMessages) {
               agent.dispatch({
                 type: "send-user-message",
@@ -260,6 +358,9 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
               });
             }
           }
+        } else {
+          console.log("[Workforce DEBUG] Worker Agent creation FAILED for task", taskId);
+          log("warn", "Worker Agent 创建失败", taskId, {});
         }
       }
     }
@@ -267,6 +368,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     // 销毁已完成的 Agent
     for (const taskId of agentManagerTaskIds) {
       if (!workingAgentTaskIds.has(taskId)) {
+        log("info", "销毁 Worker Agent", taskId, {});
         agentManager.destroy(taskId);
         // dispatch agent-completed 输入
         machine.dispatch({ type: "agent-completed", taskId });
@@ -282,6 +384,14 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
    * 创建一组 Task
    */
   function createTasks(tasks: CreateTaskInput[]): void {
+    console.log("[Workforce DEBUG] createTasks called", {
+      count: tasks.length,
+      taskIds: tasks.map((t) => t.id),
+    });
+    log("info", "创建 Tasks", null, {
+      count: tasks.length,
+      taskIds: tasks.map((t) => t.id),
+    });
     machine.dispatch({ type: "create-tasks", tasks });
   }
 
@@ -289,6 +399,10 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
    * 向 Task 追加补充信息
    */
   function appendMessage(input: AppendMessageInput): void {
+    log("info", "追加消息到 Tasks", null, {
+      messageId: input.messageId,
+      taskIds: input.taskIds,
+    });
     machine.dispatch({ type: "append-message", input });
 
     // 如果 Task 正在被处理，通知 Agent
@@ -297,6 +411,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
     for (const taskId of taskIds) {
       const workingAgent = agentManager.get(taskId);
       if (workingAgent) {
+        log("debug", "通知正在运行的 Agent", taskId, { messageId });
         workingAgent.agent.dispatch({
           type: "send-user-message",
           id: messageId,
@@ -311,10 +426,12 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
    * 取消一组 Task
    */
   function cancelTasks(taskIds: TaskId[]): void {
+    log("info", "取消 Tasks", null, { taskIds });
     machine.dispatch({ type: "cancel-tasks", taskIds });
 
     // 销毁正在运行的 Agent
     for (const taskId of taskIds) {
+      log("debug", "销毁被取消的 Agent", taskId, {});
       agentManager.destroy(taskId);
     }
   }
@@ -363,6 +480,9 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
    * 销毁 Workforce
    */
   function destroy(): void {
+    log("info", "销毁 Workforce", null, {
+      activeAgents: agentManager.getAll().length,
+    });
     machine.dispatch({ type: "destroy" });
     agentManager.destroyAll();
   }

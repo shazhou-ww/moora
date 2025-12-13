@@ -39,6 +39,9 @@ function handleUpdateTaskStatus(
 
   let updatedTasks;
 
+  // 只有 succeeded/failed 时才更新 completionUpdatedAt
+  const isCompleted = action.status === "succeeded" || action.status === "failed";
+
   if (existingIndex >= 0) {
     // 更新现有任务
     updatedTasks = topLevelTasks.map((task) =>
@@ -47,11 +50,12 @@ function handleUpdateTaskStatus(
             ...task,
             status: action.status,
             result: action.result,
+            completionUpdatedAt: isCompleted ? action.timestamp : task.completionUpdatedAt,
           }
         : task
     );
   } else {
-    // 新任务：只存储 id、status、result
+    // 新任务：存储 id、status、result、completionUpdatedAt
     // 前端可以通过 taskId 在 validTasks 中查找 title
     updatedTasks = [
       ...topLevelTasks,
@@ -59,6 +63,7 @@ function handleUpdateTaskStatus(
         id: action.taskId,
         status: action.status,
         result: action.result,
+        completionUpdatedAt: isCompleted ? action.timestamp : 0,
       },
     ];
   }

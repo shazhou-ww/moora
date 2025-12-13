@@ -12,10 +12,61 @@ import type {
   WorkforceInput,
   OutputContext,
 } from "./types";
-import type { TaskEvent, TaskDetailEvent, TaskInput } from "../types";
+import type { TaskEvent, TaskDetailEvent, TaskInput, TaskId } from "../types";
 import type { Dispatch } from "@moora/automata";
 import type { UpdatePack } from "@moora/automata";
 import type { Eff } from "@moora/effects";
+/**
+ * Nullable 工具类型
+ */
+type Nullable<T> = T | null;
+
+/**
+ * 从输入信号中提取 TaskId
+ */
+function getTaskIdFromInput(input: WorkforceInput): Nullable<TaskId> {
+  switch (input.type) {
+    case "pseudo-tool-call":
+    case "agent-completed":
+    case "schedule-agent":
+    case "update-worldscape":
+      return input.taskId;
+    case "create-tasks": {
+      const firstTask = input.tasks[0];
+      return firstTask !== undefined ? firstTask.id : null;
+    }
+    case "append-message": {
+      const firstTaskId = input.input.taskIds[0];
+      return firstTaskId !== undefined ? firstTaskId : null;
+    }
+    case "cancel-tasks": {
+      const firstCancelId = input.taskIds[0];
+      return firstCancelId !== undefined ? firstCancelId : null;
+    }
+    case "destroy":
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * 从事件中提取 TaskId
+ */
+function getTaskIdFromEvent(event: TaskEvent): Nullable<TaskId> {
+  switch (event.type) {
+    case "task-created":
+      return event.task.id;
+    case "task-started":
+    case "task-message-appended":
+    case "task-cancelled":
+    case "task-succeeded":
+    case "task-failed":
+      return event.taskId;
+    default:
+      return null;
+  }
+}
 
 /**
  * 计算状态变化产生的事件
@@ -161,9 +212,23 @@ export function output(
 
     // 返回副作用函数
     return (dispatch: Dispatch<WorkforceInput>) => {
+      const { log } = context;
+
+      // 记录输入信号
+      if (prev) {
+        const input = prev.input;
+        console.log("[Workforce DEBUG] Processing input", input.type);
+        log("debug", `处理输入信号: ${input.type}`, getTaskIdFromInput(input), {
+          inputType: input.type,
+        });
+      }
+
       // 1. 发布事件
       const { taskEvents, taskDetailEvents } = computeEvents(prev, state);
       for (const event of taskEvents) {
+        log("info", `发布事件: ${event.type}`, getTaskIdFromEvent(event), {
+          eventType: event.type,
+        });
         context.taskEventPubSub.pub(event);
       }
       for (const event of taskDetailEvents) {
@@ -172,9 +237,19 @@ export function output(
 
       // 2. 检测需要调度的情况
       const currentAgentCount = Object.keys(state.workingAgents).length;
+      const nextTaskId = getNextReadyTask(state);
+      console.log("[Workforce DEBUG] Scheduling check", {
+        currentAgentCount,
+        maxAgents: state.config.maxAgents,
+        nextTaskId,
+        taskCount: Object.keys(state.tasks).length,
+      });
       if (currentAgentCount < state.config.maxAgents) {
-        const nextTaskId = getNextReadyTask(state);
         if (nextTaskId) {
+          log("info", "调度新的 Agent", nextTaskId, {
+            currentAgentCount,
+            maxAgents: state.config.maxAgents,
+          });
           dispatch({ type: "schedule-agent", taskId: nextTaskId });
         }
       }

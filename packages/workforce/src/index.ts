@@ -40,6 +40,9 @@ export type {
   SubscribeTaskEvent,
   SubscribeTaskDetailEvent,
   // Workforce 类型
+  WorkforceLogLevel,
+  WorkforceLogEntry,
+  WorkforceLogger,
   WorkforceConfig,
   CreateTaskInput,
   AppendMessageInput,

@@ -55,11 +55,23 @@ function hasNewUserMessages(perspective: PerspectiveOfLlm): boolean {
 }
 
 /**
- * 获取最新的用户消息时间戳
+ * 检查是否有新完成的任务需要处理（succeeded 或 failed）
  */
-function getLatestUserMessageTimestamp(perspective: PerspectiveOfLlm): number {
-  const { userMessages } = perspective;
-  return Math.max(0, ...userMessages.map((m) => m.timestamp));
+function hasNewCompletedTasks(perspective: PerspectiveOfLlm): boolean {
+  const { topLevelTasks, llmProceedCutOff } = perspective;
+  return topLevelTasks.some(
+    (task) => task.completionUpdatedAt > llmProceedCutOff
+  );
+}
+
+/**
+ * 获取最新的用户消息或任务完成时间戳
+ */
+function getLatestProceedTimestamp(perspective: PerspectiveOfLlm): number {
+  const { userMessages, topLevelTasks } = perspective;
+  const latestUserMessage = Math.max(0, ...userMessages.map((m) => m.timestamp));
+  const latestTaskCompletion = Math.max(0, ...topLevelTasks.map((t) => t.completionUpdatedAt));
+  return Math.max(latestUserMessage, latestTaskCompletion);
 }
 
 // ============================================================================
@@ -123,7 +135,7 @@ function handlePseudoToolCall(
 function createLlmCallbacks(
   messageId: string,
   timestamp: number,
-  latestUserMessageTimestamp: number,
+  latestProceedTimestamp: number,
   dispatch: Dispatch<Actuation>,
   setState: (fn: () => LlmReactionState) => void
 ): CallLlmCallbacks {
@@ -137,7 +149,7 @@ function createLlmCallbacks(
           type: "start-assi-message-stream",
           id: messageId,
           timestamp,
-          llmProceedCutOff: latestUserMessageTimestamp,
+          llmProceedCutOff: latestProceedTimestamp,
         });
       }
       return messageId;
@@ -170,7 +182,7 @@ function createLlmCallbacks(
  * 创建 Llm Reaction
  *
  * Llm 负责：
- * 1. 检测新的用户消息，调用 LLM 生成响应
+ * 1. 检测新的用户消息或任务完成，调用 LLM 生成响应
  * 2. 通过伪工具让 LLM 管理 workforce 任务
  */
 export function createLlmReaction(
@@ -189,15 +201,18 @@ export function createLlmReaction(
       return;
     }
 
-    // 检查是否有新的用户消息需要处理
-    if (!hasNewUserMessages(perspective)) {
+    // 检查是否有新的用户消息或新完成的任务需要处理
+    const hasNewMessages = hasNewUserMessages(perspective);
+    const hasCompletedTasks = hasNewCompletedTasks(perspective);
+    
+    if (!hasNewMessages && !hasCompletedTasks) {
       return;
     }
 
     // 准备 LLM 调用
     const messageId = uuidv4();
     const timestamp = Date.now();
-    const latestUserMessageTimestamp = getLatestUserMessageTimestamp(perspective);
+    const latestProceedTimestamp = getLatestProceedTimestamp(perspective);
 
     // 更新状态
     setState(() => ({ ongoingCallId: messageId }));
@@ -207,7 +222,7 @@ export function createLlmReaction(
     const callbacks = createLlmCallbacks(
       messageId,
       timestamp,
-      latestUserMessageTimestamp,
+      latestProceedTimestamp,
       dispatch,
       setState
     );

@@ -120,11 +120,25 @@ export function createWorkforceReaction(
 
   // 订阅 workforce 任务事件，通过事件驱动更新任务状态
   workforce.subscribeTaskEvent((event) => {
-    if (!currentDispatch) return;
+    const taskId = "taskId" in event ? event.taskId : "task" in event ? event.task.id : "unknown";
+    
+    logger?.info("[Coordinator DEBUG] Task event received", {
+      eventType: event.type,
+      taskId: typeof taskId === "string" ? taskId.slice(0, 8) : taskId,
+      hasDispatch: currentDispatch !== null,
+    });
+    
+    if (!currentDispatch) {
+      logger?.info("[Coordinator DEBUG] WARNING: No dispatch available, event ignored!", {
+        eventType: event.type,
+        taskId: typeof taskId === "string" ? taskId.slice(0, 8) : taskId,
+      });
+      return;
+    }
 
     logger?.info("[WorkforceReaction] Task event received", {
       eventType: event.type,
-      taskId: "taskId" in event ? event.taskId : "task" in event ? event.task.id : "unknown",
+      taskId,
     });
 
     switch (event.type) {

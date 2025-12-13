@@ -47,15 +47,24 @@ function buildConversationMessages(
 
 /**
  * 构建 wf-query-tasks 的 tool result 内容
+ *
+ * @param tasks - 任务状态列表
+ * @param validTasks - 有效任务列表（用于获取 title）
  */
-function buildQueryTasksResult(tasks: TaskMonitorInfo[]): string {
+function buildQueryTasksResult(
+  tasks: TaskMonitorInfo[],
+  validTasks: { id: string; title: string }[]
+): string {
   if (tasks.length === 0) {
     return JSON.stringify({ tasks: [], message: "No active tasks" });
   }
 
+  // 构建 id -> title 的映射
+  const titleMap = new Map(validTasks.map((t) => [t.id, t.title]));
+
   const taskList = tasks.map((task) => ({
     id: task.id,
-    title: task.title,
+    title: titleMap.get(task.id) ?? "Unknown",
     status: task.status,
     result: task.result ?? null,
   }));
@@ -109,7 +118,10 @@ function buildToolDefinitions(): CallLlmToolDefinition[] {
 export function buildLlmContext(perspective: PerspectiveOfLlm): CallLlmContext {
   const conversationMessages = buildConversationMessages(perspective);
   const systemPrompt = buildSystemPrompt();
-  const queryTasksResult = buildQueryTasksResult(perspective.topLevelTasks);
+  const queryTasksResult = buildQueryTasksResult(
+    perspective.topLevelTasks,
+    perspective.validTasks
+  );
 
   // 按时间戳排序消息
   conversationMessages.sort((a, b) => a.timestamp - b.timestamp);

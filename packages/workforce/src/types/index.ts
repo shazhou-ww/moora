@@ -37,6 +37,9 @@ export { ROOT_TASK_ID } from "./task";
 
 // Workforce 相关类型
 export type {
+  WorkforceLogLevel,
+  WorkforceLogEntry,
+  WorkforceLogger,
   WorkforceConfig,
   CreateTaskInput,
   AppendMessageInput,

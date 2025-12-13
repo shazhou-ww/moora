@@ -64,7 +64,7 @@ function handleStartAssiMessageStream(
         timestamp: action.timestamp,
       },
     ],
-    // 更新 LLM 处理截止时间戳
+    // 更新 LLM 处理截止时间戳（包括用户消息和任务完成）
     llmProceedCutOff: Math.max(llmProceedCutOff, action.llmProceedCutOff),
   };
 }

@@ -143,6 +143,16 @@ export type WorkingAgent = {
 // ============================================================================
 
 /**
+ * 日志记录辅助函数类型
+ */
+export type LogHelper = (
+  level: "debug" | "info" | "warn" | "error",
+  message: string,
+  taskId: TaskId | null,
+  data?: Record<string, unknown>
+) => void;
+
+/**
  * 输出函数上下文
  *
  * 包含输出函数执行时需要的上下文信息
@@ -163,4 +173,6 @@ export type OutputContext = {
     get: (taskId: TaskId) => WorkingAgent | undefined;
     getAll: () => WorkingAgent[];
   };
+  /** 日志记录辅助函数 */
+  log: LogHelper;
 };

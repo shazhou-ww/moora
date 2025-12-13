@@ -30,7 +30,7 @@ export const startAssiMessageStreamSchema = z.object({
   id: z.string(),
   timestamp: z.number(),
   /**
-   * LLM 处理截止时间戳，表示这次请求处理的最迟用户消息时间戳
+   * LLM 处理截止时间戳，表示这次请求处理的最迟用户消息和任务完成时间戳
    */
   llmProceedCutOff: z.number(),
 });
