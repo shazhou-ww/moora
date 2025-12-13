@@ -4,7 +4,7 @@
 
 import { Elysia } from "elysia";
 
-import type { Actuation, Worldscape } from "@moora/agent-coordinator";
+import type { Actuation, Worldscape, AssiMessage, UserMessage } from "@moora/agent-coordinator";
 import { createAgent, createReaction } from "@moora/agent-coordinator";
 import { createPubSub } from "@moora/pub-sub";
 import type { Toolkit } from "@moora/toolkit";
@@ -150,13 +150,13 @@ export function createService(options: CreateServiceOptions) {
       assiMessagesCount: state.assiMessages?.length ?? 0,
       cutOff: state.cutOff,
       hasPrev: prev !== null,
-      assiMessages: state.assiMessages?.map(m => ({
+      assiMessages: state.assiMessages?.map((m: AssiMessage) => ({
         id: m.id,
         streaming: m.streaming,
-        contentLength: m.content?.length ?? 0,
-        content: m.content?.substring(0, 50),
+        contentLength: !m.streaming ? m.content?.length ?? 0 : 0,
+        content: !m.streaming ? m.content?.substring(0, 50) : "",
       })),
-      userMessages: state.userMessages?.map(m => ({
+      userMessages: state.userMessages?.map((m: UserMessage) => ({
         id: m.id,
         contentLength: m.content?.length ?? 0,
         content: m.content?.substring(0, 50),

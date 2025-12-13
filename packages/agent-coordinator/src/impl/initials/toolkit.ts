@@ -5,11 +5,13 @@
 import type { PerspectiveOfToolkit } from "@/decl/perspectives";
 
 /**
- * Toolkit Actor 的初始 Perspective（只包含 Toolkit 的输出）
+ * Toolkit Actor 的初始 Perspective
  */
 export function initialToolkit(): PerspectiveOfToolkit {
   return {
-    // ToolkitObUser & ToolkitObLlm & ToolkitObToolkit - 工具结果缓存
+    // ToolkitObLlm - 工具调用请求
+    toolCallRequests: [],
+    // ToolkitObToolkit - 工具结果缓存
     toolResults: [],
   };
 }

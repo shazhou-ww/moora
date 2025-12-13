@@ -92,10 +92,12 @@ export type ToolResults = ToolResult[];
 /**
  * User 对自身的观察 Schema（自环）
  *
- * User 能看到自己维护的用户消息列表
+ * User 能看到自己维护的用户消息列表和已通知的任务完成事件
  */
 export const userObUserSchema = z.object({
   userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
+  /** 已通知用户的任务完成事件 ID 集合 */
+  notifiedTaskCompletions: z.array(z.string()),
 });
 
 export type UserObUser = z.infer<typeof userObUserSchema>;
@@ -126,12 +128,11 @@ export type UserObToolkit = z.infer<typeof userObToolkitSchema>;
  * User 对 Workforce 的观察 Schema
  *
  * UserObWorkforce: User 能看到 Workforce 的什么 = 任务状态
+ * 注意：ongoingTopLevelTasks 是从 taskCache 计算的派生字段
  */
 export const userObWorkforceSchema = z.object({
   /** 所有顶层正在进行的任务（不包括 succeeded/failed 的） */
   ongoingTopLevelTasks: z.array(taskMonitorInfoSchema),
-  /** 已通知用户的任务完成事件 ID 集合 */
-  notifiedTaskCompletions: z.array(z.string()),
 });
 
 export type UserObWorkforce = z.infer<typeof userObWorkforceSchema>;

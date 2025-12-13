@@ -83,14 +83,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
 
         if (patches.length > 0) {
           logger.agent.info(`[UserReaction] Publishing ${patches.length} patches`, {
-            patches: patches.map(p => ({ op: p.op, path: p.path, value: p.value })),
+            patches: patches.map(p => ({ op: p.op, path: p.path, value: "value" in p ? p.value : undefined })),
             perspective: {
               userMessagesCount: perspective.userMessages?.length ?? 0,
               assiMessagesCount: perspective.assiMessages?.length ?? 0,
-              assiMessages: perspective.assiMessages?.map(m => ({
+              assiMessages: perspective.assiMessages?.map((m: AssiMessage) => ({
                 id: m.id,
                 streaming: m.streaming,
-                contentLength: m.content?.length ?? 0,
+                contentLength: !m.streaming ? m.content?.length ?? 0 : 0,
               })),
             },
           });

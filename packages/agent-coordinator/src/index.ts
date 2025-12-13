@@ -8,6 +8,18 @@
 // 类型导出
 // ============================================================================
 export type {
+  // Messages
+  UserMessage,
+  AssiMessage,
+  AssiMessageStreaming,
+  AssiMessageCompleted,
+  UserMessages,
+  AssiMessages,
+  // Tool related
+  ToolCallRequest,
+  ToolResult,
+  ToolCallRequests,
+  ToolResults,
   // Actors
   Actors,
   // Observations

@@ -133,11 +133,15 @@ function extractAppearance(
 
   if (actor === LLM) {
     return {
-      userMessages: worldscape.userMessages,
+      // LlmObLlm
       assiMessages: worldscape.assiMessages,
       cutOff: worldscape.cutOff,
-      topLevelTasks: worldscape.topLevelTasks,
-      toolResults: worldscape.toolResults,
+      // ToolkitObLlm
+      toolCallRequests: worldscape.toolCallRequests,
+      // WorkforceObLlm
+      taskCreateRequests: worldscape.taskCreateRequests,
+      messageAppendRequests: worldscape.messageAppendRequests,
+      taskCancelRequests: worldscape.taskCancelRequests,
     } as AppearanceOfLlm;
   }
 
@@ -150,10 +154,7 @@ function extractAppearance(
 
   if (actor === WORKFORCE) {
     return {
-      notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
-      taskCreateRequests: worldscape.taskCreateRequests,
-      messageAppendRequests: worldscape.messageAppendRequests,
-      taskCancelRequests: worldscape.taskCancelRequests,
+      // WorkforceObWorkforce
       topLevelTaskIds: worldscape.topLevelTaskIds,
       taskCache: worldscape.taskCache,
     } as AppearanceOfWorkforce;

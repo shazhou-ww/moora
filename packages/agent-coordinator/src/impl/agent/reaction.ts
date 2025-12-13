@@ -12,6 +12,7 @@ import type {
   PerspectiveOfLlm,
   PerspectiveOfToolkit,
   PerspectiveOfWorkforce,
+  TaskMonitorInfo,
 } from "@/decl";
 import { USER, LLM, TOOLKIT, WORKFORCE } from "@/decl";
 
@@ -48,25 +49,43 @@ export function createReaction(reactions: ReactionFns): AgentReaction {
  * User 能看到：自己的消息、Llm 的回复、工具结果、任务状态
  */
 function extractUserPerspective(worldscape: Worldscape): PerspectiveOfUser {
+  // 从 taskCache 计算 ongoingTopLevelTasks（筛选出 ongoing 状态的任务）
+  const ongoingTopLevelTasks: TaskMonitorInfo[] = worldscape.topLevelTaskIds
+    .map((id: string) => worldscape.taskCache[id])
+    .filter((task): task is TaskMonitorInfo => 
+      task !== undefined && 
+      task.status !== "succeeded" && 
+      task.status !== "failed"
+    );
+
   return {
-    // UserObUser: 自己维护的用户消息
+    // UserObUser: 自己维护的用户消息和已通知的任务完成事件
     userMessages: worldscape.userMessages,
+    notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
     // UserObLlm: Llm 的助手消息
     assiMessages: worldscape.assiMessages,
     // UserObToolkit: Toolkit 的工具结果
     toolResults: worldscape.toolResults,
-    // UserObWorkforce: Workforce 的任务信息
-    ongoingTopLevelTasks: worldscape.ongoingTopLevelTasks,
-    notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
+    // UserObWorkforce: Workforce 的任务信息（计算得出）
+    ongoingTopLevelTasks,
   };
 }
 
 /**
  * 从 Worldscape 提取 Llm 的 Perspective
  *
- * Llm 能看到：用户消息、自己的回复、工具结果、任务状态
+ * Llm 能看到：用户消息、自己的回复、工具结果、任务状态、工具调用请求、任务请求
  */
 function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
+  // 从 taskCache 构建 topLevelTasks Map
+  const topLevelTasks: Record<string, TaskMonitorInfo> = {};
+  for (const id of worldscape.topLevelTaskIds) {
+    const task = worldscape.taskCache[id];
+    if (task) {
+      topLevelTasks[id] = task;
+    }
+  }
+
   return {
     // LlmObUser: User 的用户消息
     userMessages: worldscape.userMessages,
@@ -75,8 +94,14 @@ function extractLlmPerspective(worldscape: Worldscape): PerspectiveOfLlm {
     cutOff: worldscape.cutOff,
     // LlmObToolkit: Toolkit 的工具结果
     toolResults: worldscape.toolResults,
-    // LlmObWorkforce: Workforce 的任务详情
-    topLevelTasks: worldscape.topLevelTasks,
+    // LlmObWorkforce: Workforce 的任务详情（计算得出）
+    topLevelTasks,
+    // ToolkitObLlm: 工具调用请求
+    toolCallRequests: worldscape.toolCallRequests,
+    // WorkforceObLlm: 任务请求
+    taskCreateRequests: worldscape.taskCreateRequests,
+    messageAppendRequests: worldscape.messageAppendRequests,
+    taskCancelRequests: worldscape.taskCancelRequests,
   };
 }
 

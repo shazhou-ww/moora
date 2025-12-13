@@ -17,7 +17,7 @@ import type {
 export function transitionToolkit(
   appearance: AppearanceOfToolkit,
   action: ActionFromToolkit
-): PerspectiveOfToolkit {
+): Partial<PerspectiveOfToolkit> {
   // ActionFromToolkit 目前只有 ReturnToolResult 一种类型
   return handleReturnToolResult(appearance, action);
 }
@@ -28,7 +28,7 @@ export function transitionToolkit(
 function handleReturnToolResult(
   appearance: AppearanceOfToolkit,
   action: ReturnToolResult
-): PerspectiveOfToolkit {
+): Partial<PerspectiveOfToolkit> {
   return {
     // ToolkitObUser & ToolkitObLlm & ToolkitObToolkit - 追加新的工具结果
     toolResults: [

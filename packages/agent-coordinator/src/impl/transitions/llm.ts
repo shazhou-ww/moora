@@ -12,17 +12,18 @@ import type {
   RequestAppendMessage,
   RequestCancelTasks,
   CallTool,
+  AssiMessage,
 } from "@/decl";
 
 /**
  * Llm 的状态转换函数
  *
- * 处理 Llm 的 Action，更新其 Perspective
+ * 处理 Llm 的 Action，更新其 Appearance 中的字段
  */
 export function transitionLlm(
   appearance: AppearanceOfLlm,
   action: ActionFromLlm
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   switch (action.type) {
     case "start-assi-message-stream":
       return handleStartAssiMessageStream(appearance, action);
@@ -49,7 +50,7 @@ export function transitionLlm(
 function handleStartAssiMessageStream(
   appearance: AppearanceOfLlm,
   action: StartAssiMessageStream
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   const { assiMessages, cutOff } = appearance;
 
   return {
@@ -81,7 +82,7 @@ function handleStartAssiMessageStream(
 function handleEndAssiMessageStream(
   appearance: AppearanceOfLlm,
   action: EndAssiMessageStream
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   const { assiMessages } = appearance;
 
   // 找到对应的消息并更新
@@ -118,7 +119,7 @@ function handleEndAssiMessageStream(
 function handleRequestCreateTask(
   appearance: AppearanceOfLlm,
   _action: RequestCreateTask
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   // Llm 的 Perspective 中不需要记录请求，这些请求会被 Workforce 处理
   // 这里只需要保持状态不变
   return {
@@ -137,7 +138,7 @@ function handleRequestCreateTask(
 function handleRequestAppendMessage(
   appearance: AppearanceOfLlm,
   _action: RequestAppendMessage
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   return {
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
@@ -154,7 +155,7 @@ function handleRequestAppendMessage(
 function handleRequestCancelTasks(
   appearance: AppearanceOfLlm,
   _action: RequestCancelTasks
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   return {
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,
@@ -171,7 +172,7 @@ function handleRequestCancelTasks(
 function handleCallTool(
   appearance: AppearanceOfLlm,
   _action: CallTool
-): PerspectiveOfLlm {
+): Partial<PerspectiveOfLlm> {
   return {
     assiMessages: appearance.assiMessages,
     cutOff: appearance.cutOff,

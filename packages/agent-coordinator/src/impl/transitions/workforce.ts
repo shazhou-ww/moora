@@ -17,7 +17,7 @@ import type {
 export function transitionWorkforce(
   perspective: PerspectiveOfWorkforce,
   action: ActionFromWorkforce
-): PerspectiveOfWorkforce {
+): Partial<PerspectiveOfWorkforce> {
   switch (action.type) {
     case "notify-task-completion":
       return handleNotifyTaskCompletion(perspective, action);
@@ -39,7 +39,7 @@ export function transitionWorkforce(
 function handleNotifyTaskCompletion(
   perspective: PerspectiveOfWorkforce,
   _action: NotifyTaskCompletion
-): PerspectiveOfWorkforce {
+): Partial<PerspectiveOfWorkforce> {
   // 保持不变，notification 的状态由 reaction 层处理
   return perspective;
 }
@@ -50,7 +50,7 @@ function handleNotifyTaskCompletion(
 function handleUpdateTaskStatus(
   perspective: PerspectiveOfWorkforce,
   action: UpdateTaskStatus
-): PerspectiveOfWorkforce {
+): Partial<PerspectiveOfWorkforce> {
   const { taskCache, topLevelTaskIds } = perspective;
 
   // 更新任务缓存
