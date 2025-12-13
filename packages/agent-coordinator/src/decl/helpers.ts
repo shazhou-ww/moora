@@ -76,9 +76,9 @@ export type InitialFnOf<Actor extends Actors> = () => PerspectiveOf<Actor>;
  * 状态转换函数类型
  *
  * Transition 接收当前 Appearance 和 Action，返回要合并到 Worldscape 的部分数据
- * 使用 Partial 类型因为 transition 只需要返回它要更新的字段
+ * 返回 Partial<AppearanceOf<Actor>> 因为 Actor 发起的 action 更新的是它的 Appearance（别人看到它的内容）
  */
 export type TransitionFnOf<Actor extends Actors> = (
   appearance: AppearanceOf<Actor>,
   action: ActionFrom<Actor>
-) => Partial<PerspectiveOf<Actor>>;
+) => Partial<AppearanceOf<Actor>>;

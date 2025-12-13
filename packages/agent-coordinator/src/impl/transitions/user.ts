@@ -5,7 +5,6 @@
 import type {
   AppearanceOfUser,
   ActionFromUser,
-  PerspectiveOfUser,
   SendUserMessage,
 } from "@/decl";
 
@@ -17,7 +16,7 @@ import type {
 export function transitionUser(
   appearance: AppearanceOfUser,
   action: ActionFromUser
-): Partial<PerspectiveOfUser> {
+): Partial<AppearanceOfUser> {
   // ActionFromUser 目前只有 SendUserMessage 一种类型
   return handleSendUserMessage(appearance, action);
 }
@@ -28,7 +27,7 @@ export function transitionUser(
 function handleSendUserMessage(
   appearance: AppearanceOfUser,
   action: SendUserMessage
-): Partial<PerspectiveOfUser> {
+): Partial<AppearanceOfUser> {
   return {
     // UserObUser & UserObLlm - 追加新的用户消息
     userMessages: [

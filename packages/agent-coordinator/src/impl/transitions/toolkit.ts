@@ -5,7 +5,6 @@
 import type {
   AppearanceOfToolkit,
   ActionFromToolkit,
-  PerspectiveOfToolkit,
   ReturnToolResult,
 } from "@/decl";
 
@@ -17,7 +16,7 @@ import type {
 export function transitionToolkit(
   appearance: AppearanceOfToolkit,
   action: ActionFromToolkit
-): Partial<PerspectiveOfToolkit> {
+): Partial<AppearanceOfToolkit> {
   // ActionFromToolkit 目前只有 ReturnToolResult 一种类型
   return handleReturnToolResult(appearance, action);
 }
@@ -28,7 +27,7 @@ export function transitionToolkit(
 function handleReturnToolResult(
   appearance: AppearanceOfToolkit,
   action: ReturnToolResult
-): Partial<PerspectiveOfToolkit> {
+): Partial<AppearanceOfToolkit> {
   return {
     // ToolkitObUser & ToolkitObLlm & ToolkitObToolkit - 追加新的工具结果
     toolResults: [

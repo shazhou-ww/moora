@@ -1,11 +1,12 @@
 /**
  * Llm Actor 状态转换函数
+ *
+ * 处理 Llm 发起的 Action，更新 AppearanceOfLlm
  */
 
 import type {
   AppearanceOfLlm,
   ActionFromLlm,
-  PerspectiveOfLlm,
   StartAssiMessageStream,
   EndAssiMessageStream,
   RequestCreateTask,
@@ -22,7 +23,7 @@ import type {
 export function transitionLlm(
   appearance: AppearanceOfLlm,
   action: ActionFromLlm
-): Partial<PerspectiveOfLlm> {
+): Partial<AppearanceOfLlm> {
   switch (action.type) {
     case "start-assi-message-stream":
       return handleStartAssiMessageStream(appearance, action);
@@ -49,11 +50,11 @@ export function transitionLlm(
 function handleStartAssiMessageStream(
   appearance: AppearanceOfLlm,
   action: StartAssiMessageStream
-): Partial<PerspectiveOfLlm> {
-  const { assiMessages, cutOff } = appearance;
+): Partial<AppearanceOfLlm> {
+  const { assiMessages, llmProceedCutOff } = appearance;
 
   return {
-    // LlmObUser & LlmObLlm - 添加新的流式消息，更新 cutOff
+    // 添加新的流式消息
     assiMessages: [
       ...assiMessages,
       {
@@ -63,15 +64,8 @@ function handleStartAssiMessageStream(
         timestamp: action.timestamp,
       },
     ],
-    cutOff: Math.max(cutOff, action.cutOff),
-
-    // LlmObToolkit - 保持不变
-    toolCallRequests: [],
-
-    // LlmObWorkforce - 保持不变
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
+    // 更新 LLM 处理截止时间戳
+    llmProceedCutOff: Math.max(llmProceedCutOff, action.llmProceedCutOff),
   };
 }
 
@@ -81,10 +75,10 @@ function handleStartAssiMessageStream(
 function handleEndAssiMessageStream(
   appearance: AppearanceOfLlm,
   action: EndAssiMessageStream
-): Partial<PerspectiveOfLlm> {
+): Partial<AppearanceOfLlm> {
   const { assiMessages } = appearance;
 
-  // 找到对应的消息并更新
+  // 找到对应的消息并更新为完成状态
   const updatedMessages = assiMessages.map((msg) =>
     msg.id === action.id
       ? {
@@ -98,87 +92,95 @@ function handleEndAssiMessageStream(
   );
 
   return {
-    // LlmObUser & LlmObLlm - 更新消息状态
     assiMessages: updatedMessages,
-    cutOff: appearance.cutOff,
-
-    // LlmObToolkit - 保持不变
-    toolCallRequests: [],
-
-    // LlmObWorkforce - 保持不变
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
-  };
-}
-
-/**
- * 处理创建任务请求
- */
-function handleRequestCreateTask(
-  appearance: AppearanceOfLlm,
-  _action: RequestCreateTask
-): Partial<PerspectiveOfLlm> {
-  // Llm 的 Perspective 中不需要记录请求，这些请求会被 Workforce 处理
-  // 这里只需要保持状态不变
-  return {
-    assiMessages: appearance.assiMessages,
-    cutOff: appearance.cutOff,
-    toolCallRequests: [],
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
-  };
-}
-
-/**
- * 处理追加消息请求
- */
-function handleRequestAppendMessage(
-  appearance: AppearanceOfLlm,
-  _action: RequestAppendMessage
-): Partial<PerspectiveOfLlm> {
-  return {
-    assiMessages: appearance.assiMessages,
-    cutOff: appearance.cutOff,
-    toolCallRequests: [],
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
-  };
-}
-
-/**
- * 处理取消任务请求
- */
-function handleRequestCancelTasks(
-  appearance: AppearanceOfLlm,
-  _action: RequestCancelTasks
-): Partial<PerspectiveOfLlm> {
-  return {
-    assiMessages: appearance.assiMessages,
-    cutOff: appearance.cutOff,
-    toolCallRequests: [],
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
   };
 }
 
 /**
  * 处理工具调用
+ *
+ * 添加工具调用请求到 toolCallRequests 列表
  */
 function handleCallTool(
   appearance: AppearanceOfLlm,
-  _action: CallTool
-): Partial<PerspectiveOfLlm> {
+  action: CallTool
+): Partial<AppearanceOfLlm> {
+  const { toolCallRequests } = appearance;
+
   return {
-    assiMessages: appearance.assiMessages,
-    cutOff: appearance.cutOff,
-    toolCallRequests: [],
-    taskCreateRequests: [],
-    messageAppendRequests: [],
-    taskCancelRequests: [],
+    toolCallRequests: [
+      ...toolCallRequests,
+      {
+        toolCallId: action.toolCallId,
+        name: action.name,
+        arguments: action.arguments,
+        timestamp: action.timestamp,
+      },
+    ],
   };
 }
 
+/**
+ * 处理创建任务请求
+ *
+ * 添加新任务到 validTasks 列表
+ */
+function handleRequestCreateTask(
+  appearance: AppearanceOfLlm,
+  action: RequestCreateTask
+): Partial<AppearanceOfLlm> {
+  const { validTasks } = appearance;
+
+  return {
+    validTasks: [
+      ...validTasks,
+      {
+        id: action.taskId,
+        title: action.title,
+        goal: action.goal,
+        timestamp: action.timestamp,
+      },
+    ],
+  };
+}
+
+/**
+ * 处理追加消息请求
+ *
+ * 添加消息追加请求到 messageAppendRequests 列表
+ */
+function handleRequestAppendMessage(
+  appearance: AppearanceOfLlm,
+  action: RequestAppendMessage
+): Partial<AppearanceOfLlm> {
+  const { messageAppendRequests } = appearance;
+
+  return {
+    messageAppendRequests: [
+      ...messageAppendRequests,
+      {
+        messageId: action.messageId,
+        content: action.content,
+        taskIds: action.taskIds,
+        timestamp: action.timestamp,
+      },
+    ],
+  };
+}
+
+/**
+ * 处理取消任务请求
+ *
+ * 从 validTasks 列表中移除被取消的任务
+ */
+function handleRequestCancelTasks(
+  appearance: AppearanceOfLlm,
+  action: RequestCancelTasks
+): Partial<AppearanceOfLlm> {
+  const { validTasks } = appearance;
+  const cancelledIds = new Set(action.taskIds);
+
+  return {
+    validTasks: validTasks.filter((task) => !cancelledIds.has(task.id)),
+  };
+}

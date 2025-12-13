@@ -30,9 +30,9 @@ export const startAssiMessageStreamSchema = z.object({
   id: z.string(),
   timestamp: z.number(),
   /**
-   * 这次 llm 请求所处理的最迟的用户消息时间戳，用于更新 cutOff
+   * LLM 处理截止时间戳，表示这次请求处理的最迟用户消息时间戳
    */
-  cutOff: z.number(),
+  llmProceedCutOff: z.number(),
 });
 
 export type StartAssiMessageStream = z.infer<typeof startAssiMessageStreamSchema>;
@@ -51,10 +51,11 @@ export type EndAssiMessageStream = z.infer<typeof endAssiMessageStreamSchema>;
 
 /**
  * 创建任务请求 Action Schema
+ *
+ * Llm 请求创建新任务，会添加到 validTasks 列表中
  */
 export const requestCreateTaskSchema = z.object({
   type: z.literal("request-create-task"),
-  requestId: z.string(),
   taskId: z.string(),
   title: z.string(),
   goal: z.string(),
@@ -65,10 +66,11 @@ export type RequestCreateTask = z.infer<typeof requestCreateTaskSchema>;
 
 /**
  * 追加消息到任务 Action Schema
+ *
+ * Llm 请求向任务追加消息，会添加到 messageAppendRequests 列表中
  */
 export const requestAppendMessageSchema = z.object({
   type: z.literal("request-append-message"),
-  requestId: z.string(),
   messageId: z.string(),
   content: z.string(),
   taskIds: z.array(z.string()),
@@ -79,10 +81,11 @@ export type RequestAppendMessage = z.infer<typeof requestAppendMessageSchema>;
 
 /**
  * 取消任务请求 Action Schema
+ *
+ * Llm 请求取消任务，会从 validTasks 列表中移除对应任务
  */
 export const requestCancelTasksSchema = z.object({
   type: z.literal("request-cancel-tasks"),
-  requestId: z.string(),
   taskIds: z.array(z.string()),
   timestamp: z.number(),
 });
@@ -90,34 +93,28 @@ export const requestCancelTasksSchema = z.object({
 export type RequestCancelTasks = z.infer<typeof requestCancelTasksSchema>;
 
 /**
- * 通知任务完成 Action Schema
+ * 任务结果 Schema
+ *
+ * 与 workforce 中的 TaskResult 类型一致
  */
-export const notifyTaskCompletionSchema = z.object({
-  type: z.literal("notify-task-completion"),
-  taskId: z.string(),
-  title: z.string(),
-  success: z.boolean(),
-  result: z.string(),
-  timestamp: z.number(),
-});
+export const taskResultSchema = z.union([
+  z.object({ success: z.literal(true), conclusion: z.string() }),
+  z.object({ success: z.literal(false), error: z.string() }),
+]);
 
-export type NotifyTaskCompletion = z.infer<typeof notifyTaskCompletionSchema>;
+export type TaskResult = z.infer<typeof taskResultSchema>;
 
 /**
- * 更新任务监控状态 Action Schema
+ * 更新任务状态 Action Schema
  *
- * Workforce 内部更新任务状态
+ * Workforce 更新顶层任务的状态，会更新 topLevelTasks 列表
+ * 当 status 为 succeeded/failed 时，result 必须提供
  */
 export const updateTaskStatusSchema = z.object({
   type: z.literal("update-task-status"),
   taskId: z.string(),
   status: z.enum(["ready", "pending", "processing", "succeeded", "failed"]),
-  result: z
-    .union([
-      z.object({ success: z.literal(true), conclusion: z.string() }),
-      z.object({ success: z.literal(false), error: z.string() }),
-    ])
-    .optional(),
+  result: taskResultSchema.optional(),
   timestamp: z.number(),
 });
 
@@ -176,7 +173,7 @@ export type ActionFromToolkit = ReturnToolResult;
 /**
  * Workforce Actor 可以 dispatch 的 Action 类型
  */
-export type ActionFromWorkforce = NotifyTaskCompletion | UpdateTaskStatus;
+export type ActionFromWorkforce = UpdateTaskStatus;
 
 // ============================================================================
 // 所有 Actions 的联合类型

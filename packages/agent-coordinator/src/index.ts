@@ -51,7 +51,6 @@ export type {
   RequestCreateTask,
   RequestAppendMessage,
   RequestCancelTasks,
-  NotifyTaskCompletion,
   UpdateTaskStatus,
   ActionFromUser,
   ActionFromLlm,
