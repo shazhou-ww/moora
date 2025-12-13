@@ -4,9 +4,10 @@
 
 import type { CancelFn } from "@moora/pub-sub";
 import { createPubSub } from "@moora/pub-sub";
-import type { SSEConnection, StreamConnection, StreamManager } from "./types";
 
 import { sendToConnection } from "./helpers";
+import type { SSEConnection, StreamConnection, StreamManager } from "./types";
+
 
 /**
  * 创建 StreamManager 实例

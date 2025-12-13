@@ -2,7 +2,8 @@
  * Stream Manager 测试
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+
 import { createStreamManager } from "../src";
 
 describe("StreamManager", () => {

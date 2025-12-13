@@ -4,7 +4,7 @@
  * 定义 MockGen 和相关的类型
  */
 
-import type { CallLlm, CallLlmContext, CallLlmCallbacks } from "@moora/agent-common";
+import type { CallLlm, CallLlmContext } from "@moora/agent-common";
 
 // ============================================================================
 // Range 类型
