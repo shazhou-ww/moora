@@ -80,10 +80,7 @@ export { USER, LLM, TOOLKIT, WORKFORCE } from "./decl";
 // ============================================================================
 export {
   // Initials
-  initialUser,
-  initialLlm,
-  initialToolkit,
-  initialWorkforce,
+  initialWorldscape,
   // Transitions
   transitionUser,
   transitionLlm,

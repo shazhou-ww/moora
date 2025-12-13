@@ -3,11 +3,16 @@
  */
 
 import { ROOT_TASK_ID } from "@moora/workforce";
+import { stateful } from "@moora/effects";
+import type { Dispatch } from "@moora/automata";
+
 import type {
   WORKFORCE,
   ReactionFnOf,
   Workforce,
   NotifyUser,
+  PerspectiveOfWorkforce,
+  Actuation,
 } from "@/decl";
 
 /**
@@ -21,140 +26,148 @@ export type WorkforceReactionDeps = {
 };
 
 /**
+ * Workforce Reaction 的内部状态
+ */
+type WorkforceReactionState = {
+  /** 已创建的任务 ID 集合 */
+  createdTaskIds: Set<string>;
+  /** 已通知完成的任务 ID 集合 */
+  notifiedTaskIds: Set<string>;
+};
+
+/**
  * 创建 Workforce Reaction
  *
  * Workforce 负责：
- * 1. 处理 Llm 的任务创建、追加消息、取消请求
- * 2. 监听 workforce 的任务事件，更新状态
- * 3. 当顶层任务完成时，通知用户
+ * 1. 根据 validTasks 创建任务
+ * 2. 根据 messageAppendRequests 投递消息
+ * 3. 监听任务状态变化，通知用户
  */
 export function createWorkforceReaction(
   deps: WorkforceReactionDeps
 ): ReactionFnOf<typeof WORKFORCE> {
   const { workforce, notifyUser } = deps;
 
-  // 订阅 workforce 任务事件
-  workforce.subscribeTaskEvent((_event) => {
-    // 这里我们需要在外部管理 dispatch 的引用
-    // 暂时先实现基础逻辑
-  });
+  return stateful<
+    { perspective: PerspectiveOfWorkforce; dispatch: Dispatch<Actuation> },
+    WorkforceReactionState
+  >(
+    { createdTaskIds: new Set(), notifiedTaskIds: new Set() },
+    ({ context: ctx, state, setState }) => {
+      const { perspective, dispatch } = ctx;
+      const { validTasks, messageAppendRequests, appendMessageCutOff } = perspective;
 
-  return async ({ perspective, dispatch }) => {
-    const {
-      taskCreateRequests,
-      messageAppendRequests,
-      taskCancelRequests,
-      topLevelTaskIds,
-      taskCache,
-    } = perspective;
+      // 1. 处理新任务创建
+      for (const task of validTasks) {
+        if (state.createdTaskIds.has(task.id)) {
+          continue;
+        }
 
-    // 处理任务创建请求
-    for (const request of taskCreateRequests) {
-      const task = workforce.getTask(request.taskId);
-      if (!task) {
-        // 任务不存在，创建它
+        // 创建任务
         workforce.createTasks([
           {
-            id: request.taskId,
-            title: request.title,
-            goal: request.goal,
+            id: task.id,
+            title: task.title,
+            goal: task.goal,
           },
         ]);
+
+        // 记录已创建
+        setState((prev) => ({
+          ...prev,
+          createdTaskIds: new Set([...prev.createdTaskIds, task.id]),
+        }));
 
         // 更新任务状态
         dispatch({
           type: "update-task-status",
-          taskId: request.taskId,
+          taskId: task.id,
           status: "ready",
           timestamp: Date.now(),
         });
       }
-    }
 
-    // 处理追加消息请求
-    for (const request of messageAppendRequests) {
-      workforce.appendMessage({
-        messageId: request.messageId,
-        content: request.content,
-        taskIds: request.taskIds,
-      });
-    }
+      // 2. 处理消息追加请求（只处理新的）
+      const newAppendRequests = messageAppendRequests.filter(
+        (req) => req.timestamp > appendMessageCutOff
+      );
 
-    // 处理取消任务请求
-    for (const request of taskCancelRequests) {
-      workforce.cancelTasks(request.taskIds);
-    }
-
-    // 检查任务完成并通知用户
-    // 注意：notifiedTaskCompletions 现在不在 WorkforcePerspective 中
-    // 需要通过其他方式跟踪（比如在 reaction 内部状态中）
-    for (const taskId of topLevelTaskIds) {
-      const task = workforce.getTask(taskId);
-      if (!task) continue;
-
-      // 只处理顶层任务（parentId 为 ROOT_TASK_ID）
-      if (task.parentId !== ROOT_TASK_ID) continue;
-
-      const status = workforce.getTaskStatus(taskId);
-      if (!status) continue;
-
-      // 检查任务是否完成（成功或失败）
-      if (status.status === "succeeded" || status.status === "failed") {
-        // 通知用户
-        const result =
-          status.status === "succeeded"
-            ? status.result?.success
-              ? status.result.conclusion
-              : "Task completed"
-            : status.result?.success === false
-              ? status.result.error
-              : "Task failed";
-
-        const message = `Task "${task.title}" ${status.status === "succeeded" ? "completed successfully" : "failed"}: ${result}`;
-
-        await notifyUser(message);
-
-        // 记录已通知
-        dispatch({
-          type: "notify-task-completion",
-          taskId,
-          title: task.title,
-          success: status.status === "succeeded",
-          result,
-          timestamp: Date.now(),
-        });
-
-        // 更新任务状态（移除已完成的任务）
-        dispatch({
-          type: "update-task-status",
-          taskId,
-          status: status.status,
-          result: status.result,
-          timestamp: Date.now(),
+      for (const request of newAppendRequests) {
+        workforce.appendMessage({
+          messageId: request.messageId,
+          content: request.content,
+          taskIds: request.taskIds,
         });
       }
-    }
 
-    // 同步 workforce 中的所有顶层任务状态
-    const allTaskIds = workforce.getAllTaskIds();
-    for (const taskId of allTaskIds) {
-      const task = workforce.getTask(taskId);
-      if (!task || task.parentId !== ROOT_TASK_ID) continue;
+      // 3. 检查任务状态并通知用户
+      for (const task of validTasks) {
+        if (state.notifiedTaskIds.has(task.id)) {
+          continue;
+        }
 
-      const status = workforce.getTaskStatus(taskId);
-      if (!status) continue;
+        const status = workforce.getTaskStatus(task.id);
+        if (!status) continue;
 
-      // 如果任务不在缓存中，或状态发生变化，更新它
-      const cached = taskCache[taskId];
-      if (!cached || cached.status !== status.status) {
-        dispatch({
-          type: "update-task-status",
-          taskId,
-          status: status.status,
-          result: status.result,
-          timestamp: Date.now(),
-        });
+        const taskData = workforce.getTask(task.id);
+        if (!taskData || taskData.parentId !== ROOT_TASK_ID) continue;
+
+        // 检查任务是否完成
+        if (status.status === "succeeded" || status.status === "failed") {
+          const resultMessage =
+            status.status === "succeeded"
+              ? status.result?.success
+                ? status.result.conclusion
+                : "Task completed"
+              : status.result?.success === false
+                ? status.result.error
+                : "Task failed";
+
+          const message = `Task "${task.title}" ${status.status === "succeeded" ? "completed successfully" : "failed"}: ${resultMessage}`;
+
+          // 异步通知用户
+          Promise.resolve(notifyUser(message)).catch(() => {
+            // 忽略通知错误
+          });
+
+          // 记录已通知
+          setState((prev) => ({
+            ...prev,
+            notifiedTaskIds: new Set([...prev.notifiedTaskIds, task.id]),
+          }));
+
+          // 更新任务状态
+          dispatch({
+            type: "update-task-status",
+            taskId: task.id,
+            status: status.status,
+            result: status.result,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      // 4. 同步所有任务的状态变化
+      const allTaskIds = workforce.getAllTaskIds();
+      for (const taskId of allTaskIds) {
+        const taskData = workforce.getTask(taskId);
+        if (!taskData || taskData.parentId !== ROOT_TASK_ID) continue;
+
+        const status = workforce.getTaskStatus(taskId);
+        if (!status) continue;
+
+        // 如果任务在 validTasks 中但状态发生变化，更新它
+        const validTask = validTasks.find((t) => t.id === taskId);
+        if (validTask) {
+          dispatch({
+            type: "update-task-status",
+            taskId,
+            status: status.status,
+            result: status.result,
+            timestamp: Date.now(),
+          });
+        }
       }
     }
-  };
+  );
 }

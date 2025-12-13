@@ -68,10 +68,7 @@ export function transitionAgent(
       );
     }
 
-    if (
-      action.type === "notify-task-completion" ||
-      action.type === "update-task-status"
-    ) {
+    if (action.type === "update-task-status") {
       return transitionForActor(
         worldscape,
         WORKFORCE,
@@ -108,12 +105,12 @@ function transitionForActor<
 
   // 执行状态转换
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const newPerspective = transitionFn(appearance as any, action as any);
+  const newAppearance = transitionFn(appearance as any, action as any);
 
-  // 将新的 Perspective 合并回 Worldscape
+  // 将新的 Appearance 合并回 Worldscape
   return {
     ...worldscape,
-    ...newPerspective,
+    ...newAppearance,
   };
 }
 
@@ -126,8 +123,8 @@ function extractAppearance(
 ): AppearanceOfUser | AppearanceOfLlm | AppearanceOfToolkit | AppearanceOfWorkforce {
   if (actor === USER) {
     return {
+      // UserObUser
       userMessages: worldscape.userMessages,
-      notifiedTaskCompletions: worldscape.notifiedTaskCompletions,
     } as AppearanceOfUser;
   }
 
@@ -135,28 +132,29 @@ function extractAppearance(
     return {
       // LlmObLlm
       assiMessages: worldscape.assiMessages,
-      cutOff: worldscape.cutOff,
-      // ToolkitObLlm
+      llmProceedCutOff: worldscape.llmProceedCutOff,
       toolCallRequests: worldscape.toolCallRequests,
-      // WorkforceObLlm
-      taskCreateRequests: worldscape.taskCreateRequests,
+      validTasks: worldscape.validTasks,
+      // UserObLlm / WorkforceObLlm
       messageAppendRequests: worldscape.messageAppendRequests,
-      taskCancelRequests: worldscape.taskCancelRequests,
     } as AppearanceOfLlm;
   }
 
   if (actor === TOOLKIT) {
     return {
+      // ToolkitObLlm
       toolCallRequests: worldscape.toolCallRequests,
+      // ToolkitObToolkit
       toolResults: worldscape.toolResults,
     } as AppearanceOfToolkit;
   }
 
   if (actor === WORKFORCE) {
     return {
+      // UserObWorkforce / LlmObWorkforce
+      topLevelTasks: worldscape.topLevelTasks,
       // WorkforceObWorkforce
-      topLevelTaskIds: worldscape.topLevelTaskIds,
-      taskCache: worldscape.taskCache,
+      appendMessageCutOff: worldscape.appendMessageCutOff,
     } as AppearanceOfWorkforce;
   }
 

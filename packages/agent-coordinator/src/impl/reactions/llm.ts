@@ -48,7 +48,7 @@ export function createLlmReaction(
     { ongoingCallId: null },
     ({ context: ctx, state, setState }) => {
       const { perspective, dispatch } = ctx;
-      const { userMessages, assiMessages, cutOff, topLevelTasks } = perspective;
+      const { userMessages, assiMessages, llmProceedCutOff, topLevelTasks } = perspective;
 
       // 如果有正在进行的调用，跳过
       if (state.ongoingCallId !== null) {
@@ -56,7 +56,7 @@ export function createLlmReaction(
       }
 
       // 检查是否有新的用户消息需要处理
-      const hasNewMessages = userMessages.some((msg) => msg.timestamp > cutOff);
+      const hasNewMessages = userMessages.some((msg) => msg.timestamp > llmProceedCutOff);
 
       if (!hasNewMessages) {
         return;
@@ -95,7 +95,7 @@ export function createLlmReaction(
       ];
 
       // 构建系统提示，包含任务信息
-      const taskInfo = Object.values(topLevelTasks)
+      const taskInfo = topLevelTasks
         .map(
           (task) =>
             `- Task "${task.title}" (${task.id}): ${task.status}${
@@ -140,7 +140,7 @@ When responding, you can mention these actions in natural language, and I will h
               type: "start-assi-message-stream",
               id: messageId,
               timestamp,
-              cutOff: latestUserMessageTimestamp,
+              llmProceedCutOff: latestUserMessageTimestamp,
             });
           }
           return messageId;
