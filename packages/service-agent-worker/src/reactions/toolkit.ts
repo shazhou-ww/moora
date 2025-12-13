@@ -8,6 +8,7 @@ import type { ToolCallRequest } from "@moora/agent-worker";
 import type { Toolkit } from "@moora/toolkit";
 import { emptyToolkit, mergeToolkits } from "@moora/toolkit";
 import { createTavilyToolkit } from "@moora/tools-tavily";
+import { createWorkspaceToolkit } from "@moora/tools-workspace";
 import { getLogger } from "@/logger";
 
 
@@ -65,6 +66,11 @@ export type CreateDefaultToolkitOptions = {
    * Tavily API Key（可选，用于启用 Tavily 搜索工具）
    */
   tavilyApiKey?: string;
+  /**
+   * Workspace 根目录路径（可选，用于启用 Workspace 工具）
+   * 如果未提供，将从环境变量 WORKSPACE_PATH 读取
+   */
+  workspacePath?: string;
 };
 
 /**
@@ -78,8 +84,14 @@ export type CreateDefaultToolkitOptions = {
 export function createDefaultToolkit(
   options: CreateDefaultToolkitOptions = {}
 ): Toolkit {
-  const { tavilyApiKey } = options;
+  const { tavilyApiKey, workspacePath } = options;
   const toolkits: Toolkit[] = [];
+
+  // 如果提供了 Workspace 路径或环境变量中有设置，添加 Workspace 工具
+  const workspaceRootPath = workspacePath ?? process.env.WORKSPACE_PATH;
+  if (workspaceRootPath) {
+    toolkits.push(createWorkspaceToolkit({ rootPath: workspaceRootPath }));
+  }
 
   // 如果提供了 Tavily API Key，添加 Tavily 工具
   if (tavilyApiKey) {

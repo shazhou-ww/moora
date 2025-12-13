@@ -1,0 +1,31 @@
+{
+  "name": "@moora/tools-workspace",
+  "version": "0.1.0",
+  "description": "Workspace tools for Moora toolkit - file and directory operations",
+  "type": "module",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "private": false,
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@moora/toolkit": "0.1.2"
+  },
+  "devDependencies": {
+    "@moora/eslint-config": "0.1.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "keywords": [
+    "moora",
+    "toolkit",
+    "workspace",
+    "file",
+    "filesystem",
+    "ai"
+  ]
+}

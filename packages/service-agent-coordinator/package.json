@@ -33,6 +33,7 @@
     "@moora/stream-manager": "workspace:*",
     "@moora/toolkit": "0.1.2",
     "@moora/tools-tavily": "0.1.2",
+    "@moora/tools-workspace": "workspace:*",
     "@moora/workforce": "workspace:*",
     "dotenv": "^17.2.3",
     "elysia": "^1.4.18",
