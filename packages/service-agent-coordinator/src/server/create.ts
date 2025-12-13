@@ -143,7 +143,25 @@ export function createService(options: CreateServiceOptions) {
 
   // 订阅 agent 状态变化，记录日志
   agent.subscribe((update) => {
-    logger.agent.debug("Agent input", formatInputLog(update));
+    const { state, prev } = update;
+    logger.agent.info("[Agent] State updated", {
+      input: formatInputLog(update),
+      userMessagesCount: state.userMessages?.length ?? 0,
+      assiMessagesCount: state.assiMessages?.length ?? 0,
+      cutOff: state.cutOff,
+      hasPrev: prev !== null,
+      assiMessages: state.assiMessages?.map(m => ({
+        id: m.id,
+        streaming: m.streaming,
+        contentLength: m.content?.length ?? 0,
+        content: m.content?.substring(0, 50),
+      })),
+      userMessages: state.userMessages?.map(m => ({
+        id: m.id,
+        contentLength: m.content?.length ?? 0,
+        content: m.content?.substring(0, 50),
+      })),
+    });
   });
 
   const app = new Elysia()

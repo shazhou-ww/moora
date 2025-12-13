@@ -4,5 +4,5 @@
 
 export { initialAgent } from "./initial";
 export { transitionAgent } from "./transition";
-export { createReaction } from "./reaction";
+export { createReaction, extractUserPerspective } from "./reaction";
 export { createAgent } from "./create";

@@ -22,3 +22,4 @@ export default [
     ignores: ["dist", "node_modules", "*.config.*", "*.d.ts"],
   },
 ];
+

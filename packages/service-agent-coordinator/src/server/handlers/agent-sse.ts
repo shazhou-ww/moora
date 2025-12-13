@@ -8,7 +8,7 @@ import { sse } from "elysia";
 
 
 import type { createAgent } from "@moora/agent-coordinator";
-import type { PerspectiveOfUser } from "@moora/agent-coordinator";
+import { extractUserPerspective } from "@moora/agent-coordinator";
 import type { Subscribe } from "@moora/pub-sub";
 import { getLogger } from "@/logger";
 
@@ -56,16 +56,19 @@ export function createAgentSSEHandler(
 
     // 订阅 patch
     const unsubscribe = subscribePatch((patch) => {
-      logger.server.debug("Agent SSE: Received patch from pubsub");
+      logger.server.info("Agent SSE: Received patch from pubsub", {
+        patchLength: patch.length,
+        patchPreview: patch.substring(0, 200),
+      });
       if (state.closed) {
-        logger.server.debug("Agent SSE: Connection closed, ignoring patch");
+        logger.server.warn("Agent SSE: Connection closed, ignoring patch");
         return;
       }
 
       state.queue.push(patch);
-      logger.server.debug(`Agent SSE: Queue length: ${state.queue.length}`);
+      logger.server.info(`Agent SSE: Queue length: ${state.queue.length}`);
       if (state.resolve) {
-        logger.server.debug("Agent SSE: Resolving pending promise");
+        logger.server.info("Agent SSE: Resolving pending promise");
         state.resolve();
         state.resolve = null;
       }
@@ -74,9 +77,10 @@ export function createAgentSSEHandler(
     try {
       // 发送初始全量数据
       const worldscape = agent.current();
-      const perspective: PerspectiveOfUser = {
-        userMessages: worldscape.userMessages,
-      };
+
+      // 获取 User 的 Perspective（包含所有观察数据）
+      const perspective = extractUserPerspective(worldscape);
+
       const fullData = JSON.stringify({
         type: "full",
         data: perspective,
@@ -98,7 +102,10 @@ export function createAgentSSEHandler(
         while (state.queue.length > 0 && !state.closed) {
           const data = state.queue.shift();
           if (data) {
-            logger.server.debug("Agent SSE: Sending patch data");
+            logger.server.info("Agent SSE: Sending patch data", {
+              dataLength: data.length,
+              dataPreview: data.substring(0, 200),
+            });
             yield sse(data);
           }
         }

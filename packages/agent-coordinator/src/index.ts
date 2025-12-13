@@ -19,11 +19,9 @@ export type {
   LlmObWorkforce,
   LlmObToolkit,
   ToolkitObLlm,
-  ToolkitObUser,
   ToolkitObToolkit,
   WorkforceObWorkforce,
   WorkforceObLlm,
-  WorkforceObUser,
   // Appearances
   AppearanceOfUser,
   AppearanceOfLlm,
@@ -85,6 +83,7 @@ export {
   transitionAgent,
   createReaction,
   createAgent,
+  extractUserPerspective,
   // Reactions
   createUserReaction,
   createLlmReaction,

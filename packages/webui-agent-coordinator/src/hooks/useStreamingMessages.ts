@@ -1,13 +1,12 @@
 /**
  * 流式消息管理 Hook (Coordinator Agent 版本)
- * 
- * 在 Coordinator Agent 中，PerspectiveOfUser 只包含 userMessages
- * 暂时只显示用户消息，未来可扩展以显示其他信息
+ *
+ * 处理用户消息和助手消息的显示
  */
 
 import { useMemo } from "react";
 
-import type { PerspectiveOfUser, Message } from "@/types";
+import type { ContextOfUser, Message } from "@/types";
 
 /**
  * 渲染列表项类型：只有消息
@@ -17,25 +16,39 @@ export type RenderItem = { type: "message"; data: Message };
 /**
  * 流式消息管理 Hook
  *
- * @param context - Agent 的 PerspectiveOfUser
+ * @param context - Agent 的完整上下文
  * @returns 处理后的消息列表和渲染项
  */
 export function useStreamingMessages(
-  context: PerspectiveOfUser | null
+  context: ContextOfUser | null
 ): {
   messages: Message[];
   streamingMessageIds: Set<string>;
   renderItems: RenderItem[];
 } {
-  // 从 context 获取用户消息
+  // 从 context 获取所有消息
   const messages: Message[] = useMemo(() => {
     if (!context) return [];
-    
-    // 只返回用户消息，按时间戳排序
-    return [...context.userMessages].sort(
-      (a, b) => a.timestamp - b.timestamp
-    );
+
+    const allMessages: Message[] = [
+      ...context.userMessages,
+      ...(context.assiMessages || []),
+    ];
+
+    // 按时间戳排序
+    return allMessages.sort((a, b) => a.timestamp - b.timestamp);
   }, [context]);
+
+  // 获取正在流式的消息ID
+  const streamingMessageIds: Set<string> = useMemo(() => {
+    if (!context?.assiMessages) return new Set();
+
+    return new Set(
+      context.assiMessages
+        .filter((msg) => msg.streaming)
+        .map((msg) => msg.id)
+    );
+  }, [context?.assiMessages]);
 
   // 渲染列表：只包含消息
   const renderItems: RenderItem[] = useMemo(() => {
@@ -47,7 +60,7 @@ export function useStreamingMessages(
 
   return {
     messages,
-    streamingMessageIds: new Set(), // Coordinator 版本暂时不支持流式
+    streamingMessageIds,
     renderItems,
   };
 }

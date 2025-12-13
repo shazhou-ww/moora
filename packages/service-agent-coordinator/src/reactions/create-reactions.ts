@@ -64,9 +64,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
     let previousPerspective: PerspectiveOfUser | null = null;
 
     return async ({ perspective }) => {
+      logger.agent.debug("[UserReaction] Called", {
+        userMessagesCount: perspective.userMessages?.length ?? 0,
+        assiMessagesCount: perspective.assiMessages?.length ?? 0,
+      });
+
       // 计算 perspective 变化并发送 patch
       if (previousPerspective === null) {
-        logger.server.debug("User reaction: First perspective");
+        logger.agent.debug("[UserReaction] First perspective, storing");
         previousPerspective = perspective;
         return;
       }
@@ -77,7 +82,18 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
         const patches = createPatch(previousPerspective, perspective);
 
         if (patches.length > 0) {
-          logger.server.debug(`User reaction: Publishing ${patches.length} patches`);
+          logger.agent.info(`[UserReaction] Publishing ${patches.length} patches`, {
+            patches: patches.map(p => ({ op: p.op, path: p.path, value: p.value })),
+            perspective: {
+              userMessagesCount: perspective.userMessages?.length ?? 0,
+              assiMessagesCount: perspective.assiMessages?.length ?? 0,
+              assiMessages: perspective.assiMessages?.map(m => ({
+                id: m.id,
+                streaming: m.streaming,
+                contentLength: m.content?.length ?? 0,
+              })),
+            },
+          });
           publishPatch(
             JSON.stringify({
               type: "patch",
@@ -86,6 +102,8 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
           );
           previousPerspective = perspective;
         }
+      } else {
+        logger.agent.debug("[UserReaction] No perspective change");
       }
     };
   })();
@@ -97,21 +115,38 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       const { perspective, dispatch } = ctx;
       const { userMessages, assiMessages, cutOff, topLevelTasks } = perspective;
 
+      logger.llm.debug("[LlmReaction] Called", {
+        userMessagesCount: userMessages.length,
+        assiMessagesCount: assiMessages.length,
+        cutOff,
+        ongoingCallId: state.ongoingCallId,
+      });
+
       // 如果有正在进行的调用，跳过
       if (state.ongoingCallId !== null) {
+        logger.llm.debug("[LlmReaction] Skipped: ongoing call in progress", { ongoingCallId: state.ongoingCallId });
         return;
       }
 
       // 检查是否有新的用户消息需要处理
       const hasNewMessages = userMessages.some((msg: UserMessage) => msg.timestamp > cutOff);
 
+      logger.llm.debug("[LlmReaction] Checking for new messages", {
+        hasNewMessages,
+        cutOff,
+        userMessageTimestamps: userMessages.map((m: UserMessage) => m.timestamp),
+      });
+
       if (!hasNewMessages) {
+        logger.llm.debug("[LlmReaction] Skipped: no new messages after cutOff");
         return;
       }
 
       // 开始新的 LLM 调用
       const messageId = uuidv4();
       const timestamp = Date.now();
+
+      logger.llm.info("[LlmReaction] Starting new LLM call", { messageId, timestamp });
 
       setState(() => ({ ongoingCallId: messageId }));
 
@@ -161,6 +196,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       // 异步调用 LLM
       void (async () => {
         try {
+          logger.llm.debug("[LlmReaction] Dispatching start-assi-message-stream", { messageId });
           // Dispatch start action
           dispatch({
             type: "start-assi-message-stream",
@@ -168,6 +204,8 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
             timestamp,
             cutOff: latestUserMessageTimestamp,
           });
+
+          logger.llm.debug("[LlmReaction] Calling LLM", { messagesCount: messages.length });
 
           // 调用 LLM
           await callLlm(
@@ -179,17 +217,20 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
             },
             {
               onStart: () => {
+                logger.llm.debug("[LlmReaction] LLM onStart callback");
                 if (onStreamStart) {
                   onStreamStart(messageId);
                 }
                 return messageId;
               },
               onChunk: (chunk: string) => {
+                logger.llm.debug("[LlmReaction] LLM onChunk", { chunkLength: chunk.length });
                 if (onStreamChunk) {
                   onStreamChunk(messageId, chunk);
                 }
               },
               onComplete: (content: string) => {
+                logger.llm.info("[LlmReaction] LLM onComplete", { contentLength: content.length });
                 dispatch({
                   type: "end-assi-message-stream",
                   id: messageId,
@@ -204,12 +245,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
                 setState(() => ({ ongoingCallId: null }));
               },
               onToolCall: () => {
+                logger.llm.debug("[LlmReaction] LLM onToolCall (not implemented)");
                 // TODO: Handle tool calls
               },
             }
           );
+          logger.llm.debug("[LlmReaction] LLM call completed");
         } catch (error) {
-          logger.llm.error("LLM call failed", error as unknown as Record<string, unknown>);
+          logger.llm.error("[LlmReaction] LLM call failed", error as unknown as Record<string, unknown>);
           setState(() => ({ ongoingCallId: null }));
         }
       })();
@@ -223,6 +266,12 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       const { perspective, dispatch } = ctx;
       const { toolCallRequests, toolResults } = perspective;
 
+      logger.toolkit.debug("[ToolkitReaction] Called", {
+        toolCallRequestsCount: toolCallRequests.length,
+        toolResultsCount: toolResults.length,
+        executingCount: state.executingToolCalls.length,
+      });
+
       // 找出已经有结果的 tool call IDs
       const completedToolCallIds = new Set(toolResults.map((r: ToolResult) => r.toolCallId));
 
@@ -234,8 +283,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       );
 
       if (pendingToolCalls.length === 0) {
+        logger.toolkit.debug("[ToolkitReaction] No pending tool calls");
         return;
       }
+
+      logger.toolkit.info("[ToolkitReaction] Processing pending tool calls", {
+        pendingCount: pendingToolCalls.length,
+        pendingNames: pendingToolCalls.map((t: ToolCallRequest) => t.name),
+      });
 
       // 将所有 pending tool calls 标记为执行中
       setState((prev) => ({
@@ -300,6 +355,12 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
   // Workforce Reaction - 处理任务管理
   const workforceReaction: ReactionFns[typeof WORKFORCE] = async ({ perspective, dispatch }) => {
     const { taskCreateRequests, messageAppendRequests, taskCancelRequests } = perspective;
+
+    logger.agent.debug("[WorkforceReaction] Called", {
+      taskCreateRequestsCount: taskCreateRequests?.length ?? 0,
+      messageAppendRequestsCount: messageAppendRequests?.length ?? 0,
+      taskCancelRequestsCount: taskCancelRequests?.length ?? 0,
+    });
 
     // 处理任务创建请求
     for (const request of taskCreateRequests || []) {

@@ -114,3 +114,8 @@ function extractWorkforcePerspective(
     taskCache: worldscape.taskCache,
   };
 }
+
+/**
+ * 导出 extractUserPerspective 函数供外部使用
+ */
+export { extractUserPerspective };

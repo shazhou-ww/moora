@@ -93,33 +93,26 @@ export type Message = UserMessage | AssiMessage;
 
 /**
  * PerspectiveOfUser 类型 (Coordinator Agent)
- * 
- * 在 Coordinator Agent 中，PerspectiveOfUser 只包含 userMessages
- * 其他信息（assiMessages, toolResults, tasks）需要通过扩展的 Worldscape 获取
+ *
+ * 按照 MOOREX 规范，PerspectiveOfUser 包含 User 能看到的所有数据：
+ * - userMessages: 用户消息（来自 UserObUser）
+ * - assiMessages: 助手消息（来自 UserObLlm）
+ * - toolResults: 工具执行结果（来自 UserObToolkit）
+ * - ongoingTopLevelTasks: 进行中的顶层任务（来自 UserObWorkforce）
+ * - notifiedTaskCompletions: 已通知的任务完成事件（来自 UserObWorkforce）
  */
 export type PerspectiveOfUser = {
   userMessages: UserMessage[];
+  assiMessages: AssiMessage[];
+  toolResults: ToolResult[];
+  ongoingTopLevelTasks: TaskInfo[];
+  notifiedTaskCompletions: string[];
 };
 
 /**
- * 扩展的 Worldscape 类型（用于 WebUI 显示）
- * 
- * 包含了 WebUI 需要展示的所有信息
- * 注意：这不是严格的 MOOREX Worldscape，而是为了 UI 便利的扩展
+ * ContextOfUser 类型（与 PerspectiveOfUser 完全一致，用于兼容）
  */
-export type ExtendedWorldscape = {
-  userMessages: UserMessage[];
-  assiMessages?: AssiMessage[];
-  toolResults?: ToolResult[];
-  ongoingTopLevelTasks?: TaskInfo[];
-  notifiedTaskCompletions?: string[];
-};
-
-/**
- * ContextOfUser 类型（保留用于兼容）
- * @deprecated 使用 ExtendedWorldscape 代替
- */
-export type ContextOfUser = ExtendedWorldscape;
+export type ContextOfUser = PerspectiveOfUser;
 
 /**
  * RFC6902 Patch 操作类型
@@ -136,7 +129,7 @@ export type PatchOperation = {
 export type SSEMessage =
   | {
       type: "full";
-      data: PerspectiveOfUser;
+      data: ContextOfUser;
     }
   | {
       type: "patch";
