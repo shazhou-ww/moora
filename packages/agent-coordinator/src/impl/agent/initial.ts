@@ -3,7 +3,7 @@
  */
 
 import type { Worldscape } from "@/decl";
-import { initialWorldscape } from "@/impl/initials";
+import { initialWorldscape } from "@/impl/initial";
 
 /**
  * 初始化整个 Agent 的状态

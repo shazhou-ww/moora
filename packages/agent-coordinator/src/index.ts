@@ -104,4 +104,23 @@ export type {
   LlmReactionDeps,
   ToolkitReactionOptions,
   WorkforceReactionDeps,
+  // Pseudo tools
+  TaskDefinition,
+  CreateTasksParams,
+  AppendMessageParams,
+  CancelTasksParams,
+  CoordinatorPseudoToolCall,
+} from "./impl";
+
+// ============================================================================
+// 伪工具导出
+// ============================================================================
+export {
+  WF_CREATE_TASKS,
+  WF_APPEND_MESSAGE,
+  WF_CANCEL_TASKS,
+  WF_QUERY_TASKS,
+  coordinatorPseudoToolInfos,
+  isCoordinatorPseudoTool,
+  parseCoordinatorPseudoToolCall,
 } from "./impl";
