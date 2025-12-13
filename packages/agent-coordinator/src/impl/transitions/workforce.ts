@@ -51,13 +51,12 @@ function handleUpdateTaskStatus(
         : task
     );
   } else {
-    // 新任务：这种情况不应该发生，因为任务应该先通过 validTasks 创建
-    // 但为了健壮性，我们还是处理这种情况
+    // 新任务：只存储 id、status、result
+    // 前端可以通过 taskId 在 validTasks 中查找 title
     updatedTasks = [
       ...topLevelTasks,
       {
         id: action.taskId,
-        title: "Unknown Task",
         status: action.status,
         result: action.result,
       },

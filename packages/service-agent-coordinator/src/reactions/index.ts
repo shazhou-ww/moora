@@ -10,5 +10,11 @@ export type { CreateCallLlmCallbackOptions } from "./llm.js";
 export { createDefaultToolkit } from "./toolkit.js";
 export type { CreateDefaultToolkitOptions } from "./toolkit.js";
 
-export { createReactions } from "./create-reactions.js";
-export type { CreateReactionsOptions } from "./create-reactions.js";
+export { createServiceUserReaction } from "./user.js";
+export type { CreateServiceUserReactionOptions } from "./user.js";
+
+export { createServiceWorkforceReaction } from "./workforce.js";
+export type { CreateServiceWorkforceReactionOptions } from "./workforce.js";
+
+export { createReactions } from "./create.js";
+export type { CreateReactionsOptions } from "./create.js";

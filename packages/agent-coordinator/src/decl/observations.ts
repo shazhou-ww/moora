@@ -37,8 +37,9 @@ export type {
  * Workforce 提供的任务状态信息
  */
 export const taskMonitorInfoSchema = z.object({
+  /** 任务 ID */
   id: z.string(),
-  title: z.string(),
+  /** 任务状态 */
   status: z.enum(["ready", "pending", "processing", "succeeded", "failed"]),
   /** 任务结果（仅在 succeeded 或 failed 时存在） */
   result: z

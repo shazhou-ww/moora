@@ -29,9 +29,44 @@ import {
   loadingBoxStyles,
   messageCountChipStyles,
 } from "@/styles/app";
-import type { ContextOfUser } from "@/types";
+import type { ContextOfUser, TaskInfo } from "@/types";
 import { sendMessage } from "@/utils/api";
 import { createSSEConnection, applyPatchesToContext } from "@/utils/sse";
+
+/**
+ * 合并 validTasks 和 topLevelTasks 得到完整的任务信息
+ */
+function mergeTaskInfo(context: ContextOfUser | null): TaskInfo[] {
+  if (!context) return [];
+
+  const { validTasks = [], topLevelTasks = [] } = context;
+
+  // 创建一个 Map 用于快速查找 topLevelTasks 的状态
+  const statusMap = new Map(
+    topLevelTasks.map((t) => [t.id, { status: t.status, result: t.result }])
+  );
+
+  // 合并信息：从 validTasks 获取 title/goal，从 topLevelTasks 获取 status/result
+  const merged = validTasks.map((validTask) => {
+    const statusInfo = statusMap.get(validTask.id);
+    return {
+      id: validTask.id,
+      title: validTask.title,
+      goal: validTask.goal,
+      status: statusInfo?.status ?? "pending",
+      result: statusInfo?.result,
+    };
+  });
+
+  console.log("[App] Merged tasks:", {
+    validTasksCount: validTasks.length,
+    topLevelTasksCount: topLevelTasks.length,
+    mergedCount: merged.length,
+    tasks: merged,
+  });
+
+  return merged;
+}
 
 
 function App() {
@@ -46,8 +81,8 @@ function App() {
   // 使用流式消息管理 Hook
   const { messages, streamingMessageIds, toolCalls, renderItems } = useStreamingMessages(context);
 
-  // 获取进行中的任务
-  const ongoingTasks = context?.ongoingTopLevelTasks || [];
+  // 合并 validTasks 和 topLevelTasks 获取完整任务信息
+  const tasks = mergeTaskInfo(context);
 
   // 处理 scroll indicator 状态变化
   const handleScrollIndicatorChange = useCallback((show: boolean, scrollToBottom: () => void) => {
@@ -64,17 +99,33 @@ function App() {
           "/api/agent",
           (data: ContextOfUser) => {
             // 全量数据更新
+            console.log("[App] Full context received:", {
+              userMessagesCount: data.userMessages?.length ?? 0,
+              assiMessagesCount: data.assiMessages?.length ?? 0,
+              validTasksCount: data.validTasks?.length ?? 0,
+              topLevelTasksCount: data.topLevelTasks?.length ?? 0,
+              validTasks: data.validTasks,
+              topLevelTasks: data.topLevelTasks,
+            });
             setContext(data);
             setLoading(false);
             setError(null);
           },
           (patches) => {
             // Patch 更新
+            console.log("[App] Patches received:", patches);
             setContext((prevContext) => {
               if (!prevContext) {
                 return prevContext;
               }
-              return applyPatchesToContext(prevContext, patches);
+              const newContext = applyPatchesToContext(prevContext, patches);
+              console.log("[App] Context after patch:", {
+                validTasksCount: newContext.validTasks?.length ?? 0,
+                topLevelTasksCount: newContext.topLevelTasks?.length ?? 0,
+                validTasks: newContext.validTasks,
+                topLevelTasks: newContext.topLevelTasks,
+              });
+              return newContext;
             });
           }
         );
@@ -165,7 +216,7 @@ function App() {
               flexDirection: "column",
             }}
           >
-            <TaskPanel tasks={ongoingTasks} />
+            <TaskPanel tasks={tasks} />
           </Box>
         )}
 

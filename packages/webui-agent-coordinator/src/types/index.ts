@@ -76,13 +76,32 @@ export type TaskResult =
     };
 
 /**
- * 任务信息类型
+ * 有效任务类型（LLM 发起的任务，包含 title 和 goal）
+ */
+export type ValidTask = {
+  id: string;
+  title: string;
+  goal: string;
+  timestamp: number;
+};
+
+/**
+ * 任务监控信息类型（运行时状态）
+ */
+export type TaskMonitorInfo = {
+  id: string;
+  status: TaskStatus;
+  result?: TaskResult;
+};
+
+/**
+ * 任务信息类型（合并后的完整信息，用于 UI 展示）
  */
 export type TaskInfo = {
   id: string;
   title: string;
+  goal: string;
   status: TaskStatus;
-  parentId: string;
   result?: TaskResult;
 };
 
@@ -97,16 +116,18 @@ export type Message = UserMessage | AssiMessage;
  * 按照 MOOREX 规范，PerspectiveOfUser 包含 User 能看到的所有数据：
  * - userMessages: 用户消息（来自 UserObUser）
  * - assiMessages: 助手消息（来自 UserObLlm）
+ * - toolCallRequests: 工具调用请求（来自 UserObLlm）
+ * - validTasks: 有效任务列表（来自 UserObLlm）
  * - toolResults: 工具执行结果（来自 UserObToolkit）
- * - ongoingTopLevelTasks: 进行中的顶层任务（来自 UserObWorkforce）
- * - notifiedTaskCompletions: 已通知的任务完成事件（来自 UserObWorkforce）
+ * - topLevelTasks: 顶层任务运行时状态（来自 UserObWorkforce）
  */
 export type PerspectiveOfUser = {
   userMessages: UserMessage[];
   assiMessages: AssiMessage[];
+  toolCallRequests: ToolCallRequest[];
+  validTasks: ValidTask[];
   toolResults: ToolResult[];
-  ongoingTopLevelTasks: TaskInfo[];
-  notifiedTaskCompletions: string[];
+  topLevelTasks: TaskMonitorInfo[];
 };
 
 /**

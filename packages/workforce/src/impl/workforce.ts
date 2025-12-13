@@ -248,18 +248,18 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
 
           agentManager.create(taskId, agent, unsubscribe);
 
-    // 发送初始用户消息（从 Worldscape 获取）
+          // 发送初始用户消息（从 Worldscape 获取）
           const task = state.tasks[taskId];
-    if (task && task.worldscape.userMessages.length > 0) {
-      for (const msg of task.worldscape.userMessages) {
+          if (task && task.worldscape.userMessages.length > 0) {
+            for (const msg of task.worldscape.userMessages) {
               agent.dispatch({
-          type: "send-user-message",
-          id: msg.id,
-          content: msg.content,
-          timestamp: msg.timestamp,
-        });
-      }
-    }
+                type: "send-user-message",
+                id: msg.id,
+                content: msg.content,
+                timestamp: msg.timestamp,
+              });
+            }
+          }
         }
       }
     }
@@ -270,7 +270,7 @@ export function createWorkforce(config: WorkforceConfig): Workforce {
         agentManager.destroy(taskId);
         // dispatch agent-completed 输入
         machine.dispatch({ type: "agent-completed", taskId });
-  }
+      }
     }
   });
 
