@@ -2,7 +2,7 @@
  * 主应用组件
  */
 
-import { KeyboardArrowDown, Menu as MenuIcon } from "@mui/icons-material";
+import { KeyboardArrowDown, Menu as MenuIcon, FolderOpen as FolderOpenIcon } from "@mui/icons-material";
 import {
   Box,
   Typography,
@@ -17,6 +17,7 @@ import { useEffect, useState, useCallback } from "react";
 
 import { MessageInput } from "@/components/MessageInput";
 import { MessageListContainer } from "@/components/MessageListContainer";
+import { RightPanel } from "@/components/RightPanel";
 import { TaskPanel } from "@/components/TaskPanel";
 import { useStreamingMessages } from "@/hooks";
 import {
@@ -77,9 +78,10 @@ function App() {
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [scrollToBottomFn, setScrollToBottomFn] = useState<(() => void) | null>(null);
   const [taskPanelOpen, setTaskPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   // 使用流式消息管理 Hook
-  const { messages, streamingMessageIds, toolCalls, renderItems } = useStreamingMessages(context);
+  const { messages, streamingMessageIds, renderItems } = useStreamingMessages(context);
 
   // 合并 validTasks 和 topLevelTasks 获取完整任务信息
   const tasks = mergeTaskInfo(context);
@@ -190,6 +192,15 @@ function App() {
               sx={messageCountChipStyles}
             />
           )}
+          <Box sx={{ flexGrow: 1 }} />
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={() => setRightPanelOpen((prev) => !prev)}
+            sx={{ ml: 2 }}
+          >
+            <FolderOpenIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
 
@@ -243,7 +254,6 @@ function App() {
           <MessageListContainer
             messages={messages}
             streamingMessageIds={streamingMessageIds}
-            toolCalls={toolCalls}
             renderItems={renderItems}
             onScrollIndicatorChange={handleScrollIndicatorChange}
           />
@@ -296,6 +306,11 @@ function App() {
           </Box>
         )}
         </Box>
+
+        {/* 右侧文件面板 */}
+        {rightPanelOpen && !loading && (
+          <RightPanel width={800} />
+        )}
       </Box>
 
       <MessageInput onSend={handleSend} disabled={sending || loading} />

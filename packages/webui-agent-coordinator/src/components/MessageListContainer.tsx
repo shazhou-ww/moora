@@ -51,7 +51,7 @@ const scrollToBottom = (container: HTMLElement, messagesEnd: HTMLDivElement | nu
 export function MessageListContainer({
   messages,
   streamingMessageIds = new Set(),
-  toolCalls = [],
+  toolCalls,
   renderItems = [],
   onScrollIndicatorChange,
 }: MessageListContainerProps) {
@@ -232,7 +232,7 @@ export function MessageListContainer({
       <MessageList
         messages={messages}
         streamingMessageIds={streamingMessageIds}
-        toolCalls={toolCalls}
+        toolCalls={toolCalls || []}
         renderItems={renderItems}
       />
       <div ref={messagesEndRef} />

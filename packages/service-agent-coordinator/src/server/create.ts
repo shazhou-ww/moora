@@ -183,7 +183,14 @@ export function createService(options: CreateServiceOptions) {
   if (workspaceRootPath) {
     const webdavHandler = createWebDAVHandler({ workspacePath: workspaceRootPath });
     // 使用 .all() 支持所有 WebDAV 方法（GET, PUT, DELETE, PROPFIND, MKCOL, OPTIONS 等）
+    // 同时匹配 /webdav 和 /webdav/* 路径
+    app.all("/webdav", webdavHandler);
     app.all("/webdav/*", webdavHandler);
+    logger.server.info("[WebDAV] WebDAV handler registered", {
+      workspacePath: workspaceRootPath,
+    });
+  } else {
+    logger.server.warn("[WebDAV] WebDAV handler not registered: workspacePath not provided");
   }
 
   return app;

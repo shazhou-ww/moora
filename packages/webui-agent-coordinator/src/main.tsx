@@ -6,7 +6,6 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import "highlight.js/styles/github-dark.css";
 import App from "./App";
 
 const theme = createTheme({

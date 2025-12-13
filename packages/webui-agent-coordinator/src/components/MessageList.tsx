@@ -4,11 +4,11 @@
 
 import { Person } from "@mui/icons-material";
 import { Box, Avatar, Paper, Typography, Fade } from "@mui/material";
-import { useEffect, useState } from "react";
+import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
+import { useEffect, useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import "highlight.js/styles/github-dark.css";
+import { createHighlighter } from "shiki";
 
 import type { RenderItem } from "@/hooks";
 import type { Message, AssiMessage, UserMessage } from "@/types";
@@ -27,7 +27,7 @@ import {
   inlineCodeStyles,
   timestampStyles,
 } from "./MessageList.styles";
-import { ToolCallStatus, ToolCallItemView, type ToolCallItem } from "./ToolCallStatus";
+import { ToolCallStatus, type ToolCallItem } from "./ToolCallStatus";
 
 
 type MessageListProps = {
@@ -101,6 +101,83 @@ export function MessageList({
   // 如果提供了 renderItems，使用它来渲染；否则使用旧的 messages 渲染
   const useRenderItems = renderItems.length > 0;
 
+  // 创建并初始化 Shiki highlighter（使用 useMemo 避免重复创建）
+  const [highlighter, setHighlighter] = useState<Awaited<ReturnType<typeof createHighlighter>> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    createHighlighter({
+      themes: ["github-dark"],
+      langs: ["javascript", "typescript", "jsx", "tsx", "json", "python", "bash", "shell", "yaml", "markdown", "html", "css", "text"],
+    }).then((h) => {
+      if (!cancelled) {
+        setHighlighter(h);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Shiki rehype 插件配置
+  const rehypeShikiPlugin = useMemo(() => {
+    if (!highlighter) {
+      // 如果 highlighter 还未初始化，返回空数组（不使用插件）
+      return [];
+    }
+
+    const transformer = rehypeShikiFromHighlighter(highlighter, {
+      themes: {
+        dark: "github-dark",
+      },
+    });
+
+    // 包装 transformer 以确保总是返回有效节点
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const safeTransformer = (tree: any, file?: any, next?: any) => {
+      // 确保 tree 有 children 属性（防御性检查）
+      if (!tree || typeof tree !== "object" || !("children" in tree)) {
+        return tree;
+      }
+
+      try {
+        // 调用原始 transformer（总是传递所有参数）
+        const result = transformer(tree, file, next);
+        
+        // 如果是 Promise，处理异步情况
+        if (result && typeof result === "object" && "then" in result) {
+          return (result as Promise<any>).catch((error) => {
+            console.warn("Shiki highlighting error:", error);
+            return tree;
+          }).then((resolved) => {
+            // 确保解析后的结果也有 children 属性
+            if (!resolved || typeof resolved !== "object" || !("children" in resolved)) {
+              return tree;
+            }
+            return resolved;
+          });
+        }
+        
+        // 确保返回的节点有 children 属性
+        if (!result || typeof result !== "object" || !("children" in result)) {
+          // 如果 transformer 没有返回有效结果，返回原始 tree
+          return tree;
+        }
+        return result;
+      } catch (error) {
+        console.warn("Shiki highlighting error:", error);
+        // 出错时返回原始 tree，避免破坏渲染
+        return tree;
+      }
+    };
+
+    // 将 transformer 包装成插件格式
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return [safeTransformer] as any[];
+  }, [highlighter]);
+
   /**
    * 渲染单条消息
    */
@@ -140,7 +217,7 @@ export function MessageList({
                 <>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
+                    rehypePlugins={rehypeShikiPlugin.length > 0 ? rehypeShikiPlugin : []}
                     components={createMarkdownComponents(message.role)}
                   >
                     {content}
@@ -164,19 +241,6 @@ export function MessageList({
               <Person sx={avatarIconStyles} />
             </Avatar>
           )}
-        </Box>
-      </Fade>
-    );
-  };
-
-  /**
-   * 渲染单个工具调用
-   */
-  const renderToolCall = (toolCall: ToolCallItem) => {
-    return (
-      <Fade in={true} key={toolCall.request.toolCallId} timeout={300}>
-        <Box sx={{ width: "100%", maxWidth: 900, mx: "auto", my: 1, px: 2 }}>
-          <ToolCallItemView toolCall={toolCall} />
         </Box>
       </Fade>
     );
@@ -209,9 +273,10 @@ export function MessageList({
           {renderItems.map((item) => {
             if (item.type === "message") {
               return renderMessage(item.data);
-            } else {
-              return renderToolCall(item.data);
             }
+            // Coordinator 版本只有 message 类型，但为了类型安全保留 else 分支
+            // 注意：这个分支在 Coordinator 版本中永远不会执行
+            return null;
           })}
         </>
       ) : (

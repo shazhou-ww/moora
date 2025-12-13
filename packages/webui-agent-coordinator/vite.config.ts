@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
+      // 支持 monorepo：也查找根目录的 node_modules
+      preserveSymlinks: false,
     },
     optimizeDeps: {
       esbuildOptions: {

@@ -69,10 +69,16 @@ type FileInfo = {
  * @returns 如果路径安全，返回规范化后的绝对路径；否则返回 null
  */
 function validatePath(workspaceRoot: string, relativePath: string): string | null {
+  // 如果路径以 / 开头，移除它（因为这是相对于 workspace 的路径，不是绝对路径）
+  let pathToNormalize = relativePath;
+  if (pathToNormalize.startsWith("/")) {
+    pathToNormalize = pathToNormalize.slice(1);
+  }
+  
   // 规范化路径，移除 ".." 和 "." 等
-  const normalized = normalize(relativePath);
+  const normalized = normalize(pathToNormalize);
 
-  // 解析为绝对路径
+  // 解析为绝对路径（相对于 workspace 根目录）
   const absolutePath = resolve(workspaceRoot, normalized);
 
   // 规范化 workspace 根目录
@@ -118,7 +124,11 @@ function getFileInfo(filePath: string, baseName: string): FileInfo | null {
  */
 function generatePropFindResponse(files: FileInfo[], basePath: string): string {
   const responses = files.map((file) => {
-    const href = join(basePath, file.name).replace(/\\/g, "/");
+    let href = join(basePath, file.name).replace(/\\/g, "/");
+    // 对于目录，href 应该以斜杠结尾
+    if (file.isDirectory && !href.endsWith("/")) {
+      href += "/";
+    }
     const lastModified = file.lastModified.toUTCString();
     const contentLength = file.isDirectory ? "" : `<d:getcontentlength>${file.size}</d:getcontentlength>`;
 
@@ -165,6 +175,14 @@ export function createWebDAVHandler(options: CreateWebDAVHandlerOptions) {
   const { workspacePath } = options;
   const absoluteWorkspacePath = resolve(workspacePath);
 
+  // 如果 workspace 目录不存在，创建它
+  if (!existsSync(absoluteWorkspacePath)) {
+    logger.server.info("[WebDAV] Workspace directory does not exist, creating it", {
+      workspacePath: absoluteWorkspacePath,
+    });
+    mkdirSync(absoluteWorkspacePath, { recursive: true });
+  }
+
   logger.server.info("[WebDAV] Initializing WebDAV handler", {
     workspacePath: absoluteWorkspacePath,
   });
@@ -184,16 +202,33 @@ export function createWebDAVHandler(options: CreateWebDAVHandlerOptions) {
     logger.server.debug("[WebDAV] Request", {
       method,
       path: requestPath,
+      urlPathname: url.pathname,
     });
 
     try {
+      // 处理根路径：空字符串或 "/" 应该映射到当前目录 "."
+      // 其他路径会在 validatePath 中统一处理（移除开头的 "/"）
+      const normalizedRequestPath = !requestPath || requestPath === "/" ? "." : requestPath;
+      
+      logger.server.debug("[WebDAV] Path normalization", {
+        requestPath,
+        normalizedRequestPath,
+        workspacePath: absoluteWorkspacePath,
+      });
+      
       // 验证路径
-      const safePath = validatePath(absoluteWorkspacePath, requestPath || "/");
+      const safePath = validatePath(absoluteWorkspacePath, normalizedRequestPath);
       if (!safePath) {
-        logger.server.warn("[WebDAV] Invalid path", { requestPath });
+        logger.server.warn("[WebDAV] Invalid path", { 
+          requestPath, 
+          normalizedRequestPath,
+          workspacePath: absoluteWorkspacePath,
+        });
         set.status = 403;
         return "Forbidden: Path outside workspace";
       }
+      
+      logger.server.debug("[WebDAV] Path validated", { safePath });
 
       // 根据方法处理请求
       switch (method) {
@@ -281,7 +316,15 @@ export function createWebDAVHandler(options: CreateWebDAVHandlerOptions) {
             }
           }
 
-          const xml = generatePropFindResponse(files, requestPath || "/");
+          // 构建 basePath（用于 XML 响应中的 href）：基于原始请求路径
+          let basePath = "/webdav";
+          if (requestPath && requestPath !== "/" && requestPath !== "") {
+            // 确保 requestPath 以 / 开头
+            const normalizedRequestPathForUrl = requestPath.startsWith("/") ? requestPath : `/${requestPath}`;
+            basePath = `/webdav${normalizedRequestPathForUrl}`;
+          }
+          
+          const xml = generatePropFindResponse(files, basePath);
           if (!set.headers) {
             set.headers = {};
           }
