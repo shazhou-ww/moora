@@ -8,8 +8,12 @@
 import type {
   UserObUser,
   UserObLlm,
+  UserObToolkit,
+  UserObWorkforce,
   LlmObUser,
   LlmObLlm,
+  LlmObToolkit,
+  LlmObWorkforce,
   ToolkitObLlm,
   ToolkitObToolkit,
   WorkforceObLlm,
@@ -46,20 +50,24 @@ export type AppearanceOfLlm = UserObLlm & ToolkitObLlm & WorkforceObLlm & LlmObL
  * Toolkit 的 Appearance
  *
  * AppearanceOfToolkit = 别人能看到 Toolkit 的什么
- *  = 其他 Actor 对 Toolkit 的观察 + 自身状态
+ *  = UserObToolkit & LlmObToolkit & ToolkitObToolkit
  *
- * 注意：目前只有 Llm 会观察 Toolkit 的输出（工具结果），
- * 但这里用 ToolkitObToolkit 表示 Toolkit 自己的状态
+ * 包含：
+ * - UserObToolkit: User 看到的 Toolkit = toolResults
+ * - LlmObToolkit: Llm 看到的 Toolkit = toolResults
+ * - ToolkitObToolkit: Toolkit 自己维护的状态 = toolResults
  */
-export type AppearanceOfToolkit = ToolkitObToolkit;
+export type AppearanceOfToolkit = UserObToolkit & LlmObToolkit & ToolkitObToolkit;
 
 /**
  * Workforce 的 Appearance
  *
  * AppearanceOfWorkforce = 别人能看到 Workforce 的什么
- *  = 其他 Actor 对 Workforce 的观察 + 自身状态
+ *  = UserObWorkforce & LlmObWorkforce & WorkforceObWorkforce
  *
- * 注意：目前只有 Llm 会观察 Workforce 的状态，
- * 但这里用 WorkforceObWorkforce 表示 Workforce 自己的状态
+ * 包含：
+ * - UserObWorkforce: User 看到的 Workforce = topLevelTasks
+ * - LlmObWorkforce: Llm 看到的 Workforce = topLevelTasks
+ * - WorkforceObWorkforce: Workforce 自己维护的状态 = appendMessageCutOff
  */
-export type AppearanceOfWorkforce = WorkforceObWorkforce;
+export type AppearanceOfWorkforce = UserObWorkforce & LlmObWorkforce & WorkforceObWorkforce;

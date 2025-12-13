@@ -38,17 +38,15 @@ export type PerspectiveOfUser = UserObUser & UserObLlm & UserObToolkit & UserObW
  * Llm 的 Perspective
  *
  * PerspectiveOfLlm = Llm 能看到的所有数据
- *  = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce & ToolkitObLlm & WorkforceObLlm
+ *  = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce
  *
  * 包含：
  * - LlmObUser: User 的用户消息
- * - LlmObLlm: 自己维护的状态（assiMessages, cutOff）
+ * - LlmObLlm: 自己维护的状态（assiMessages, llmProceedCutOff, toolCallRequests, validTasks）
  * - LlmObToolkit: Toolkit 的工具结果
- * - LlmObWorkforce: Workforce 的任务详情
- * - ToolkitObLlm: Toolkit 对 Llm 的观察（工具调用请求）
- * - WorkforceObLlm: Workforce 对 Llm 的观察（任务请求）
+ * - LlmObWorkforce: Workforce 的任务状态
  */
-export type PerspectiveOfLlm = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce & ToolkitObLlm & WorkforceObLlm;
+export type PerspectiveOfLlm = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce;
 
 /**
  * Toolkit 的 Perspective

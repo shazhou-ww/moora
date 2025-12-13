@@ -12,7 +12,6 @@ import type {
   RequestAppendMessage,
   RequestCancelTasks,
   CallTool,
-  AssiMessage,
 } from "@/decl";
 
 /**
