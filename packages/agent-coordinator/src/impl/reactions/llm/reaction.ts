@@ -12,6 +12,8 @@ import type { CallLlmCallbacks } from "@moora/agent-common";
 import type { Dispatch } from "@moora/automata";
 import { stateful } from "@moora/effects";
 
+import { buildLlmContext } from "./context";
+import { parseCoordinatorPseudoToolCall } from "./pseudo-tools";
 import type {
   LLM,
   ReactionFnOf,
@@ -19,8 +21,6 @@ import type {
   CallLlm,
   Actuation,
 } from "../../../decl";
-import { buildLlmContext } from "./context";
-import { parseCoordinatorPseudoToolCall } from "./pseudo-tools";
 
 // ============================================================================
 // 类型定义
