@@ -1,0 +1,49 @@
+{
+  "name": "@moora/test-mocks",
+  "version": "0.1.0",
+  "description": "Mock utilities for testing, including random data generation and LLM mocking",
+  "keywords": [
+    "test",
+    "mock",
+    "random",
+    "llm",
+    "testing"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moora.git",
+    "directory": "packages/test-mocks"
+  },
+  "homepage": "https://github.com/shazhou-ww/moora/tree/main/packages/test-mocks#readme",
+  "bugs": {
+    "url": "https://github.com/shazhou-ww/moora/issues"
+  },
+  "dependencies": {
+    "@moora/agent-common": "0.1.2"
+  },
+  "devDependencies": {
+    "@moora/eslint-config": "0.1.0",
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.0.12",
+    "@vitest/ui": "4.0.12",
+    "vitest": "^4.0.12"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest --run --no-ui",
+    "test:coverage": "vitest --run --coverage --no-ui",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest --run --coverage --no-ui"
+  }
+}
