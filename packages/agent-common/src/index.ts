@@ -32,6 +32,7 @@ export type {
   CallLlmScenario,
   CallLlmToolDefinition,
   CallLlmToolCall,
+  CallLlmToolChoice,
   CallLlmContext,
   CallLlmCallbacks,
   CallLlm,

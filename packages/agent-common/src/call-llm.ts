@@ -46,6 +46,20 @@ export type CallLlmToolCall = {
 };
 
 /**
+ * Tool Choice 类型
+ *
+ * - 'auto': 自动决定是否使用工具（默认）
+ * - 'none': 不使用工具，只生成文本
+ * - 'required': 必须使用工具
+ * - { name: string }: 强制使用指定的工具
+ */
+export type CallLlmToolChoice =
+  | "auto"
+  | "none"
+  | "required"
+  | { name: string };
+
+/**
  * callLlm 的 context 参数
  */
 export type CallLlmContext = {
@@ -53,6 +67,8 @@ export type CallLlmContext = {
   scenario: CallLlmScenario;
   tools: CallLlmToolDefinition[];
   toolCalls: CallLlmToolCall[];
+  /** 工具选择策略，默认为 'auto' */
+  toolChoice: CallLlmToolChoice;
 };
 
 /**

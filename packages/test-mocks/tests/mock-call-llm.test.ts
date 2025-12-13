@@ -9,6 +9,7 @@ describe("createMockCallLlm", () => {
     scenario: "re-act-loop",
     tools: [],
     toolCalls: [],
+    toolChoice: "auto",
   });
 
   const createMockCallbacks = (): CallLlmCallbacks & {

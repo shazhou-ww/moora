@@ -128,6 +128,7 @@ When responding, you can mention these actions in natural language, and I will h
         scenario: "re-act-loop",
         tools: [],
         toolCalls: [],
+        toolChoice: "auto",
       };
 
       let hasStarted = false;

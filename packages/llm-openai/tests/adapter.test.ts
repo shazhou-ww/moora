@@ -58,6 +58,7 @@ describe("createCallLlmWithOpenAI", () => {
       scenario: "re-act-loop",
       tools: [],
       toolCalls: [],
+      toolChoice: "auto",
     };
 
     const callbacks: CallLlmCallbacks = {
@@ -133,6 +134,7 @@ describe("createCallLlmWithOpenAI", () => {
         },
       ],
       toolCalls: [],
+      toolChoice: "auto",
     };
 
     const callbacks: CallLlmCallbacks = {
@@ -173,6 +175,7 @@ describe("createCallLlmWithOpenAI", () => {
       scenario: "re-act-loop",
       tools: [],
       toolCalls: [],
+      toolChoice: "auto",
     };
 
     const callbacks: CallLlmCallbacks = {
@@ -212,6 +215,7 @@ describe("createCallLlmWithOpenAI", () => {
       scenario: "re-act-loop",
       tools: [],
       toolCalls: [],
+      toolChoice: "auto",
     };
 
     const callbacks: CallLlmCallbacks = {
