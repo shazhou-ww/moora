@@ -114,23 +114,14 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
     ToolkitReactionInternalState
   >({ executingToolCalls: [] }, ({ context: ctx, state, setState }) => {
     const { perspective, dispatch } = ctx;
-    
-    // 类型断言：perspective 实际是 Appearance，包含输入字段
-    const p = perspective as any;
-    
-    // 防御性检查：确保 perspective 存在且完整
-    if (!p || !p.toolCallRequests || !p.toolResults) {
-      return;
-    }
-    
-    const { toolCallRequests, toolResults } = p;
+    const { toolCallRequests, toolResults } = perspective;
 
     // 找出已经有结果的 tool call IDs
-    const completedToolCallIds = new Set(toolResults.map((r: any) => r.toolCallId));
+    const completedToolCallIds = new Set(toolResults.map((r) => r.toolCallId));
 
     // 找出需要执行的 tool calls（没有结果且不在执行中）
     const pendingToolCalls = toolCallRequests.filter(
-      (req: any) =>
+      (req) =>
         !completedToolCallIds.has(req.toolCallId) &&
         !state.executingToolCalls.includes(req.toolCallId)
     );
@@ -143,7 +134,7 @@ export const createToolkitReaction = (options: ToolkitReactionOptions): ToolkitR
     setState((prev) => ({
       executingToolCalls: [
         ...prev.executingToolCalls,
-        ...pendingToolCalls.map((t: any) => t.toolCallId),
+        ...pendingToolCalls.map((t) => t.toolCallId),
       ],
     }));
 

@@ -1,7 +1,8 @@
 /**
  * Appearances 类型定义
  *
- * AppearanceOfFoo = 所有 XxxObFoo 的交集
+ * Appearance = Actor 的外表，即别人能看到这个 Actor 的什么数据
+ * AppearanceOfFoo = 所有 XxxObFoo 的并集（其他 Actor 对 Foo 的观察）
  */
 
 import type {
@@ -9,12 +10,8 @@ import type {
   UserObLlm,
   LlmObUser,
   LlmObLlm,
-  LlmObToolkit,
-  LlmObWorkforce,
-  ToolkitObUser,
   ToolkitObLlm,
   ToolkitObToolkit,
-  WorkforceObUser,
   WorkforceObLlm,
   WorkforceObWorkforce,
 } from "./observations";
@@ -22,32 +19,47 @@ import type {
 /**
  * User 的 Appearance
  *
- * AppearanceOfUser = UserObUser & LlmObUser & ToolkitObUser & WorkforceObUser
+ * AppearanceOfUser = 别人能看到 User 的什么
+ *  = LlmObUser & UserObUser
+ *
+ * 包含：
+ * - LlmObUser: Llm 看到的 User = 用户消息
+ * - UserObUser: User 自己维护的用户消息
  */
-export type AppearanceOfUser = UserObUser & LlmObUser & ToolkitObUser & WorkforceObUser;
+export type AppearanceOfUser = LlmObUser & UserObUser;
 
 /**
  * Llm 的 Appearance
  *
- * AppearanceOfLlm = Llm 的输入（其他 Actor 发送给 Llm 的数据）
- *  = UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm
+ * AppearanceOfLlm = 别人能看到 Llm 的什么
+ *  = UserObLlm & ToolkitObLlm & WorkforceObLlm & LlmObLlm
+ *
+ * 包含：
+ * - UserObLlm: User 看到的 Llm = 助手消息
+ * - ToolkitObLlm: Toolkit 看到的 Llm = 工具调用请求
+ * - WorkforceObLlm: Workforce 看到的 Llm = 任务请求
+ * - LlmObLlm: Llm 自己维护的状态
  */
-export type AppearanceOfLlm = UserObLlm & LlmObLlm & ToolkitObLlm & WorkforceObLlm;
+export type AppearanceOfLlm = UserObLlm & ToolkitObLlm & WorkforceObLlm & LlmObLlm;
 
 /**
  * Toolkit 的 Appearance
  *
- * AppearanceOfToolkit = Toolkit 的输入（其他 Actor 发送给 Toolkit 的数据）
- *  = LlmObToolkit & ToolkitObToolkit
+ * AppearanceOfToolkit = 别人能看到 Toolkit 的什么
+ *  = 其他 Actor 对 Toolkit 的观察 + 自身状态
  *
- * 注意：Toolkit 持有 Workforce 实例并直接调用其方法，不通过 Observation
+ * 注意：目前只有 Llm 会观察 Toolkit 的输出（工具结果），
+ * 但这里用 ToolkitObToolkit 表示 Toolkit 自己的状态
  */
-export type AppearanceOfToolkit = LlmObToolkit & ToolkitObToolkit;
+export type AppearanceOfToolkit = ToolkitObToolkit;
 
 /**
  * Workforce 的 Appearance
  *
- * AppearanceOfWorkforce = Workforce 的输入（其他 Actor 发送给 Workforce 的数据）
- *  = LlmObWorkforce & WorkforceObWorkforce
+ * AppearanceOfWorkforce = 别人能看到 Workforce 的什么
+ *  = 其他 Actor 对 Workforce 的观察 + 自身状态
+ *
+ * 注意：目前只有 Llm 会观察 Workforce 的状态，
+ * 但这里用 WorkforceObWorkforce 表示 Workforce 自己的状态
  */
-export type AppearanceOfWorkforce = LlmObWorkforce & WorkforceObWorkforce;
+export type AppearanceOfWorkforce = WorkforceObWorkforce;

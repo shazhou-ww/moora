@@ -1,7 +1,8 @@
 /**
  * Observations 类型定义
  *
- * Observation 是 Actor 相互之间的观察，它是被观察 Actor 状态的切片。
+ * Observation 是 Actor 对其他 Actor 的观察。
+ * FooObBar = Foo 对 Bar 的观察 = Foo 能看到 Bar 的什么数据
  */
 
 import { z } from "zod";
@@ -85,22 +86,13 @@ export type ToolCallRequests = ToolCallRequest[];
 export type ToolResults = ToolResult[];
 
 // ============================================================================
-// Observation Schema 定义
+// User 相关 Observation
 // ============================================================================
 
 /**
- * User 对 Llm 的观察 Schema
- *
- * UserObLlm: User 发给 Llm 的数据（用户消息）
- */
-export const userObLlmSchema = z.object({
-  userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
-});
-
-export type UserObLlm = z.infer<typeof userObLlmSchema>;
-
-/**
  * User 对自身的观察 Schema（自环）
+ *
+ * User 能看到自己维护的用户消息列表
  */
 export const userObUserSchema = z.object({
   userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
@@ -109,7 +101,49 @@ export const userObUserSchema = z.object({
 export type UserObUser = z.infer<typeof userObUserSchema>;
 
 /**
+ * User 对 Llm 的观察 Schema
+ *
+ * UserObLlm: User 能看到 Llm 的什么 = 助手消息
+ */
+export const userObLlmSchema = z.object({
+  assiMessages: z.array(assiMessageSchema as unknown as z.ZodTypeAny),
+});
+
+export type UserObLlm = z.infer<typeof userObLlmSchema>;
+
+/**
+ * User 对 Toolkit 的观察 Schema
+ *
+ * UserObToolkit: User 能看到 Toolkit 的什么 = 工具执行结果
+ */
+export const userObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type UserObToolkit = z.infer<typeof userObToolkitSchema>;
+
+/**
+ * User 对 Workforce 的观察 Schema
+ *
+ * UserObWorkforce: User 能看到 Workforce 的什么 = 任务状态
+ */
+export const userObWorkforceSchema = z.object({
+  /** 所有顶层正在进行的任务（不包括 succeeded/failed 的） */
+  ongoingTopLevelTasks: z.array(taskMonitorInfoSchema),
+  /** 已通知用户的任务完成事件 ID 集合 */
+  notifiedTaskCompletions: z.array(z.string()),
+});
+
+export type UserObWorkforce = z.infer<typeof userObWorkforceSchema>;
+
+// ============================================================================
+// Llm 相关 Observation
+// ============================================================================
+
+/**
  * Llm 对自身的观察 Schema（自环）
+ *
+ * Llm 能看到自己维护的状态
  */
 export const llmObLlmSchema = z.object({
   assiMessages: z.array(assiMessageSchema as unknown as z.ZodTypeAny),
@@ -124,20 +158,87 @@ export type LlmObLlm = z.infer<typeof llmObLlmSchema>;
 /**
  * Llm 对 User 的观察 Schema
  *
- * LlmObUser: Llm 发给 User 的数据（助手消息）
+ * LlmObUser: Llm 能看到 User 的什么 = 用户消息
  */
 export const llmObUserSchema = z.object({
-  assiMessages: z.array(assiMessageSchema as unknown as z.ZodTypeAny),
+  userMessages: z.array(userMessageSchema as unknown as z.ZodTypeAny),
 });
 
 export type LlmObUser = z.infer<typeof llmObUserSchema>;
 
 /**
+ * Llm 对 Toolkit 的观察 Schema
+ *
+ * LlmObToolkit: Llm 能看到 Toolkit 的什么 = 工具执行结果
+ */
+export const llmObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type LlmObToolkit = z.infer<typeof llmObToolkitSchema>;
+
+/**
  * Llm 对 Workforce 的观察 Schema
  *
- * LlmObWorkforce: Llm 发给 Workforce 的请求
+ * LlmObWorkforce: Llm 能看到 Workforce 的什么 = 任务状态
  */
 export const llmObWorkforceSchema = z.object({
+  /** 所有顶层任务的详细信息 Map */
+  topLevelTasks: z.record(z.string(), taskMonitorInfoSchema),
+});
+
+export type LlmObWorkforce = z.infer<typeof llmObWorkforceSchema>;
+
+// ============================================================================
+// Toolkit 相关 Observation
+// ============================================================================
+
+/**
+ * Toolkit 对自身的观察 Schema（自环）
+ *
+ * Toolkit 能看到自己维护的工具结果缓存
+ */
+export const toolkitObToolkitSchema = z.object({
+  toolResults: z.array(toolResultSchema),
+});
+
+export type ToolkitObToolkit = z.infer<typeof toolkitObToolkitSchema>;
+
+/**
+ * Toolkit 对 Llm 的观察 Schema
+ *
+ * ToolkitObLlm: Toolkit 能看到 Llm 的什么 = 工具调用请求
+ */
+export const toolkitObLlmSchema = z.object({
+  toolCallRequests: z.array(toolCallRequestSchema),
+});
+
+export type ToolkitObLlm = z.infer<typeof toolkitObLlmSchema>;
+
+// ============================================================================
+// Workforce 相关 Observation
+// ============================================================================
+
+/**
+ * Workforce 对自身的观察 Schema（自环）
+ *
+ * Workforce 能看到自己维护的任务状态
+ */
+export const workforceObWorkforceSchema = z.object({
+  /** 所有顶层任务 ID 列表 */
+  topLevelTaskIds: z.array(z.string()),
+  /** 任务详情缓存 */
+  taskCache: z.record(z.string(), taskMonitorInfoSchema),
+});
+
+export type WorkforceObWorkforce = z.infer<typeof workforceObWorkforceSchema>;
+
+/**
+ * Workforce 对 Llm 的观察 Schema
+ *
+ * WorkforceObLlm: Workforce 能看到 Llm 的什么 = 任务创建/追加/取消请求
+ */
+export const workforceObLlmSchema = z.object({
   /** Llm 请求创建的任务列表 */
   taskCreateRequests: z.array(
     z.object({
@@ -168,86 +269,4 @@ export const llmObWorkforceSchema = z.object({
   ),
 });
 
-export type LlmObWorkforce = z.infer<typeof llmObWorkforceSchema>;
-
-/**
- * Workforce 对自身的观察 Schema（自环）
- *
- * Workforce 维护所有任务的完整状态
- */
-export const workforceObWorkforceSchema = z.object({
-  /** 所有顶层任务 ID 列表 */
-  topLevelTaskIds: z.array(z.string()),
-  /** 任务详情缓存 */
-  taskCache: z.record(z.string(), taskMonitorInfoSchema),
-});
-
-export type WorkforceObWorkforce = z.infer<typeof workforceObWorkforceSchema>;
-
-/**
- * Workforce 对 Llm 的观察 Schema
- *
- * WorkforceObLlm: Workforce 发给 Llm 的任务信息
- */
-export const workforceObLlmSchema = z.object({
-  /** 所有顶层任务的详细信息 Map */
-  topLevelTasks: z.record(z.string(), taskMonitorInfoSchema),
-});
-
 export type WorkforceObLlm = z.infer<typeof workforceObLlmSchema>;
-
-/**
- * Workforce 对 User 的观察 Schema
- *
- * WorkforceObUser: Workforce 发给 User 的任务信息
- */
-export const workforceObUserSchema = z.object({
-  /** 所有顶层正在进行的任务（不包括 succeeded/failed 的） */
-  ongoingTopLevelTasks: z.array(taskMonitorInfoSchema),
-  /** 已通知用户的任务完成事件 ID 集合 */
-  notifiedTaskCompletions: z.array(z.string()),
-});
-
-export type WorkforceObUser = z.infer<typeof workforceObUserSchema>;
-
-/**
- * Llm 对 Toolkit 的观察 Schema
- *
- * LlmObToolkit: Llm 发给 Toolkit 的工具调用请求
- */
-export const llmObToolkitSchema = z.object({
-  toolCallRequests: z.array(toolCallRequestSchema),
-});
-
-export type LlmObToolkit = z.infer<typeof llmObToolkitSchema>;
-
-/**
- * Toolkit 对 Llm 的观察 Schema
- *
- * ToolkitObLlm: Toolkit 发给 Llm 的工具调用结果
- */
-export const toolkitObLlmSchema = z.object({
-  toolResults: z.array(toolResultSchema),
-});
-
-export type ToolkitObLlm = z.infer<typeof toolkitObLlmSchema>;
-
-/**
- * Toolkit 对自身的观察 Schema（自环）
- */
-export const toolkitObToolkitSchema = z.object({
-  toolResults: z.array(toolResultSchema),
-});
-
-export type ToolkitObToolkit = z.infer<typeof toolkitObToolkitSchema>;
-
-/**
- * Toolkit 对 User 的观察 Schema
- *
- * ToolkitObUser: Toolkit 发给 User 的工具结果
- */
-export const toolkitObUserSchema = z.object({
-  toolResults: z.array(toolResultSchema),
-});
-
-export type ToolkitObUser = z.infer<typeof toolkitObUserSchema>;

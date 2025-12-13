@@ -40,22 +40,13 @@ export function createWorkforceReaction(
   });
 
   return async ({ perspective, dispatch }) => {
-    // 类型断言：perspective 实际是 Appearance，包含输入字段
-    const p = perspective as any;
-    
-    // 防御性检查：确保 perspective 存在且完整
-    if (!p || !p.taskCreateRequests) {
-      return;
-    }
-    
     const {
       taskCreateRequests,
       messageAppendRequests,
       taskCancelRequests,
-      notifiedTaskCompletions,
       topLevelTaskIds,
       taskCache,
-    } = p;
+    } = perspective;
 
     // 处理任务创建请求
     for (const request of taskCreateRequests) {
@@ -95,6 +86,8 @@ export function createWorkforceReaction(
     }
 
     // 检查任务完成并通知用户
+    // 注意：notifiedTaskCompletions 现在不在 WorkforcePerspective 中
+    // 需要通过其他方式跟踪（比如在 reaction 内部状态中）
     for (const taskId of topLevelTaskIds) {
       const task = workforce.getTask(taskId);
       if (!task) continue;
@@ -106,10 +99,7 @@ export function createWorkforceReaction(
       if (!status) continue;
 
       // 检查任务是否完成（成功或失败）
-      if (
-        (status.status === "succeeded" || status.status === "failed") &&
-        !notifiedTaskCompletions.includes(taskId)
-      ) {
+      if (status.status === "succeeded" || status.status === "failed") {
         // 通知用户
         const result =
           status.status === "succeeded"

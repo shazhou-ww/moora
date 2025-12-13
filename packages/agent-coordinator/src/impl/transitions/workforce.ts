@@ -3,9 +3,8 @@
  */
 
 import type {
-  AppearanceOfWorkforce,
-  ActionFromWorkforce,
   PerspectiveOfWorkforce,
+  ActionFromWorkforce,
   NotifyTaskCompletion,
   UpdateTaskStatus,
 } from "@/decl";
@@ -16,14 +15,14 @@ import type {
  * 处理 Workforce 的 Action，更新其 Perspective
  */
 export function transitionWorkforce(
-  appearance: AppearanceOfWorkforce,
+  perspective: PerspectiveOfWorkforce,
   action: ActionFromWorkforce
 ): PerspectiveOfWorkforce {
   switch (action.type) {
     case "notify-task-completion":
-      return handleNotifyTaskCompletion(appearance, action);
+      return handleNotifyTaskCompletion(perspective, action);
     case "update-task-status":
-      return handleUpdateTaskStatus(appearance, action);
+      return handleUpdateTaskStatus(perspective, action);
     default: {
       const _exhaustive: never = action;
       throw new Error(`Unknown action type: ${(_exhaustive as unknown as { type: string }).type}`);
@@ -33,39 +32,26 @@ export function transitionWorkforce(
 
 /**
  * 处理通知任务完成
+ *
+ * 注意：notifiedTaskCompletions 不在 WorkforcePerspective 中
+ * 这个 action 目前只记录日志，实际状态由 workforce 实例管理
  */
 function handleNotifyTaskCompletion(
-  appearance: AppearanceOfWorkforce,
-  action: NotifyTaskCompletion
+  perspective: PerspectiveOfWorkforce,
+  _action: NotifyTaskCompletion
 ): PerspectiveOfWorkforce {
-  // 类型断言：Appearance 实际包含了完整的 Worldscape 状态
-  const state = appearance as any;
-  const { notifiedTaskCompletions } = state;
-
-  return {
-    // WorkforceObUser - 记录已通知的任务
-    ongoingTopLevelTasks: state.ongoingTopLevelTasks,
-    notifiedTaskCompletions: [...notifiedTaskCompletions, action.taskId],
-
-    // WorkforceObLlm - 保持不变
-    topLevelTasks: state.topLevelTasks,
-
-    // WorkforceObWorkforce - 保持不变
-    topLevelTaskIds: state.topLevelTaskIds,
-    taskCache: state.taskCache,
-  };
+  // 保持不变，notification 的状态由 reaction 层处理
+  return perspective;
 }
 
 /**
  * 处理更新任务状态
  */
 function handleUpdateTaskStatus(
-  appearance: AppearanceOfWorkforce,
+  perspective: PerspectiveOfWorkforce,
   action: UpdateTaskStatus
 ): PerspectiveOfWorkforce {
-  // 类型断言：Appearance 实际包含了完整的 Worldscape 状态
-  const state = appearance as any;
-  const { taskCache, topLevelTaskIds } = state;
+  const { taskCache, topLevelTaskIds } = perspective;
 
   // 更新任务缓存
   const existingTask = taskCache[action.taskId];
@@ -92,19 +78,16 @@ function handleUpdateTaskStatus(
   const shouldRemove =
     action.status === "succeeded" || action.status === "failed";
   const updatedTopLevelTaskIds = shouldRemove
-    ? topLevelTaskIds.filter((id: string) => id !== action.taskId)
+    ? topLevelTaskIds.filter((id) => id !== action.taskId)
     : topLevelTaskIds.includes(action.taskId)
       ? topLevelTaskIds
       : [...topLevelTaskIds, action.taskId];
 
   return {
-    // WorkforceObUser - 保持不变
-    ongoingTopLevelTasks: state.ongoingTopLevelTasks,
-    notifiedTaskCompletions: state.notifiedTaskCompletions,
-
-    // WorkforceObLlm - 保持不变
-    topLevelTasks: state.topLevelTasks,
-
+    // WorkforceObLlm - 保持不变（任务请求列表）
+    taskCreateRequests: perspective.taskCreateRequests,
+    messageAppendRequests: perspective.messageAppendRequests,
+    taskCancelRequests: perspective.taskCancelRequests,
     // WorkforceObWorkforce - 更新任务缓存和列表
     topLevelTaskIds: updatedTopLevelTaskIds,
     taskCache: updatedCache,

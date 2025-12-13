@@ -5,6 +5,13 @@
  */
 
 import {
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  PlayArrow as PlayArrowIcon,
+  Schedule as ScheduleIcon,
+} from "@mui/icons-material";
+import {
   Box,
   Paper,
   Typography,
@@ -15,13 +22,7 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import {
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  HourglassEmpty as HourglassEmptyIcon,
-  PlayArrow as PlayArrowIcon,
-  Schedule as ScheduleIcon,
-} from "@mui/icons-material";
+import type { ReactElement } from "react";
 
 import type { TaskInfo, TaskStatus } from "@/types";
 
@@ -35,7 +36,7 @@ type TaskPanelProps = {
 /**
  * 获取任务状态对应的图标
  */
-function getStatusIcon(status: TaskStatus): JSX.Element {
+function getStatusIcon(status: TaskStatus): ReactElement {
   switch (status) {
     case "ready":
       return <ScheduleIcon fontSize="small" />;

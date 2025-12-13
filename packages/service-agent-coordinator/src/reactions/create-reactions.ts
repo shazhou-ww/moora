@@ -5,20 +5,24 @@
 import { v4 as uuidv4 } from "uuid";
 
 import type { CallLlm } from "@moora/agent-common";
+import type {
+  ReactionFns,
+  PerspectiveOfUser,
+  UserMessage,
+  AssiMessage,
+  TaskMonitorInfo,
+  ToolCallRequest,
+  ToolResult,
+} from "@moora/agent-coordinator";
 import {
   USER,
   LLM,
   TOOLKIT,
   WORKFORCE,
 } from "@moora/agent-coordinator";
-import type {
-  ReactionFns,
-  PerspectiveOfUser,
-} from "@moora/agent-coordinator";
 import { stateful } from "@moora/effects";
 import type { Toolkit } from "@moora/toolkit";
 import type { Workforce } from "@moora/workforce";
-
 import { getLogger } from "@/logger";
 
 const logger = getLogger();
@@ -91,15 +95,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
     { ongoingCallId: null as string | null },
     ({ context: ctx, state, setState }) => {
       const { perspective, dispatch } = ctx;
-
-      // 类型断言：perspective 实际是 Appearance，包含输入字段
-      const p = perspective as any;
-
-      if (!p || !p.userMessages || !p.assiMessages) {
-        return;
-      }
-
-      const { userMessages, assiMessages, cutOff, topLevelTasks, toolResults } = p;
+      const { userMessages, assiMessages, cutOff, topLevelTasks } = perspective;
 
       // 如果有正在进行的调用，跳过
       if (state.ongoingCallId !== null) {
@@ -107,7 +103,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       }
 
       // 检查是否有新的用户消息需要处理
-      const hasNewMessages = userMessages.some((msg: any) => msg.timestamp > cutOff);
+      const hasNewMessages = userMessages.some((msg: UserMessage) => msg.timestamp > cutOff);
 
       if (!hasNewMessages) {
         return;
@@ -125,27 +121,27 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
 
       // 构建消息列表
       const messages = [
-        ...userMessages.map((m: any) => ({
+        ...userMessages.map((m: UserMessage) => ({
           role: "user" as const,
           id: m.id,
           content: m.content,
           timestamp: m.timestamp,
         })),
         ...assiMessages
-          .filter((m: any) => !m.streaming)
-          .map((m: any) => ({
+          .filter((m: AssiMessage) => !m.streaming)
+          .map((m: AssiMessage) => ({
             role: "assistant" as const,
             id: m.id,
             streaming: false as const,
-            content: m.content,
+            content: !m.streaming ? m.content : "",
             timestamp: m.timestamp,
           })),
       ];
 
       // 构建系统提示，包含任务信息
-      const taskInfo = Object.values(topLevelTasks || {})
+      const _taskInfo = Object.values(topLevelTasks || {})
         .map(
-          (task: any) =>
+          (task: TaskMonitorInfo) =>
             `- Task "${task.title}" (${task.id}): ${task.status}${
               task.result
                 ? task.result.success
@@ -159,7 +155,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       // 获取最新的用户消息时间戳
       const latestUserMessageTimestamp = Math.max(
         0,
-        ...userMessages.map((m: any) => m.timestamp)
+        ...userMessages.map((m: UserMessage) => m.timestamp)
       );
 
       // 异步调用 LLM
@@ -225,21 +221,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
     { executingToolCalls: [] as string[] },
     ({ context: ctx, state, setState }) => {
       const { perspective, dispatch } = ctx;
-
-      const p = perspective as any;
-
-      if (!p || !p.toolCallRequests) {
-        return;
-      }
-
-      const { toolCallRequests, toolResults } = p;
+      const { toolCallRequests, toolResults } = perspective;
 
       // 找出已经有结果的 tool call IDs
-      const completedToolCallIds = new Set(toolResults.map((r: any) => r.toolCallId));
+      const completedToolCallIds = new Set(toolResults.map((r: ToolResult) => r.toolCallId));
 
       // 找出需要执行的 tool calls（没有结果且不在执行中）
       const pendingToolCalls = toolCallRequests.filter(
-        (req: any) =>
+        (req: ToolCallRequest) =>
           !completedToolCallIds.has(req.toolCallId) &&
           !state.executingToolCalls.includes(req.toolCallId)
       );
@@ -252,14 +241,14 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
       setState((prev) => ({
         executingToolCalls: [
           ...prev.executingToolCalls,
-          ...pendingToolCalls.map((t: any) => t.toolCallId),
+          ...pendingToolCalls.map((t: ToolCallRequest) => t.toolCallId),
         ],
       }));
 
       // 异步执行每个 tool call
       void (async () => {
         await Promise.all(
-          pendingToolCalls.map(async (t: any) => {
+          pendingToolCalls.map(async (t: ToolCallRequest) => {
             try {
               // 查找工具
               const tool = toolkit.getAllToolInfos().find((tool) => tool.name === t.name);
@@ -301,7 +290,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
         // 从执行中列表移除
         setState((prev) => ({
           executingToolCalls: prev.executingToolCalls.filter(
-            (id) => !pendingToolCalls.some((t: any) => t.toolCallId === id)
+            (id) => !pendingToolCalls.some((t: ToolCallRequest) => t.toolCallId === id)
           ),
         }));
       })();
@@ -310,13 +299,7 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
 
   // Workforce Reaction - 处理任务管理
   const workforceReaction: ReactionFns[typeof WORKFORCE] = async ({ perspective, dispatch }) => {
-    const p = perspective as any;
-
-    if (!p) {
-      return;
-    }
-
-    const { taskCreateRequests, messageAppendRequests, taskCancelRequests } = p;
+    const { taskCreateRequests, messageAppendRequests, taskCancelRequests } = perspective;
 
     // 处理任务创建请求
     for (const request of taskCreateRequests || []) {
@@ -371,9 +354,9 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
   };
 
   return {
-    [USER as any]: userReaction,
-    [LLM as any]: llmReaction,
-    [TOOLKIT as any]: toolkitReaction,
-    [WORKFORCE as any]: workforceReaction,
-  } as ReactionFns;
+    [USER]: userReaction,
+    [LLM]: llmReaction,
+    [TOOLKIT]: toolkitReaction,
+    [WORKFORCE]: workforceReaction,
+  };
 }

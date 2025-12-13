@@ -32,11 +32,11 @@ function runLint(packageDir: string, args: string[]) {
       cwd: packageDir,
       stdio: 'inherit'
     });
+    return true;
   } catch (error) {
     console.error(`ESLint failed for ${packageName}`);
     return false;
   }
-  return true;
 }
 
 function main() {

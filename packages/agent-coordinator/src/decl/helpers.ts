@@ -74,8 +74,10 @@ export type InitialFnOf<Actor extends Actors> = () => PerspectiveOf<Actor>;
 
 /**
  * 状态转换函数类型
+ *
+ * Transition 接收当前 Perspective 和 Action，返回新的 Perspective
  */
 export type TransitionFnOf<Actor extends Actors> = (
-  appearance: AppearanceOf<Actor>,
+  perspective: PerspectiveOf<Actor>,
   action: ActionFrom<Actor>
 ) => PerspectiveOf<Actor>;

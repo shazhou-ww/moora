@@ -4,7 +4,7 @@
 
 import { Elysia } from "elysia";
 
-import type { Actuation } from "@moora/agent-coordinator";
+import type { Actuation, Worldscape } from "@moora/agent-coordinator";
 import { createAgent, createReaction } from "@moora/agent-coordinator";
 import { createPubSub } from "@moora/pub-sub";
 import type { Toolkit } from "@moora/toolkit";
@@ -40,7 +40,7 @@ function ellipsis(str: string, maxLen = 20): string {
  * 格式化输入日志（只记录 input，不记录 state）
  * 对可能过长的 content 字段进行截断
  */
-function formatInputLog(update: { prev: { state: any; input: Actuation } | null; state: any }) {
+function formatInputLog(update: { prev: { state: Worldscape; input: Actuation } | null; state: Worldscape }) {
   const { prev } = update;
 
   if (prev === null) {

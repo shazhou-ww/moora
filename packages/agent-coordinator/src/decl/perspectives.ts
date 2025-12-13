@@ -1,20 +1,21 @@
 /**
  * Perspectives 类型定义
  *
- * PerspectiveOfFoo = FooObUser & FooObLlm & FooObToolkit & FooObWorkforce & FooObFoo
+ * Perspective = Actor 的视角，即 Actor 能看到的所有数据
+ * PerspectiveOfFoo = Foo 对所有其他 Actor 的观察 + Foo 对自己的观察
  */
 
 import type {
   UserObUser,
   UserObLlm,
+  UserObToolkit,
+  UserObWorkforce,
   LlmObUser,
   LlmObLlm,
   LlmObToolkit,
   LlmObWorkforce,
-  ToolkitObUser,
   ToolkitObLlm,
   ToolkitObToolkit,
-  WorkforceObUser,
   WorkforceObLlm,
   WorkforceObWorkforce,
 } from "./observations";
@@ -22,56 +23,51 @@ import type {
 /**
  * User 的 Perspective
  *
- * PerspectiveOfUser = User 的输出（User 发送给其他 Actor 的数据）
- *  = UserObUser & UserObLlm
+ * PerspectiveOfUser = User 能看到的所有数据
+ *  = UserObUser & UserObLlm & UserObToolkit & UserObWorkforce
  *
  * 包含：
- * - UserObUser: userMessages (User 自己维护的状态)
- * - UserObLlm: userMessages (User 发给 Llm 的消息，与 UserObUser 字段相同)
- *
- * 注意：UserObUser 和 UserObLlm 的字段完全相同（都是 userMessages），
- * 因为 User 维护的状态就是它发给 Llm 的消息列表。
+ * - UserObUser: 自己维护的用户消息
+ * - UserObLlm: Llm 的助手消息
+ * - UserObToolkit: Toolkit 的工具结果
+ * - UserObWorkforce: Workforce 的任务信息
  */
-export type PerspectiveOfUser = UserObUser & UserObLlm;
+export type PerspectiveOfUser = UserObUser & UserObLlm & UserObToolkit & UserObWorkforce;
 
 /**
  * Llm 的 Perspective
  *
- * PerspectiveOfLlm = Llm 的输出（Llm 发送给其他 Actor 的数据）
+ * PerspectiveOfLlm = Llm 能看到的所有数据
  *  = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce
  *
  * 包含：
- * - LlmObUser: 发给 User 的助手消息
+ * - LlmObUser: User 的用户消息
  * - LlmObLlm: 自己维护的状态（assiMessages, cutOff）
- * - LlmObToolkit: 发给 Toolkit 的工具调用请求
- * - LlmObWorkforce: 发给 Workforce 的任务请求
+ * - LlmObToolkit: Toolkit 的工具结果
+ * - LlmObWorkforce: Workforce 的任务详情
  */
 export type PerspectiveOfLlm = LlmObUser & LlmObLlm & LlmObToolkit & LlmObWorkforce;
 
 /**
  * Toolkit 的 Perspective
  *
- * PerspectiveOfToolkit = Toolkit 的输出（Toolkit 发送给其他 Actor 的数据）
- *  = ToolkitObUser & ToolkitObLlm & ToolkitObToolkit
+ * PerspectiveOfToolkit = Toolkit 能看到的所有数据
+ *  = ToolkitObLlm & ToolkitObToolkit
  *
  * 包含：
- * - ToolkitObUser: 发给 User 的工具结果
- * - ToolkitObLlm: 发给 Llm 的工具结果
+ * - ToolkitObLlm: Llm 的工具调用请求
  * - ToolkitObToolkit: 自己维护的工具结果缓存
  */
-export type PerspectiveOfToolkit = ToolkitObUser & ToolkitObLlm & ToolkitObToolkit;
+export type PerspectiveOfToolkit = ToolkitObLlm & ToolkitObToolkit;
 
 /**
  * Workforce 的 Perspective
  *
- * PerspectiveOfWorkforce = Workforce 的输出（Workforce 发送给其他 Actor 的数据）
- *  = WorkforceObUser & WorkforceObLlm & WorkforceObWorkforce
+ * PerspectiveOfWorkforce = Workforce 能看到的所有数据
+ *  = WorkforceObLlm & WorkforceObWorkforce
  *
  * 包含：
- * - WorkforceObUser: 发给 User 的任务信息
- * - WorkforceObLlm: 发给 Llm 的任务详情
+ * - WorkforceObLlm: Llm 的任务请求
  * - WorkforceObWorkforce: 自己维护的状态
- *
- * 注意：Workforce 不发送数据给 Toolkit，Toolkit 通过持有的 Workforce 实例直接调用方法
  */
-export type PerspectiveOfWorkforce = WorkforceObUser & WorkforceObLlm & WorkforceObWorkforce;
+export type PerspectiveOfWorkforce = WorkforceObLlm & WorkforceObWorkforce;
