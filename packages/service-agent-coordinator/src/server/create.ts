@@ -20,6 +20,7 @@ import type { CreateServiceOptions } from "@/types";
 import {
   createAgentSSEHandler,
   createPostSendHandler,
+  createWebDAVHandler,
 } from "./handlers";
 
 
@@ -92,10 +93,13 @@ function formatInputLog(update: { prev: { state: Worldscape; input: Actuation } 
  * ```
  */
 export function createService(options: CreateServiceOptions) {
-  const { openai, prompt, toolkit: providedToolkit, tavilyApiKey } = options;
+  const { openai, prompt, toolkit: providedToolkit, tavilyApiKey, workspacePath } = options;
 
   // 使用提供的 toolkit 或创建默认 toolkit（包含 Tavily 等内置工具）
-  const toolkit: Toolkit = providedToolkit ?? createDefaultToolkit({ tavilyApiKey });
+  const toolkit: Toolkit = providedToolkit ?? createDefaultToolkit({
+    tavilyApiKey,
+    workspacePath,
+  });
 
   // 创建 callLlm 回调
   const callLlm = createCallLlmCallback({
@@ -173,6 +177,14 @@ export function createService(options: CreateServiceOptions) {
   const app = new Elysia()
     .get("/agent", createAgentSSEHandler(agent, patchPubSub.sub))
     .post("/send", createPostSendHandler(agent));
+
+  // 如果提供了 workspacePath，添加 WebDAV 接口
+  const workspaceRootPath = workspacePath ?? process.env.WORKSPACE_PATH;
+  if (workspaceRootPath) {
+    const webdavHandler = createWebDAVHandler({ workspacePath: workspaceRootPath });
+    // 使用 .all() 支持所有 WebDAV 方法（GET, PUT, DELETE, PROPFIND, MKCOL, OPTIONS 等）
+    app.all("/webdav/*", webdavHandler);
+  }
 
   return app;
 }

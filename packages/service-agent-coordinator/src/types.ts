@@ -56,4 +56,9 @@ export type CreateServiceOptions = {
    * Tavily API Key（可选，用于启用 Tavily 搜索工具）
    */
   tavilyApiKey?: string;
+  /**
+   * Workspace 根目录路径（可选，用于启用 WebDAV 接口和 Workspace 工具）
+   * 如果未提供，将从环境变量 WORKSPACE_PATH 读取
+   */
+  workspacePath?: string;
 };
