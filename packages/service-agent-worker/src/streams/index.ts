@@ -1,13 +1,19 @@
 /**
  * Streams 模块导出
+ *
+ * 重新导出 @moora/stream-manager 的功能
  */
 
 // ============================================================================
 // 导出类型
 // ============================================================================
-export type { SSEConnection, StreamConnection, StreamManager } from "@/types";
+export type {
+  SSEConnection,
+  StreamConnection,
+  StreamManager,
+} from "@moora/stream-manager";
 
 // ============================================================================
 // 导出函数
 // ============================================================================
-export { createStreamManager } from "./create";
+export { createStreamManager } from "@moora/stream-manager";

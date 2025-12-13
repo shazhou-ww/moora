@@ -4,14 +4,9 @@
 
 import type { CancelFn } from "@moora/pub-sub";
 import { createPubSub } from "@moora/pub-sub";
-import { getLogger } from "@/logger";
-import type { SSEConnection, StreamConnection, StreamManager } from "@/types";
+import type { SSEConnection, StreamConnection, StreamManager } from "./types";
 
 import { sendToConnection } from "./helpers";
-
-
-
-const logger = getLogger().stream;
 
 /**
  * 创建 StreamManager 实例
@@ -97,7 +92,6 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      logger.debug("Stream not found, chunk ignored", { messageId });
       return;
     }
 
@@ -119,7 +113,6 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      logger.debug("Stream not found, endStream ignored", { messageId });
       return;
     }
 
@@ -153,7 +146,6 @@ export function createStreamManager(
     const stream = streams.get(messageId);
 
     if (!stream) {
-      logger.warn("Stream not found, connection closed", { messageId });
       connection.closed = true;
       if (connection.resolve) {
         connection.resolve();
@@ -209,4 +201,3 @@ export function createStreamManager(
     isActive,
   };
 }
-

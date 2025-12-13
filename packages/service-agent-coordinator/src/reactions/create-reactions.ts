@@ -150,10 +150,6 @@ export function createReactions(options: CreateReactionsOptions): ReactionFns {
 
       setState(() => ({ ongoingCallId: messageId }));
 
-      if (onStreamStart) {
-        onStreamStart(messageId);
-      }
-
       // 构建消息列表
       const messages = [
         ...userMessages.map((m: UserMessage) => ({

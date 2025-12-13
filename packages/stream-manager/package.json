@@ -1,0 +1,35 @@
+{
+  "name": "@moora/stream-manager",
+  "version": "0.1.0",
+  "description": "Stream manager for handling streaming messages and SSE connections",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest --run --no-ui",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix"
+  },
+  "keywords": [
+    "stream",
+    "sse",
+    "streaming",
+    "pubsub"
+  ],
+  "author": "Moora Team",
+  "license": "MIT",
+  "dependencies": {
+    "@moora/pub-sub": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@moora/eslint-config": "workspace:*",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@moora/pub-sub": "^0.1.0"
+  }
+}

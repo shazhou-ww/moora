@@ -30,6 +30,7 @@
     "@moora/effects": "workspace:*",
     "@moora/llm-openai": "0.1.2",
     "@moora/pub-sub": "0.1.2",
+    "@moora/stream-manager": "workspace:*",
     "@moora/toolkit": "0.1.2",
     "@moora/tools-tavily": "0.1.2",
     "@moora/workforce": "workspace:*",
