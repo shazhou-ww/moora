@@ -7,30 +7,39 @@
  */
 
 // ============================================================================
+// 导出常量
+// ============================================================================
+export { ROOT_TASK_ID } from "./types";
+
+// ============================================================================
 // 导出类型
 // ============================================================================
 export type {
-  // Task Status
+  // Task Creation
+  TaskCreation,
+  // Appended Info
+  AppendedInfo,
+  // Completion
+  Completion,
+  CompletionSuccess,
+  CompletionFailure,
+  // Task Status (推导的)
   TaskStatus,
   TaskStatusReady,
   TaskStatusPending,
   TaskStatusSucceeded,
   TaskStatusFailed,
-  // Task
-  Task,
+  // Task Info (查询结果)
   TaskInfo,
-  TaskDefinition,
-  SubTaskDefinition,
   // State
   TaskManagerState,
-  // Actuations
-  Actuation,
-  ActuationSchedule,
-  ActuationCancel,
-  ActuationAppendInfo,
-  ActuationBreakDown,
-  ActuationComplete,
-  ActuationFail,
+  // Input
+  Input,
+  InputCreate,
+  InputCancel,
+  InputAppend,
+  InputComplete,
+  InputFail,
 } from "./types";
 
 export type { TaskManager } from "./create";
@@ -38,7 +47,7 @@ export type { TaskManager } from "./create";
 // ============================================================================
 // 导出辅助函数
 // ============================================================================
-export { isCompleted, isActive } from "./types";
+export { isCompleted, isActive } from "./queries";
 
 // ============================================================================
 // 导出 Automata
@@ -49,6 +58,8 @@ export { initial, transition, taskManagerMachine } from "./automata";
 // 导出查询函数
 // ============================================================================
 export {
+  deriveTaskStatus,
+  getTopLevelTaskIds,
   getNextTask,
   getTaskInfo,
   getAllTaskIds,

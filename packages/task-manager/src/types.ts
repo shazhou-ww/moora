@@ -1,25 +1,99 @@
 /**
  * Task Manager 类型定义
  *
- * 定义任务管理的核心类型
+ * 设计原则：
+ * - 状态最小化：只存储基本数据，TaskStatus 从 completions 和 children 推导
+ * - 父子即依赖：任务的依赖关系通过父子关系表达，父任务必须等所有子任务完成
+ * - 虚拟根节点：所有任务都有 parentId，顶层任务的 parentId 是 ROOT_TASK_ID
  */
 
 // ============================================================================
-// Task Status 类型
+// 常量
 // ============================================================================
 
 /**
- * 任务就绪状态 - 无未完成的依赖
+ * 根节点的虚拟 ID
+ * 所有顶层任务的 parentId 都是这个值
  */
-export type TaskStatusReady = {
-  type: "ready";
+export const ROOT_TASK_ID = "00000000-0000-0000-0000-000000000000";
+
+// ============================================================================
+// Task 创建信息
+// ============================================================================
+
+/**
+ * Task 的创建信息（不可变数据）
+ * 一旦创建就不会改变
+ */
+export type TaskCreation = {
+  /** 任务 ID */
+  id: string;
+  /** 任务标题 */
+  title: string;
+  /** 任务目标/描述 */
+  goal: string;
+  /** 父任务 ID，顶层任务的 parentId 是 ROOT_TASK_ID */
+  parentId: string;
+  /** 创建时间戳 */
+  createdAt: number;
+};
+
+// ============================================================================
+// Task 追加消息
+// ============================================================================
+
+/**
+ * 追加到任务的消息
+ */
+export type AppendedInfo = {
+  /** 任务 ID */
+  taskId: string;
+  /** 追加的信息 */
+  info: string;
+};
+
+// ============================================================================
+// Task Completion 类型
+// ============================================================================
+
+/**
+ * 任务成功完成
+ */
+export type CompletionSuccess = {
+  isSuccess: true;
+  result: string;
 };
 
 /**
- * 任务等待状态 - 有未完成的依赖
+ * 任务失败
+ */
+export type CompletionFailure = {
+  isSuccess: false;
+  error: string;
+};
+
+/**
+ * 任务完成状态
+ * 只有完成的任务才会在 completions 中
+ */
+export type Completion = CompletionSuccess | CompletionFailure;
+
+// ============================================================================
+// Task Status 类型（推导出的状态）
+// ============================================================================
+
+/**
+ * 任务等待状态 - 有未完成的子任务
  */
 export type TaskStatusPending = {
   type: "pending";
+};
+
+/**
+ * 任务就绪状态 - 所有子任务已完成，可以执行
+ */
+export type TaskStatusReady = {
+  type: "ready";
 };
 
 /**
@@ -40,61 +114,43 @@ export type TaskStatusFailed = {
 
 /**
  * 任务状态联合类型
+ * 这是从 completions 和 children 推导出来的，不直接存储在 state 中
  */
 export type TaskStatus =
-  | TaskStatusReady
   | TaskStatusPending
+  | TaskStatusReady
   | TaskStatusSucceeded
   | TaskStatusFailed;
 
 // ============================================================================
-// Task 类型
+// State 类型
 // ============================================================================
 
 /**
- * 任务定义 - 用于 schedule 输入
+ * Task Manager 的状态
+ *
+ * 设计原则：
+ * - 只存储最基本的数据
+ * - TaskStatus 从 completions 和 children 推导
  */
-export type TaskDefinition = {
-  /** 任务 ID */
-  id: string;
-  /** 任务标题 */
-  title: string;
-  /** 任务目标/描述 */
-  goal: string;
-  /** 父任务 ID（可选，用于子任务） */
-  parentId?: string;
-  /** 依赖的任务 ID 列表 */
-  dependencies?: string[];
+export type TaskManagerState = {
+  /** 所有 task 的创建信息 */
+  creations: Record<string, TaskCreation>;
+  /** 所有追加的消息（有序列表） */
+  appendedInfos: AppendedInfo[];
+  /** 已完成任务的结果，key 是 taskId */
+  completions: Record<string, Completion>;
+  /** (cache) 所有 task 的 children 列表，key 包含 ROOT_TASK_ID */
+  children: Record<string, string[]>;
 };
 
-/**
- * 任务内部状态
- */
-export type Task = {
-  /** 任务 ID */
-  id: string;
-  /** 任务标题 */
-  title: string;
-  /** 任务目标/描述 */
-  goal: string;
-  /** 父任务 ID（顶层任务为 null） */
-  parentId: string | null;
-  /** 依赖的任务 ID 列表 */
-  dependencies: string[];
-  /** 子任务 ID 列表 */
-  childIds: string[];
-  /** 附加信息列表 */
-  appendedInfos: string[];
-  /** 任务状态 */
-  status: TaskStatus;
-  /** 创建时间戳 */
-  createdAt: number;
-  /** 最后更新时间戳 */
-  updatedAt: number;
-};
+// ============================================================================
+// TaskInfo 类型（查询结果）
+// ============================================================================
 
 /**
  * 任务信息 - 对外查询返回的类型
+ * 从 State 的各个部分组装而成
  */
 export type TaskInfo = {
   /** 任务 ID */
@@ -104,134 +160,81 @@ export type TaskInfo = {
   /** 任务目标/描述 */
   goal: string;
   /** 父任务 ID */
-  parentId: string | null;
-  /** 依赖的任务 ID 列表 */
-  dependencies: string[];
+  parentId: string;
   /** 子任务 ID 列表 */
   childIds: string[];
   /** 附加信息列表 */
   appendedInfos: string[];
-  /** 任务状态 */
+  /** 任务状态（从 completions 和 children 推导） */
   status: TaskStatus;
+  /** 创建时间戳 */
+  createdAt: number;
 };
 
 // ============================================================================
-// Break Down 类型
+// Input 类型
 // ============================================================================
 
 /**
- * 子任务定义 - 用于 break-down 输入
+ * 创建任务
+ * - parentId 是必须的，顶层任务用 ROOT_TASK_ID
  */
-export type SubTaskDefinition = {
-  /** 子任务 ID */
+export type InputCreate = {
+  type: "create";
+  timestamp: number;
   id: string;
-  /** 子任务标题 */
   title: string;
-  /** 子任务目标/描述 */
   goal: string;
-  /** 依赖的兄弟任务 ID 列表（相对于同一父任务下的子任务） */
-  dependencies?: string[];
-};
-
-// ============================================================================
-// State 类型
-// ============================================================================
-
-/**
- * Task Manager 的状态
- */
-export type TaskManagerState = {
-  /** 所有任务的映射 */
-  tasks: Record<string, Task>;
-  /** 顶层任务 ID 列表（按创建顺序） */
-  topLevelTaskIds: string[];
-};
-
-// ============================================================================
-// Actuation (输入) 类型
-// ============================================================================
-
-/**
- * Schedule 一批任务
- */
-export type ActuationSchedule = {
-  type: "schedule";
-  tasks: TaskDefinition[];
-  timestamp: number;
+  parentId: string;
 };
 
 /**
- * Cancel 一批任务
+ * 取消任务
+ * 会递归取消所有子任务
  */
-export type ActuationCancel = {
+export type InputCancel = {
   type: "cancel";
-  taskIds: string[];
-  error?: string;
   timestamp: number;
-};
-
-/**
- * 向一批任务追加信息
- */
-export type ActuationAppendInfo = {
-  type: "append-info";
-  taskIds: string[];
-  info: string;
-  timestamp: number;
-};
-
-/**
- * 分解一个任务为子任务
- */
-export type ActuationBreakDown = {
-  type: "break-down";
   taskId: string;
-  subTasks: SubTaskDefinition[];
-  timestamp: number;
+  error: string;
 };
 
 /**
- * 完成一个任务（成功）
+ * 追加消息到任务
  */
-export type ActuationComplete = {
+export type InputAppend = {
+  type: "append";
+  timestamp: number;
+  taskId: string;
+  info: string;
+};
+
+/**
+ * 完成任务（成功）
+ */
+export type InputComplete = {
   type: "complete";
+  timestamp: number;
   taskId: string;
   result: string;
-  timestamp: number;
 };
 
 /**
  * 任务失败
  */
-export type ActuationFail = {
+export type InputFail = {
   type: "fail";
+  timestamp: number;
   taskId: string;
   error: string;
-  timestamp: number;
 };
 
 /**
- * 所有 Actuation 类型的联合
+ * 所有 Input 类型的联合
  */
-export type Actuation =
-  | ActuationSchedule
-  | ActuationCancel
-  | ActuationAppendInfo
-  | ActuationBreakDown
-  | ActuationComplete
-  | ActuationFail;
-
-// ============================================================================
-// 辅助函数类型
-// ============================================================================
-
-/**
- * 检查任务是否已完成（成功或失败）
- */
-export const isCompleted = (status: TaskStatus): boolean =>
-  status.type === "succeeded" || status.type === "failed";
-
-/**
- * 检查任务是否活跃（未完成）
- */
-export const isActive = (status: TaskStatus): boolean => !isCompleted(status);
+export type Input =
+  | InputCreate
+  | InputCancel
+  | InputAppend
+  | InputComplete
+  | InputFail;

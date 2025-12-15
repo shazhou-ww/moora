@@ -5,18 +5,16 @@
  */
 
 import type {
-  Actuation,
-  ActuationSchedule,
-  ActuationCancel,
-  ActuationAppendInfo,
-  ActuationBreakDown,
-  ActuationComplete,
-  ActuationFail,
-  Task,
+  Input,
+  InputCreate,
+  InputCancel,
+  InputAppend,
+  InputComplete,
+  InputFail,
   TaskManagerState,
-  TaskStatus,
+  Completion,
 } from "./types";
-import { isCompleted } from "./types";
+import { ROOT_TASK_ID } from "./types";
 
 // ============================================================================
 // 初始状态
@@ -26,8 +24,12 @@ import { isCompleted } from "./types";
  * 创建初始状态
  */
 export const initial = (): TaskManagerState => ({
-  tasks: {},
-  topLevelTaskIds: [],
+  creations: {},
+  appendedInfos: [],
+  completions: {},
+  children: {
+    [ROOT_TASK_ID]: [],
+  },
 });
 
 // ============================================================================
@@ -35,137 +37,79 @@ export const initial = (): TaskManagerState => ({
 // ============================================================================
 
 /**
- * 计算任务状态（基于依赖）
+ * 获取任务的所有子任务 ID
  */
-const computeStatus = (
-  dependencies: string[],
-  tasks: Record<string, Task>
-): TaskStatus => {
-  // 检查所有依赖是否已完成
-  const allDepsCompleted = dependencies.every((depId) => {
-    const dep = tasks[depId];
-    return dep && isCompleted(dep.status);
-  });
-
-  return allDepsCompleted ? { type: "ready" } : { type: "pending" };
+const getChildIds = (
+  state: TaskManagerState,
+  taskId: string
+): string[] => {
+  return state.children[taskId] ?? [];
 };
 
 /**
- * 更新受影响任务的状态（当某个任务完成时）
- */
-const updateDependentStatuses = (
-  tasks: Record<string, Task>,
-  completedTaskId: string
-): Record<string, Task> => {
-  const updatedTasks = { ...tasks };
-
-  // 遍历所有任务，检查是否依赖于刚完成的任务
-  for (const taskId of Object.keys(updatedTasks)) {
-    const task = updatedTasks[taskId];
-    if (!task) continue;
-
-    // 只更新未完成的任务
-    if (isCompleted(task.status)) continue;
-
-    // 如果任务依赖于刚完成的任务，重新计算状态
-    if (task.dependencies.includes(completedTaskId)) {
-      const newStatus = computeStatus(task.dependencies, updatedTasks);
-      if (newStatus.type !== task.status.type) {
-        updatedTasks[taskId] = {
-          ...task,
-          status: newStatus,
-          updatedAt: Date.now(),
-        };
-      }
-    }
-  }
-
-  return updatedTasks;
-};
-
-/**
- * 递归标记任务及其子任务为取消
+ * 递归取消任务及其所有子任务
  */
 const cancelTaskRecursively = (
-  tasks: Record<string, Task>,
+  state: TaskManagerState,
   taskId: string,
-  error: string,
-  timestamp: number
-): Record<string, Task> => {
-  const task = tasks[taskId];
-  if (!task) return tasks;
+  error: string
+): TaskManagerState => {
+  // 如果任务不存在或已完成，跳过
+  if (!state.creations[taskId] || state.completions[taskId]) {
+    return state;
+  }
 
-  // 已经完成的任务不需要取消
-  if (isCompleted(task.status)) return tasks;
-
-  let updatedTasks = { ...tasks };
+  let newState = { ...state };
+  const childIds = getChildIds(state, taskId);
 
   // 先递归取消所有子任务
-  for (const childId of task.childIds) {
-    updatedTasks = cancelTaskRecursively(updatedTasks, childId, error, timestamp);
+  for (const childId of childIds) {
+    newState = cancelTaskRecursively(newState, childId, error);
   }
 
   // 然后取消当前任务
-  updatedTasks[taskId] = {
-    ...task,
-    status: { type: "failed", error },
-    updatedAt: timestamp,
+  const completion: Completion = { isSuccess: false, error };
+  newState = {
+    ...newState,
+    completions: {
+      ...newState.completions,
+      [taskId]: completion,
+    },
   };
 
-  return updatedTasks;
+  return newState;
 };
 
 // ============================================================================
-// 各个 Actuation 的处理函数
+// 各个 Input 的处理函数
 // ============================================================================
 
 /**
- * 处理 schedule 输入
+ * 处理 create 输入
  */
-const handleSchedule = (
+const handleCreate = (
   state: TaskManagerState,
-  actuation: ActuationSchedule
+  input: InputCreate
 ): TaskManagerState => {
-  const { tasks: taskDefs, timestamp } = actuation;
-  const newTasks = { ...state.tasks };
-  const newTopLevelTaskIds = [...state.topLevelTaskIds];
+  const { id, title, goal, parentId, timestamp } = input;
 
-  for (const def of taskDefs) {
-    const dependencies = def.dependencies ?? [];
-    const status = computeStatus(dependencies, newTasks);
+  // 创建任务信息
+  const creation = { id, title, goal, parentId, createdAt: timestamp };
 
-    const task: Task = {
-      id: def.id,
-      title: def.title,
-      goal: def.goal,
-      parentId: def.parentId ?? null,
-      dependencies,
-      childIds: [],
-      appendedInfos: [],
-      status,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-
-    newTasks[def.id] = task;
-
-    // 如果有父任务，更新父任务的 childIds
-    if (def.parentId && newTasks[def.parentId]) {
-      const parent = newTasks[def.parentId];
-      newTasks[def.parentId] = {
-        ...parent,
-        childIds: [...parent.childIds, def.id],
-        updatedAt: timestamp,
-      };
-    } else if (!def.parentId) {
-      // 顶层任务
-      newTopLevelTaskIds.push(def.id);
-    }
-  }
+  // 更新 children 缓存
+  const parentChildren = state.children[parentId] ?? [];
 
   return {
-    tasks: newTasks,
-    topLevelTaskIds: newTopLevelTaskIds,
+    ...state,
+    creations: {
+      ...state.creations,
+      [id]: creation,
+    },
+    children: {
+      ...state.children,
+      [parentId]: [...parentChildren, id],
+      [id]: [], // 新任务没有子任务
+    },
   };
 };
 
@@ -174,99 +118,29 @@ const handleSchedule = (
  */
 const handleCancel = (
   state: TaskManagerState,
-  actuation: ActuationCancel
+  input: InputCancel
 ): TaskManagerState => {
-  const { taskIds, error = "Cancelled", timestamp } = actuation;
-  let newTasks = { ...state.tasks };
-
-  for (const taskId of taskIds) {
-    newTasks = cancelTaskRecursively(newTasks, taskId, error, timestamp);
-  }
-
-  // 更新依赖于被取消任务的其他任务的状态
-  for (const taskId of taskIds) {
-    newTasks = updateDependentStatuses(newTasks, taskId);
-  }
-
-  return {
-    ...state,
-    tasks: newTasks,
-  };
+  const { taskId, error } = input;
+  return cancelTaskRecursively(state, taskId, error);
 };
 
 /**
- * 处理 append-info 输入
+ * 处理 append 输入
  */
-const handleAppendInfo = (
+const handleAppend = (
   state: TaskManagerState,
-  actuation: ActuationAppendInfo
+  input: InputAppend
 ): TaskManagerState => {
-  const { taskIds, info, timestamp } = actuation;
-  const newTasks = { ...state.tasks };
+  const { taskId, info } = input;
 
-  for (const taskId of taskIds) {
-    const task = newTasks[taskId];
-    if (!task) continue;
-
-    newTasks[taskId] = {
-      ...task,
-      appendedInfos: [...task.appendedInfos, info],
-      updatedAt: timestamp,
-    };
+  // 检查任务是否存在
+  if (!state.creations[taskId]) {
+    return state;
   }
 
   return {
     ...state,
-    tasks: newTasks,
-  };
-};
-
-/**
- * 处理 break-down 输入
- */
-const handleBreakDown = (
-  state: TaskManagerState,
-  actuation: ActuationBreakDown
-): TaskManagerState => {
-  const { taskId, subTasks, timestamp } = actuation;
-  const parentTask = state.tasks[taskId];
-
-  if (!parentTask) return state;
-
-  const newTasks = { ...state.tasks };
-  const subTaskIds: string[] = [];
-
-  for (const subDef of subTasks) {
-    const dependencies = subDef.dependencies ?? [];
-    const status = computeStatus(dependencies, newTasks);
-
-    const subTask: Task = {
-      id: subDef.id,
-      title: subDef.title,
-      goal: subDef.goal,
-      parentId: taskId,
-      dependencies,
-      childIds: [],
-      appendedInfos: [],
-      status,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-
-    newTasks[subDef.id] = subTask;
-    subTaskIds.push(subDef.id);
-  }
-
-  // 更新父任务的 childIds
-  newTasks[taskId] = {
-    ...parentTask,
-    childIds: [...parentTask.childIds, ...subTaskIds],
-    updatedAt: timestamp,
-  };
-
-  return {
-    ...state,
-    tasks: newTasks,
+    appendedInfos: [...state.appendedInfos, { taskId, info }],
   };
 };
 
@@ -275,28 +149,23 @@ const handleBreakDown = (
  */
 const handleComplete = (
   state: TaskManagerState,
-  actuation: ActuationComplete
+  input: InputComplete
 ): TaskManagerState => {
-  const { taskId, result, timestamp } = actuation;
-  const task = state.tasks[taskId];
+  const { taskId, result } = input;
 
-  if (!task) return state;
+  // 检查任务是否存在
+  if (!state.creations[taskId]) {
+    return state;
+  }
 
-  let newTasks = { ...state.tasks };
-
-  // 更新任务状态为成功
-  newTasks[taskId] = {
-    ...task,
-    status: { type: "succeeded", result },
-    updatedAt: timestamp,
-  };
-
-  // 更新依赖于此任务的其他任务的状态
-  newTasks = updateDependentStatuses(newTasks, taskId);
+  const completion: Completion = { isSuccess: true, result };
 
   return {
     ...state,
-    tasks: newTasks,
+    completions: {
+      ...state.completions,
+      [taskId]: completion,
+    },
   };
 };
 
@@ -305,28 +174,23 @@ const handleComplete = (
  */
 const handleFail = (
   state: TaskManagerState,
-  actuation: ActuationFail
+  input: InputFail
 ): TaskManagerState => {
-  const { taskId, error, timestamp } = actuation;
-  const task = state.tasks[taskId];
+  const { taskId, error } = input;
 
-  if (!task) return state;
+  // 检查任务是否存在
+  if (!state.creations[taskId]) {
+    return state;
+  }
 
-  let newTasks = { ...state.tasks };
-
-  // 更新任务状态为失败
-  newTasks[taskId] = {
-    ...task,
-    status: { type: "failed", error },
-    updatedAt: timestamp,
-  };
-
-  // 更新依赖于此任务的其他任务的状态
-  newTasks = updateDependentStatuses(newTasks, taskId);
+  const completion: Completion = { isSuccess: false, error };
 
   return {
     ...state,
-    tasks: newTasks,
+    completions: {
+      ...state.completions,
+      [taskId]: completion,
+    },
   };
 };
 
@@ -340,28 +204,26 @@ const handleFail = (
  * 接收输入并返回状态更新函数
  */
 export const transition =
-  (actuation: Actuation) =>
-    (state: TaskManagerState): TaskManagerState => {
-      switch (actuation.type) {
-        case "schedule":
-          return handleSchedule(state, actuation);
-        case "cancel":
-          return handleCancel(state, actuation);
-        case "append-info":
-          return handleAppendInfo(state, actuation);
-        case "break-down":
-          return handleBreakDown(state, actuation);
-        case "complete":
-          return handleComplete(state, actuation);
-        case "fail":
-          return handleFail(state, actuation);
-        default: {
-          // Exhaustive check
-          const _exhaustive: never = actuation;
-          return state;
-        }
+  (input: Input) =>
+  (state: TaskManagerState): TaskManagerState => {
+    switch (input.type) {
+      case "create":
+        return handleCreate(state, input);
+      case "cancel":
+        return handleCancel(state, input);
+      case "append":
+        return handleAppend(state, input);
+      case "complete":
+        return handleComplete(state, input);
+      case "fail":
+        return handleFail(state, input);
+      default: {
+        // Exhaustive check
+        const _exhaustive: never = input;
+        return state;
       }
-    };
+    }
+  };
 
 // ============================================================================
 // State Machine 定义

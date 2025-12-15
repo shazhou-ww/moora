@@ -19,7 +19,7 @@ import {
   isAllCompleted,
   getTaskStats,
 } from "./queries";
-import type { Actuation, TaskInfo, TaskManagerState } from "./types";
+import type { Input, TaskInfo, TaskManagerState } from "./types";
 
 // ============================================================================
 // Task Manager 类型
@@ -29,7 +29,7 @@ import type { Actuation, TaskInfo, TaskManagerState } from "./types";
  * Task Manager 实例类型
  */
 export type TaskManager = {
-  dispatch: (actuation: Actuation) => void;
+  dispatch: (input: Input) => void;
   subscribe: (handler: (state: TaskManagerState) => void) => Unsubscribe;
   current: () => TaskManagerState;
   // 查询方法
@@ -57,8 +57,8 @@ export const createTaskManager = (): TaskManager => {
   let state = initial();
   const pubsub = createPubSub<TaskManagerState>();
 
-  const dispatch = (actuation: Actuation): void => {
-    state = transition(actuation)(state);
+  const dispatch = (input: Input): void => {
+    state = transition(input)(state);
     pubsub.pub(state);
   };
 
