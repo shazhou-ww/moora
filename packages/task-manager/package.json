@@ -1,0 +1,32 @@
+{
+  "name": "@moora/task-manager",
+  "version": "0.1.0",
+  "description": "Pure automata-based task manager for Moora",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shazhou-ww/moora.git",
+    "directory": "packages/task-manager"
+  },
+  "devDependencies": {
+    "@moora/eslint-config": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5",
+    "vitest": "^4.0.12"
+  },
+  "dependencies": {
+    "@moora/automata": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "test": "vitest --run --no-ui",
+    "test:coverage": "vitest --run --coverage --no-ui",
+    "test:ci": "vitest --run --coverage --no-ui"
+  }
+}
