@@ -46,7 +46,12 @@ export function createPostSendHandler(agent: ReturnType<typeof createAgent>) {
       timestamp,
     };
 
-    logger.server.info("[POST /send] Dispatching action", { id, contentLength: content.length });
+    logger.server.info("[POST /send] Dispatching action", {
+      id,
+      contentLength: content.length,
+      timestamp,
+      time: new Date(timestamp).toISOString(),
+    });
     agent.dispatch(action);
     logger.server.debug("[POST /send] Action dispatched successfully");
 

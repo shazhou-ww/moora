@@ -135,6 +135,7 @@ async function processStream(
 ): Promise<void> {
   let fullContent = "";
   let isFirstChunk = true;
+  const streamStartTime = Date.now();
 
   // Accumulate tool_calls: OpenAI streaming sends tool_calls across multiple chunks
   const toolCallsAccumulator = new Map<number, AccumulatedToolCall>();
@@ -171,6 +172,15 @@ async function processStream(
       // Call onStart on first content chunk
       if (isFirstChunk) {
         isFirstChunk = false;
+        const firstChunkTime = Date.now();
+        const timeToFirstChunk = firstChunkTime - streamStartTime;
+
+        if (debug) {
+          console.log('[llm-openai] First chunk received', {
+            timeToFirstChunk: `${timeToFirstChunk}ms`,
+          });
+        }
+
         callbacks.onStart();
       }
 
@@ -200,6 +210,17 @@ async function processStream(
   }
 
   // Call onComplete if we received any content
+  const streamEndTime = Date.now();
+  const streamDuration = streamEndTime - streamStartTime;
+
+  if (debug) {
+    console.log('[llm-openai] Stream processing completed', {
+      contentLength: fullContent.length,
+      streamDuration: `${streamDuration}ms`,
+      toolCallsCount: completedToolCalls.length,
+    });
+  }
+
   if (!isFirstChunk) {
     callbacks.onComplete(fullContent);
   } else if (toolCallsAccumulator.size > 0) {
@@ -273,6 +294,9 @@ export function createCallLlmWithOpenAI(options: OpenAICallLlmOptions): CallLlm 
       });
     }
 
+    // Record API call start time
+    const apiCallStartTime = Date.now();
+
     // Call OpenAI Streaming API
     const stream = await openai.chat.completions.create({
       model,
@@ -283,6 +307,16 @@ export function createCallLlmWithOpenAI(options: OpenAICallLlmOptions): CallLlm 
       temperature,
       top_p: topP,
     });
+
+    // Record API response time (time to get stream object)
+    const apiResponseTime = Date.now();
+    const apiLatency = apiResponseTime - apiCallStartTime;
+
+    if (debug) {
+      console.log('[llm-openai] API response received', {
+        apiLatency: `${apiLatency}ms`,
+      });
+    }
 
     // Process streaming response
     await processStream(stream, callbacks, debug);
