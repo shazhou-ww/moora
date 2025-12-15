@@ -291,18 +291,29 @@ export function createCallLlmWithOpenAI(options: OpenAICallLlmOptions): CallLlm 
         messageCount: messages.length,
         toolCount: tools?.length ?? 0,
         toolNames: tools?.map(t => t.function.name),
+        toolChoice: context.toolChoice,
       });
     }
 
     // Record API call start time
     const apiCallStartTime = Date.now();
 
+    // Convert toolChoice to OpenAI format
+    let openaiToolChoice: "auto" | "none" | "required" | { type: "function"; function: { name: string } } | undefined;
+    if (tools && tools.length > 0) {
+      if (typeof context.toolChoice === "object" && "name" in context.toolChoice) {
+        openaiToolChoice = { type: "function", function: { name: context.toolChoice.name } };
+      } else {
+        openaiToolChoice = context.toolChoice ?? "auto";
+      }
+    }
+
     // Call OpenAI Streaming API
     const stream = await openai.chat.completions.create({
       model,
       messages,
       tools,
-      tool_choice: tools && tools.length > 0 ? 'auto' : undefined,
+      tool_choice: openaiToolChoice,
       stream: true,
       temperature,
       top_p: topP,

@@ -33,8 +33,8 @@ describe("agent-coordinator", () => {
       getTaskStatus: vi.fn(),
       getAllTaskIds: vi.fn(() => []),
       getChildTaskIds: vi.fn(() => []),
-      subscribeTaskEvent: vi.fn(() => () => {}),
-      subscribeTaskDetailEvent: vi.fn(() => () => {}),
+      subscribeTaskEvent: vi.fn(() => () => { }),
+      subscribeTaskDetailEvent: vi.fn(() => () => { }),
       destroy: vi.fn(),
     };
 
@@ -60,7 +60,7 @@ describe("agent-coordinator", () => {
   });
 
   it("should handle user message dispatch", async () => {
-    const notifyUser = vi.fn(async (message: string) => {});
+    const notifyUser = vi.fn(async (message: string) => { });
     const callLlm = vi.fn(async (context, callbacks) => {
       callbacks.onStart();
       callbacks.onComplete("Response from LLM");
@@ -74,8 +74,8 @@ describe("agent-coordinator", () => {
       getTaskStatus: vi.fn(),
       getAllTaskIds: vi.fn(() => []),
       getChildTaskIds: vi.fn(() => []),
-      subscribeTaskEvent: vi.fn(() => () => {}),
-      subscribeTaskDetailEvent: vi.fn(() => () => {}),
+      subscribeTaskEvent: vi.fn(() => () => { }),
+      subscribeTaskDetailEvent: vi.fn(() => () => { }),
       destroy: vi.fn(),
     };
 
@@ -124,8 +124,8 @@ describe("agent-coordinator", () => {
       getTaskStatus: vi.fn(),
       getAllTaskIds: vi.fn(() => []),
       getChildTaskIds: vi.fn(() => []),
-      subscribeTaskEvent: vi.fn(() => () => {}),
-      subscribeTaskDetailEvent: vi.fn(() => () => {}),
+      subscribeTaskEvent: vi.fn(() => () => { }),
+      subscribeTaskDetailEvent: vi.fn(() => () => { }),
       destroy: vi.fn(),
     };
 
@@ -146,7 +146,7 @@ describe("agent-coordinator", () => {
 
     expect(state.userMessages).toEqual([]);
     expect(state.assiMessages).toEqual([]);
-    expect(state.ongoingTopLevelTasks).toEqual([]);
-    expect(state.topLevelTaskIds).toEqual([]);
+    expect(state.topLevelTasks).toEqual([]);
+    expect(state.llmProceedCutOff).toBe(0);
   });
 });

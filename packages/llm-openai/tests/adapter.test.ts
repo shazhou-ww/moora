@@ -147,7 +147,8 @@ describe("createCallLlmWithOpenAI", () => {
     await callLlm(context, callbacks);
 
     expect(callbacks.onStart).not.toHaveBeenCalled(); // No content chunks
-    expect(callbacks.onComplete).not.toHaveBeenCalled();
+    // onComplete is called with empty string to signal completion for cleanup
+    expect(callbacks.onComplete).toHaveBeenCalledWith("");
     expect(callbacks.onToolCall).toHaveBeenCalledTimes(1);
     expect(callbacks.onToolCall).toHaveBeenCalledWith({
       name: "search",

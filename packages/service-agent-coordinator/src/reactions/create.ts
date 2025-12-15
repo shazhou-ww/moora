@@ -35,6 +35,32 @@ export type CreateReactionsOptions = {
   notifyUser: (message: string) => void | Promise<void>;
   /** 发布 User Perspective 变化的回调 */
   publishPatch: (patch: string) => void;
+  /**
+   * 可选的流式开始回调
+   *
+   * 当 LLM 开始输出时调用，可用于初始化流
+   *
+   * @param messageId - 消息 ID
+   */
+  onStreamStart?: (messageId: string) => void;
+  /**
+   * 可选的流式输出回调
+   *
+   * 当 LLM 输出 chunk 时调用，可用于实时推送到客户端
+   *
+   * @param messageId - 消息 ID
+   * @param chunk - 输出的 chunk 内容
+   */
+  onStreamChunk?: (messageId: string, chunk: string) => void;
+  /**
+   * 可选的流式完成回调
+   *
+   * 当 LLM 输出完成时调用，可用于关闭流
+   *
+   * @param messageId - 消息 ID
+   * @param content - 完整的输出内容
+   */
+  onStreamComplete?: (messageId: string, content: string) => void;
 };
 
 // ============================================================================
@@ -47,13 +73,18 @@ export type CreateReactionsOptions = {
  * 使用 agent-coordinator 提供的标准创建函数
  */
 export function createReactions(options: CreateReactionsOptions): ReactionFns {
-  const { callLlm, workforce, notifyUser, publishPatch } = options;
+  const { callLlm, workforce, notifyUser, publishPatch, onStreamStart, onStreamChunk, onStreamComplete } = options;
 
   // User Reaction - service 层特有实现（发布 patches）
   const userReaction = createServiceUserReaction({ publishPatch });
 
   // LLM Reaction - 使用 agent-coordinator 提供的标准实现
-  const llmReaction = createLlmReaction({ callLlm });
+  const llmReaction = createLlmReaction({
+    callLlm,
+    onStart: onStreamStart,
+    onChunk: onStreamChunk,
+    onComplete: onStreamComplete,
+  });
 
   // Toolkit Reaction - 使用 agent-coordinator 提供的标准实现
   const toolkitReaction = createToolkitReaction({ workforce });

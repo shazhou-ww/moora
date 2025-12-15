@@ -44,8 +44,8 @@ function createMockWorkforce(): Workforce {
     getTaskStatus: vi.fn(),
     getAllTaskIds: vi.fn(() => []),
     getChildTaskIds: vi.fn(() => []),
-    subscribeTaskEvent: vi.fn(() => () => {}),
-    subscribeTaskDetailEvent: vi.fn(() => () => {}),
+    subscribeTaskEvent: vi.fn(() => () => { }),
+    subscribeTaskDetailEvent: vi.fn(() => () => { }),
     destroy: vi.fn(),
   };
 }
@@ -62,7 +62,7 @@ describe("Agent Coordinator 行为测试", () => {
   beforeEach(() => {
     mockGen = createMockGen({ seed: 12345 });
     mockWorkforce = createMockWorkforce();
-    notifyUser = vi.fn(async () => {});
+    notifyUser = vi.fn(async () => { });
   });
 
   describe("用户消息驱动 LLM 调用", () => {
@@ -329,8 +329,8 @@ describe("Agent Coordinator 行为测试", () => {
 
       expect(state.userMessages).toEqual([]);
       expect(state.assiMessages).toEqual([]);
-      expect(state.topLevelTaskIds).toEqual([]);
-      expect(state.cutOff).toBe(0);
+      expect(state.topLevelTasks).toEqual([]);
+      expect(state.llmProceedCutOff).toBe(0);
     });
 
     test("消息 ID 应正确保留", async () => {

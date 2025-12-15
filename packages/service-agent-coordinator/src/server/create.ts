@@ -15,11 +15,13 @@ import {
   createDefaultToolkit,
   createReactions,
 } from "@/reactions";
+import { createStreamManager } from "@/streams";
 import type { CreateServiceOptions } from "@/types";
 
 import {
   createAgentSSEHandler,
   createPostSendHandler,
+  createStreamSSEHandler,
   createWebDAVHandler,
 } from "./handlers";
 
@@ -135,6 +137,9 @@ export function createService(options: CreateServiceOptions) {
   // 创建 Patch PubSub（用于 /agent 路由的 SSE 推送）
   const patchPubSub = createPubSub<string>();
 
+  // 创建 StreamManager 实例（用于流式消息输出）
+  const streamManager = createStreamManager();
+
   // 创建所有 Actor 的 reactions
   const reactions = createReactions({
     callLlm,
@@ -143,6 +148,16 @@ export function createService(options: CreateServiceOptions) {
       logger.agent.info("[NotifyUser]", { message });
     },
     publishPatch: patchPubSub.pub,
+    // 流式输出回调
+    onStreamStart: (messageId: string) => {
+      streamManager.startStream(messageId);
+    },
+    onStreamChunk: (messageId: string, chunk: string) => {
+      streamManager.appendChunk(messageId, chunk);
+    },
+    onStreamComplete: (messageId: string, content: string) => {
+      streamManager.endStream(messageId, content);
+    },
   });
 
   // 创建 agent reaction
@@ -176,7 +191,8 @@ export function createService(options: CreateServiceOptions) {
 
   const app = new Elysia()
     .get("/agent", createAgentSSEHandler(agent, patchPubSub.sub))
-    .post("/send", createPostSendHandler(agent));
+    .post("/send", createPostSendHandler(agent))
+    .get("/streams/:messageId", createStreamSSEHandler(streamManager));
 
   // 如果提供了 workspacePath，添加 WebDAV 接口
   const workspaceRootPath = workspacePath ?? process.env.WORKSPACE_PATH;

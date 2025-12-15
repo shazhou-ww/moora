@@ -32,6 +32,32 @@ import type {
 export type LlmReactionDeps = {
   /** LLM 调用函数 */
   callLlm: CallLlm;
+  /**
+   * 可选的流式开始回调
+   *
+   * 当 LLM 开始输出时调用，可用于初始化流
+   *
+   * @param messageId - 消息 ID
+   */
+  onStart?: (messageId: string) => void;
+  /**
+   * 可选的流式输出回调
+   *
+   * 当 LLM 输出 chunk 时调用，可用于实时推送到客户端
+   *
+   * @param messageId - 消息 ID
+   * @param chunk - 输出的 chunk 内容
+   */
+  onChunk?: (messageId: string, chunk: string) => void;
+  /**
+   * 可选的流式完成回调
+   *
+   * 当 LLM 输出完成时调用，可用于关闭流
+   *
+   * @param messageId - 消息 ID
+   * @param content - 完整的输出内容
+   */
+  onComplete?: (messageId: string, content: string) => void;
 };
 
 /**
@@ -130,6 +156,15 @@ function handlePseudoToolCall(
 // ============================================================================
 
 /**
+ * 流式回调配置
+ */
+type StreamCallbacks = {
+  onStart?: (messageId: string) => void;
+  onChunk?: (messageId: string, chunk: string) => void;
+  onComplete?: (messageId: string, content: string) => void;
+};
+
+/**
  * 创建 LLM 回调函数
  */
 function createLlmCallbacks(
@@ -137,7 +172,8 @@ function createLlmCallbacks(
   timestamp: number,
   latestProceedTimestamp: number,
   dispatch: Dispatch<Actuation>,
-  setState: (fn: () => LlmReactionState) => void
+  setState: (fn: () => LlmReactionState) => void,
+  streamCallbacks: StreamCallbacks
 ): CallLlmCallbacks {
   let hasStarted = false;
 
@@ -151,11 +187,14 @@ function createLlmCallbacks(
           timestamp,
           llmProceedCutOff: latestProceedTimestamp,
         });
+        // 调用外部回调
+        streamCallbacks.onStart?.(messageId);
       }
       return messageId;
     },
-    onChunk: () => {
-      // Coordinator 不需要流式输出
+    onChunk: (chunk: string) => {
+      // 调用外部回调，支持流式输出
+      streamCallbacks.onChunk?.(messageId, chunk);
     },
     onComplete: (content: string) => {
       if (hasStarted) {
@@ -165,6 +204,8 @@ function createLlmCallbacks(
           content,
           timestamp: Date.now(),
         });
+        // 调用外部回调
+        streamCallbacks.onComplete?.(messageId, content);
       }
       setState(() => ({ ongoingCallId: null }));
     },
@@ -188,7 +229,14 @@ function createLlmCallbacks(
 export function createLlmReaction(
   deps: LlmReactionDeps
 ): ReactionFnOf<typeof LLM> {
-  const { callLlm } = deps;
+  const { callLlm, onStart, onChunk, onComplete } = deps;
+
+  // 流式回调配置
+  const streamCallbacks: StreamCallbacks = {
+    onStart,
+    onChunk,
+    onComplete,
+  };
 
   return stateful<
     { perspective: PerspectiveOfLlm; dispatch: Dispatch<Actuation> },
@@ -204,7 +252,7 @@ export function createLlmReaction(
     // 检查是否有新的用户消息或新完成的任务需要处理
     const hasNewMessages = hasNewUserMessages(perspective);
     const hasCompletedTasks = hasNewCompletedTasks(perspective);
-    
+
     if (!hasNewMessages && !hasCompletedTasks) {
       return;
     }
@@ -224,7 +272,8 @@ export function createLlmReaction(
       timestamp,
       latestProceedTimestamp,
       dispatch,
-      setState
+      setState,
+      streamCallbacks
     );
 
     // 异步调用 LLM

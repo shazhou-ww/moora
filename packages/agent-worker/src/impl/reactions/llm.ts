@@ -119,6 +119,7 @@ function buildCallLlmContext(
     scenario: "re-act-loop",
     tools,
     toolCalls,
+    toolChoice: "auto",
   };
 }
 
