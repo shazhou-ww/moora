@@ -200,12 +200,12 @@ export type InputCancel = {
 };
 
 /**
- * 追加消息到任务
+ * 追加消息到一个或多个任务
  */
 export type InputAppend = {
   type: "append";
   timestamp: number;
-  taskId: string;
+  taskIds: string[];
   info: string;
 };
 

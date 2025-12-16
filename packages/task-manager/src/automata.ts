@@ -131,16 +131,19 @@ const handleAppend = (
   state: TaskManagerState,
   input: InputAppend
 ): TaskManagerState => {
-  const { taskId, info } = input;
+  const { taskIds, info } = input;
 
-  // 检查任务是否存在
-  if (!state.creations[taskId]) {
+  // 仅处理存在的任务，忽略无效 taskIds
+  const validTaskIds = taskIds.filter((taskId) => state.creations[taskId]);
+  if (validTaskIds.length === 0) {
     return state;
   }
 
+  const appendedInfos = validTaskIds.map((taskId) => ({ taskId, info }));
+
   return {
     ...state,
-    appendedInfos: [...state.appendedInfos, { taskId, info }],
+    appendedInfos: [...state.appendedInfos, ...appendedInfos],
   };
 };
 

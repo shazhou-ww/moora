@@ -341,7 +341,7 @@ describe("task-manager", () => {
           const newState = transition({
             type: "append",
             timestamp: 2000,
-            taskId: "task-1",
+            taskIds: ["task-1"],
             info: "Additional information",
           })(state);
 
@@ -364,14 +364,14 @@ describe("task-manager", () => {
           state = transition({
             type: "append",
             timestamp: 2000,
-            taskId: "task-1",
+            taskIds: ["task-1"],
             info: "Info 1",
           })(state);
 
           state = transition({
             type: "append",
             timestamp: 3000,
-            taskId: "task-1",
+            taskIds: ["task-1"],
             info: "Info 2",
           })(state);
 
@@ -379,6 +379,39 @@ describe("task-manager", () => {
             .filter((i) => i.taskId === "task-1")
             .map((i) => i.info);
           expect(infos).toEqual(["Info 1", "Info 2"]);
+        });
+
+        it("should append info to multiple tasks in one input", () => {
+          state = transition({
+            type: "create",
+            timestamp: 1000,
+            id: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "create",
+            timestamp: 1500,
+            id: "task-2",
+            title: "Task 2",
+            goal: "Do something else",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          const newState = transition({
+            type: "append",
+            timestamp: 2000,
+            taskIds: ["task-1", "task-2"],
+            info: "Shared info",
+          })(state);
+
+          const targets = newState.appendedInfos
+            .filter((i) => i.info === "Shared info")
+            .map((i) => i.taskId);
+
+          expect(targets).toEqual(["task-1", "task-2"]);
         });
       });
     });
