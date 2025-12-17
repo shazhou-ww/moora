@@ -5,14 +5,16 @@
  */
 
 import type {
-  Input,
-  InputCreate,
-  InputCancel,
-  InputAppend,
-  InputComplete,
-  InputFail,
+  TaskManagerInput,
+  TaskManagerInputTaskCreated,
+  TaskManagerInputTaskStarted,
+  TaskManagerInputTaskCompleted,
+  TaskManagerInputTaskFailed,
+  TaskManagerInputTaskSuspended,
+  TaskManagerInputTaskCancelled,
+  TaskManagerInputMessageAppended,
   TaskManagerState,
-  Completion,
+  TaskStatus,
 } from "./types";
 import { ROOT_TASK_ID } from "./types";
 
@@ -25,11 +27,12 @@ import { ROOT_TASK_ID } from "./types";
  */
 export const initial = (): TaskManagerState => ({
   creations: {},
-  appendedInfos: [],
-  completions: {},
+  statuses: {},
+  results: {},
   children: {
     [ROOT_TASK_ID]: [],
   },
+  appendedMessages: [],
 });
 
 // ============================================================================
@@ -37,13 +40,48 @@ export const initial = (): TaskManagerState => ({
 // ============================================================================
 
 /**
- * 获取任务的所有子任务 ID
+ * 检查状态是否为终结状态
  */
-const getChildIds = (
+const isTerminalStatus = (status: TaskStatus): boolean =>
+  status === "completed" ||
+  status === "failed" ||
+  status === "suspended" ||
+  status === "cancelled";
+
+/**
+ * 检查父任务是否所有子任务都已终结
+ * 如果是，将父任务从 pending → ready
+ */
+const checkParentReady = (
   state: TaskManagerState,
   taskId: string
-): string[] => {
-  return state.children[taskId] ?? [];
+): TaskManagerState => {
+  const creation = state.creations[taskId];
+  if (!creation) return state;
+
+  const parentId = creation.parentId;
+  if (parentId === ROOT_TASK_ID) return state;
+
+  const parentStatus = state.statuses[parentId];
+  if (parentStatus !== "pending") return state;
+
+  const siblingIds = state.children[parentId] ?? [];
+  const allTerminal = siblingIds.every((id) => {
+    const status = state.statuses[id];
+    return status !== undefined && isTerminalStatus(status);
+  });
+
+  if (allTerminal) {
+    return {
+      ...state,
+      statuses: {
+        ...state.statuses,
+        [parentId]: "ready",
+      },
+    };
+  }
+
+  return state;
 };
 
 /**
@@ -52,28 +90,34 @@ const getChildIds = (
 const cancelTaskRecursively = (
   state: TaskManagerState,
   taskId: string,
-  error: string
+  reason: string,
+  timestamp: number
 ): TaskManagerState => {
-  // 如果任务不存在或已完成，跳过
-  if (!state.creations[taskId] || state.completions[taskId]) {
+  const status = state.statuses[taskId];
+
+  // 如果任务不存在或已是终结状态，跳过
+  if (status === undefined || isTerminalStatus(status)) {
     return state;
   }
 
   let newState = { ...state };
-  const childIds = getChildIds(state, taskId);
+  const childIds = state.children[taskId] ?? [];
 
   // 先递归取消所有子任务
   for (const childId of childIds) {
-    newState = cancelTaskRecursively(newState, childId, error);
+    newState = cancelTaskRecursively(newState, childId, reason, timestamp);
   }
 
   // 然后取消当前任务
-  const completion: Completion = { isSuccess: false, error };
   newState = {
     ...newState,
-    completions: {
-      ...newState.completions,
-      [taskId]: completion,
+    statuses: {
+      ...newState.statuses,
+      [taskId]: "cancelled",
+    },
+    results: {
+      ...newState.results,
+      [taskId]: { type: "cancelled", reason },
     },
   };
 
@@ -85,115 +129,219 @@ const cancelTaskRecursively = (
 // ============================================================================
 
 /**
- * 处理 create 输入
+ * 处理 task-created 事件
  */
-const handleCreate = (
+const handleTaskCreated = (
   state: TaskManagerState,
-  input: InputCreate
+  input: TaskManagerInputTaskCreated
 ): TaskManagerState => {
-  const { id, title, goal, parentId, timestamp } = input;
+  const { taskId, title, goal, parentId, timestamp } = input;
 
   // 创建任务信息
-  const creation = { id, title, goal, parentId, createdAt: timestamp };
+  const creation = { id: taskId, title, goal, parentId, createdAt: timestamp };
 
-  // 更新 children 缓存
+  // 更新 children
   const parentChildren = state.children[parentId] ?? [];
+
+  let newStatuses = {
+    ...state.statuses,
+    [taskId]: "ready" as TaskStatus,
+  };
+
+  // 如果父任务是 running，转为 pending
+  if (parentId !== ROOT_TASK_ID && state.statuses[parentId] === "running") {
+    newStatuses = {
+      ...newStatuses,
+      [parentId]: "pending",
+    };
+  }
 
   return {
     ...state,
     creations: {
       ...state.creations,
-      [id]: creation,
+      [taskId]: creation,
     },
+    statuses: newStatuses,
     children: {
       ...state.children,
-      [parentId]: [...parentChildren, id],
-      [id]: [], // 新任务没有子任务
+      [parentId]: [...parentChildren, taskId],
+      [taskId]: [],
     },
   };
 };
 
 /**
- * 处理 cancel 输入
+ * 处理 task-started 事件
  */
-const handleCancel = (
+const handleTaskStarted = (
   state: TaskManagerState,
-  input: InputCancel
+  input: TaskManagerInputTaskStarted
 ): TaskManagerState => {
-  const { taskId, error } = input;
-  return cancelTaskRecursively(state, taskId, error);
+  const { taskId } = input;
+
+  // 检查任务是否存在且为 ready 状态
+  if (state.statuses[taskId] !== "ready") {
+    return state;
+  }
+
+  return {
+    ...state,
+    statuses: {
+      ...state.statuses,
+      [taskId]: "running",
+    },
+  };
 };
 
 /**
- * 处理 append 输入
+ * 处理 task-completed 事件
  */
-const handleAppend = (
+const handleTaskCompleted = (
   state: TaskManagerState,
-  input: InputAppend
+  input: TaskManagerInputTaskCompleted
 ): TaskManagerState => {
-  const { taskIds, info } = input;
+  const { taskId, result } = input;
 
-  // 仅处理存在的任务，忽略无效 taskIds
-  const validTaskIds = taskIds.filter((taskId) => state.creations[taskId]);
+  // 检查任务是否存在且为 running 状态
+  if (state.statuses[taskId] !== "running") {
+    return state;
+  }
+
+  let newState: TaskManagerState = {
+    ...state,
+    statuses: {
+      ...state.statuses,
+      [taskId]: "completed",
+    },
+    results: {
+      ...state.results,
+      [taskId]: { type: "success", result },
+    },
+  };
+
+  // 检查父任务是否需要变为 ready
+  newState = checkParentReady(newState, taskId);
+
+  return newState;
+};
+
+/**
+ * 处理 task-failed 事件
+ */
+const handleTaskFailed = (
+  state: TaskManagerState,
+  input: TaskManagerInputTaskFailed
+): TaskManagerState => {
+  const { taskId, error } = input;
+
+  // 检查任务是否存在且为 running 状态
+  if (state.statuses[taskId] !== "running") {
+    return state;
+  }
+
+  let newState: TaskManagerState = {
+    ...state,
+    statuses: {
+      ...state.statuses,
+      [taskId]: "failed",
+    },
+    results: {
+      ...state.results,
+      [taskId]: { type: "failure", error },
+    },
+  };
+
+  // 检查父任务是否需要变为 ready
+  newState = checkParentReady(newState, taskId);
+
+  return newState;
+};
+
+/**
+ * 处理 task-suspended 事件
+ */
+const handleTaskSuspended = (
+  state: TaskManagerState,
+  input: TaskManagerInputTaskSuspended
+): TaskManagerState => {
+  const { taskId, reason } = input;
+
+  // 检查任务是否存在且为 running 状态
+  if (state.statuses[taskId] !== "running") {
+    return state;
+  }
+
+  let newState: TaskManagerState = {
+    ...state,
+    statuses: {
+      ...state.statuses,
+      [taskId]: "suspended",
+    },
+    results: {
+      ...state.results,
+      [taskId]: { type: "suspended", reason },
+    },
+  };
+
+  // 检查父任务是否需要变为 ready
+  newState = checkParentReady(newState, taskId);
+
+  return newState;
+};
+
+/**
+ * 处理 task-cancelled 事件
+ */
+const handleTaskCancelled = (
+  state: TaskManagerState,
+  input: TaskManagerInputTaskCancelled
+): TaskManagerState => {
+  const { taskId, reason, timestamp } = input;
+
+  let newState = cancelTaskRecursively(state, taskId, reason, timestamp);
+
+  // 检查父任务是否需要变为 ready
+  newState = checkParentReady(newState, taskId);
+
+  return newState;
+};
+
+/**
+ * 处理 message-appended 事件
+ */
+const handleMessageAppended = (
+  state: TaskManagerState,
+  input: TaskManagerInputMessageAppended
+): TaskManagerState => {
+  const { taskIds, message, timestamp } = input;
+
+  // 过滤有效的 taskIds
+  const validTaskIds = taskIds.filter((id) => state.creations[id]);
   if (validTaskIds.length === 0) {
     return state;
   }
 
-  const appendedInfos = validTaskIds.map((taskId) => ({ taskId, info }));
+  // 添加消息
+  const newMessages = validTaskIds.map((taskId) => ({
+    taskId,
+    message,
+    timestamp,
+  }));
 
-  return {
-    ...state,
-    appendedInfos: [...state.appendedInfos, ...appendedInfos],
-  };
-};
-
-/**
- * 处理 complete 输入
- */
-const handleComplete = (
-  state: TaskManagerState,
-  input: InputComplete
-): TaskManagerState => {
-  const { taskId, result } = input;
-
-  // 检查任务是否存在
-  if (!state.creations[taskId]) {
-    return state;
+  // 更新状态：非 running 状态的任务 → ready
+  const newStatuses = { ...state.statuses };
+  for (const taskId of validTaskIds) {
+    const status = state.statuses[taskId];
+    if (status !== undefined && status !== "running") {
+      newStatuses[taskId] = "ready";
+    }
   }
 
-  const completion: Completion = { isSuccess: true, result };
-
   return {
     ...state,
-    completions: {
-      ...state.completions,
-      [taskId]: completion,
-    },
-  };
-};
-
-/**
- * 处理 fail 输入
- */
-const handleFail = (
-  state: TaskManagerState,
-  input: InputFail
-): TaskManagerState => {
-  const { taskId, error } = input;
-
-  // 检查任务是否存在
-  if (!state.creations[taskId]) {
-    return state;
-  }
-
-  const completion: Completion = { isSuccess: false, error };
-
-  return {
-    ...state,
-    completions: {
-      ...state.completions,
-      [taskId]: completion,
-    },
+    statuses: newStatuses,
+    appendedMessages: [...state.appendedMessages, ...newMessages],
   };
 };
 
@@ -207,19 +355,23 @@ const handleFail = (
  * 接收输入并返回状态更新函数
  */
 export const transition =
-  (input: Input) =>
+  (input: TaskManagerInput) =>
   (state: TaskManagerState): TaskManagerState => {
     switch (input.type) {
-      case "create":
-        return handleCreate(state, input);
-      case "cancel":
-        return handleCancel(state, input);
-      case "append":
-        return handleAppend(state, input);
-      case "complete":
-        return handleComplete(state, input);
-      case "fail":
-        return handleFail(state, input);
+      case "task-created":
+        return handleTaskCreated(state, input);
+      case "task-started":
+        return handleTaskStarted(state, input);
+      case "task-completed":
+        return handleTaskCompleted(state, input);
+      case "task-failed":
+        return handleTaskFailed(state, input);
+      case "task-suspended":
+        return handleTaskSuspended(state, input);
+      case "task-cancelled":
+        return handleTaskCancelled(state, input);
+      case "message-appended":
+        return handleMessageAppended(state, input);
       default: {
         // Exhaustive check
         const _exhaustive: never = input;

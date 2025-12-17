@@ -17,29 +17,29 @@ export { ROOT_TASK_ID } from "./types";
 export type {
   // Task Creation
   TaskCreation,
-  // Appended Info
-  AppendedInfo,
-  // Completion
-  Completion,
-  CompletionSuccess,
-  CompletionFailure,
-  // Task Status (推导的)
+  // Appended Message
+  AppendedMessage,
+  // Task Status
   TaskStatus,
-  TaskStatusReady,
-  TaskStatusPending,
-  TaskStatusSucceeded,
-  TaskStatusFailed,
+  // Task Result
+  TaskResult,
+  TaskResultSuccess,
+  TaskResultFailure,
+  TaskResultSuspended,
+  TaskResultCancelled,
   // Task Info (查询结果)
   TaskInfo,
   // State
   TaskManagerState,
   // Input
-  Input,
-  InputCreate,
-  InputCancel,
-  InputAppend,
-  InputComplete,
-  InputFail,
+  TaskManagerInput,
+  TaskManagerInputTaskCreated,
+  TaskManagerInputTaskStarted,
+  TaskManagerInputTaskCompleted,
+  TaskManagerInputTaskFailed,
+  TaskManagerInputTaskSuspended,
+  TaskManagerInputTaskCancelled,
+  TaskManagerInputMessageAppended,
 } from "./types";
 
 export type { TaskManager } from "./create";
@@ -47,7 +47,7 @@ export type { TaskManager } from "./create";
 // ============================================================================
 // 导出辅助函数
 // ============================================================================
-export { isCompleted, isActive } from "./queries";
+export { isTerminalStatus, isActiveStatus } from "./queries";
 
 // ============================================================================
 // 导出 Automata
@@ -58,17 +58,19 @@ export { initial, transition, taskManagerMachine } from "./automata";
 // 导出查询函数
 // ============================================================================
 export {
-  deriveTaskStatus,
   getTopLevelTaskIds,
   getNextTask,
   getTaskInfo,
   getAllTaskIds,
   getActiveTasks,
-  getCompletedTasks,
+  getTerminalTasks,
+  getReadyTasks,
+  getRunningTasks,
   getTopLevelTasks,
   getChildTasks,
-  isAllCompleted,
+  isAllTerminal,
   getTaskStats,
+  getAppendedMessages,
 } from "./queries";
 
 // ============================================================================

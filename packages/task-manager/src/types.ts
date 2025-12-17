@@ -1,10 +1,9 @@
 /**
  * Task Manager 类型定义
  *
- * 设计原则：
- * - 状态最小化：只存储基本数据，TaskStatus 从 completions 和 children 推导
- * - 父子即依赖：任务的依赖关系通过父子关系表达，父任务必须等所有子任务完成
- * - 虚拟根节点：所有任务都有 parentId，顶层任务的 parentId 是 ROOT_TASK_ID
+ * 基于自动机建模方法论设计：
+ * - Input：系统响应的事件（过去式命名）
+ * - State：观察者需要的数据
  */
 
 // ============================================================================
@@ -45,82 +44,84 @@ export type TaskCreation = {
 /**
  * 追加到任务的消息
  */
-export type AppendedInfo = {
+export type AppendedMessage = {
   /** 任务 ID */
   taskId: string;
-  /** 追加的信息 */
-  info: string;
+  /** 追加的消息 */
+  message: string;
+  /** 时间戳 */
+  timestamp: number;
 };
 
 // ============================================================================
-// Task Completion 类型
+// Task Status 类型
 // ============================================================================
 
 /**
- * 任务成功完成
- */
-export type CompletionSuccess = {
-  isSuccess: true;
-  result: string;
-};
-
-/**
- * 任务失败
- */
-export type CompletionFailure = {
-  isSuccess: false;
-  error: string;
-};
-
-/**
- * 任务完成状态
- * 只有完成的任务才会在 completions 中
- */
-export type Completion = CompletionSuccess | CompletionFailure;
-
-// ============================================================================
-// Task Status 类型（推导出的状态）
-// ============================================================================
-
-/**
- * 任务等待状态 - 有未完成的子任务
- */
-export type TaskStatusPending = {
-  type: "pending";
-};
-
-/**
- * 任务就绪状态 - 所有子任务已完成，可以执行
- */
-export type TaskStatusReady = {
-  type: "ready";
-};
-
-/**
- * 任务成功状态
- */
-export type TaskStatusSucceeded = {
-  type: "succeeded";
-  result: string;
-};
-
-/**
- * 任务失败状态
- */
-export type TaskStatusFailed = {
-  type: "failed";
-  error: string;
-};
-
-/**
- * 任务状态联合类型
- * 这是从 completions 和 children 推导出来的，不直接存储在 state 中
+ * 任务状态
+ *
+ * - ready: 就绪，可被执行
+ * - pending: 等待子任务完成
+ * - running: 执行中
+ * - completed: 成功完成
+ * - failed: 失败
+ * - suspended: 挂起，等待用户输入
+ * - cancelled: 已取消（终结状态）
  */
 export type TaskStatus =
-  | TaskStatusPending
-  | TaskStatusReady
-  | TaskStatusSucceeded
-  | TaskStatusFailed;
+  | "ready"
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "suspended"
+  | "cancelled";
+
+// ============================================================================
+// Task Result 类型
+// ============================================================================
+
+/**
+ * 任务成功结果
+ */
+export type TaskResultSuccess = {
+  type: "success";
+  result: string;
+};
+
+/**
+ * 任务失败结果
+ */
+export type TaskResultFailure = {
+  type: "failure";
+  error: string;
+};
+
+/**
+ * 任务挂起结果
+ */
+export type TaskResultSuspended = {
+  type: "suspended";
+  reason: string;
+};
+
+/**
+ * 任务取消结果
+ */
+export type TaskResultCancelled = {
+  type: "cancelled";
+  reason: string;
+};
+
+/**
+ * 任务终结结果
+ * 当任务进入 completed/failed/suspended/cancelled 状态时记录
+ */
+export type TaskResult =
+  | TaskResultSuccess
+  | TaskResultFailure
+  | TaskResultSuspended
+  | TaskResultCancelled;
 
 // ============================================================================
 // State 类型
@@ -128,21 +129,124 @@ export type TaskStatus =
 
 /**
  * Task Manager 的状态
- *
- * 设计原则：
- * - 只存储最基本的数据
- * - TaskStatus 从 completions 和 children 推导
  */
 export type TaskManagerState = {
-  /** 所有 task 的创建信息 */
+  /** 所有任务的创建信息 */
   creations: Record<string, TaskCreation>;
-  /** 所有追加的消息（有序列表） */
-  appendedInfos: AppendedInfo[];
-  /** 已完成任务的结果，key 是 taskId */
-  completions: Record<string, Completion>;
-  /** (cache) 所有 task 的 children 列表，key 包含 ROOT_TASK_ID */
+  /** 所有任务的当前状态 */
+  statuses: Record<string, TaskStatus>;
+  /** 已终结任务的结果 */
+  results: Record<string, TaskResult>;
+  /** 父子关系：taskId → childIds，包含 ROOT_TASK_ID */
   children: Record<string, string[]>;
+  /** 追加的消息（有序列表） */
+  appendedMessages: AppendedMessage[];
 };
+
+// ============================================================================
+// Input 类型
+// ============================================================================
+
+/**
+ * 任务已创建事件
+ *
+ * 副作用：若父任务是 running 状态，父任务 → pending
+ */
+export type TaskManagerInputTaskCreated = {
+  type: "task-created";
+  timestamp: number;
+  taskId: string;
+  title: string;
+  goal: string;
+  parentId: string;
+};
+
+/**
+ * 任务开始执行事件
+ *
+ * ready → running
+ */
+export type TaskManagerInputTaskStarted = {
+  type: "task-started";
+  timestamp: number;
+  taskId: string;
+};
+
+/**
+ * 任务成功完成事件
+ *
+ * running → completed
+ * 副作用：检查父任务是否所有子任务都已终结 → ready
+ */
+export type TaskManagerInputTaskCompleted = {
+  type: "task-completed";
+  timestamp: number;
+  taskId: string;
+  result: string;
+};
+
+/**
+ * 任务失败事件
+ *
+ * running → failed
+ * 副作用：检查父任务是否所有子任务都已终结 → ready
+ */
+export type TaskManagerInputTaskFailed = {
+  type: "task-failed";
+  timestamp: number;
+  taskId: string;
+  error: string;
+};
+
+/**
+ * 任务挂起事件（等待用户输入）
+ *
+ * running → suspended
+ * 副作用：检查父任务是否所有子任务都已终结 → ready
+ */
+export type TaskManagerInputTaskSuspended = {
+  type: "task-suspended";
+  timestamp: number;
+  taskId: string;
+  reason: string;
+};
+
+/**
+ * 任务取消事件
+ *
+ * 任意非终结状态 → cancelled
+ * 副作用：递归取消所有子任务
+ */
+export type TaskManagerInputTaskCancelled = {
+  type: "task-cancelled";
+  timestamp: number;
+  taskId: string;
+  reason: string;
+};
+
+/**
+ * 消息追加事件
+ *
+ * 副作用：所有非 running 状态的目标任务 → ready
+ */
+export type TaskManagerInputMessageAppended = {
+  type: "message-appended";
+  timestamp: number;
+  taskIds: string[];
+  message: string;
+};
+
+/**
+ * Task Manager 的总 Input 类型
+ */
+export type TaskManagerInput =
+  | TaskManagerInputTaskCreated
+  | TaskManagerInputTaskStarted
+  | TaskManagerInputTaskCompleted
+  | TaskManagerInputTaskFailed
+  | TaskManagerInputTaskSuspended
+  | TaskManagerInputTaskCancelled
+  | TaskManagerInputMessageAppended;
 
 // ============================================================================
 // TaskInfo 类型（查询结果）
@@ -163,78 +267,12 @@ export type TaskInfo = {
   parentId: string;
   /** 子任务 ID 列表 */
   childIds: string[];
-  /** 附加信息列表 */
-  appendedInfos: string[];
-  /** 任务状态（从 completions 和 children 推导） */
+  /** 附加消息列表 */
+  appendedMessages: string[];
+  /** 任务状态 */
   status: TaskStatus;
+  /** 任务结果（仅终结状态有值） */
+  result: TaskResult | null;
   /** 创建时间戳 */
   createdAt: number;
 };
-
-// ============================================================================
-// Input 类型
-// ============================================================================
-
-/**
- * 创建任务
- * - parentId 是必须的，顶层任务用 ROOT_TASK_ID
- */
-export type InputCreate = {
-  type: "create";
-  timestamp: number;
-  id: string;
-  title: string;
-  goal: string;
-  parentId: string;
-};
-
-/**
- * 取消任务
- * 会递归取消所有子任务
- */
-export type InputCancel = {
-  type: "cancel";
-  timestamp: number;
-  taskId: string;
-  error: string;
-};
-
-/**
- * 追加消息到一个或多个任务
- */
-export type InputAppend = {
-  type: "append";
-  timestamp: number;
-  taskIds: string[];
-  info: string;
-};
-
-/**
- * 完成任务（成功）
- */
-export type InputComplete = {
-  type: "complete";
-  timestamp: number;
-  taskId: string;
-  result: string;
-};
-
-/**
- * 任务失败
- */
-export type InputFail = {
-  type: "fail";
-  timestamp: number;
-  taskId: string;
-  error: string;
-};
-
-/**
- * 所有 Input 类型的联合
- */
-export type Input =
-  | InputCreate
-  | InputCancel
-  | InputAppend
-  | InputComplete
-  | InputFail;

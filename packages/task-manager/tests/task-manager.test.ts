@@ -3,50 +3,65 @@ import {
   createTaskManager,
   initial,
   transition,
-  isCompleted,
-  isActive,
-  deriveTaskStatus,
+  isTerminalStatus,
+  isActiveStatus,
   ROOT_TASK_ID,
   type TaskManager,
-  type Input,
+  type TaskManagerInput,
   type TaskManagerState,
 } from "../src/index";
 
 describe("task-manager", () => {
-  describe("types", () => {
-    describe("isCompleted", () => {
-      it("should return true for succeeded status", () => {
-        expect(isCompleted({ type: "succeeded", result: "done" })).toBe(true);
+  describe("status helpers", () => {
+    describe("isTerminalStatus", () => {
+      it("should return true for completed", () => {
+        expect(isTerminalStatus("completed")).toBe(true);
       });
 
-      it("should return true for failed status", () => {
-        expect(isCompleted({ type: "failed", error: "error" })).toBe(true);
+      it("should return true for failed", () => {
+        expect(isTerminalStatus("failed")).toBe(true);
       });
 
-      it("should return false for ready status", () => {
-        expect(isCompleted({ type: "ready" })).toBe(false);
+      it("should return true for suspended", () => {
+        expect(isTerminalStatus("suspended")).toBe(true);
       });
 
-      it("should return false for pending status", () => {
-        expect(isCompleted({ type: "pending" })).toBe(false);
+      it("should return true for cancelled", () => {
+        expect(isTerminalStatus("cancelled")).toBe(true);
+      });
+
+      it("should return false for ready", () => {
+        expect(isTerminalStatus("ready")).toBe(false);
+      });
+
+      it("should return false for pending", () => {
+        expect(isTerminalStatus("pending")).toBe(false);
+      });
+
+      it("should return false for running", () => {
+        expect(isTerminalStatus("running")).toBe(false);
       });
     });
 
-    describe("isActive", () => {
-      it("should return true for ready status", () => {
-        expect(isActive({ type: "ready" })).toBe(true);
+    describe("isActiveStatus", () => {
+      it("should return true for ready", () => {
+        expect(isActiveStatus("ready")).toBe(true);
       });
 
-      it("should return true for pending status", () => {
-        expect(isActive({ type: "pending" })).toBe(true);
+      it("should return true for pending", () => {
+        expect(isActiveStatus("pending")).toBe(true);
       });
 
-      it("should return false for succeeded status", () => {
-        expect(isActive({ type: "succeeded", result: "done" })).toBe(false);
+      it("should return true for running", () => {
+        expect(isActiveStatus("running")).toBe(true);
       });
 
-      it("should return false for failed status", () => {
-        expect(isActive({ type: "failed", error: "error" })).toBe(false);
+      it("should return false for completed", () => {
+        expect(isActiveStatus("completed")).toBe(false);
+      });
+
+      it("should return false for failed", () => {
+        expect(isActiveStatus("failed")).toBe(false);
       });
     });
   });
@@ -56,9 +71,10 @@ describe("task-manager", () => {
       it("should return empty state", () => {
         const state = initial();
         expect(state.creations).toEqual({});
-        expect(state.appendedInfos).toEqual([]);
-        expect(state.completions).toEqual({});
+        expect(state.statuses).toEqual({});
+        expect(state.results).toEqual({});
         expect(state.children[ROOT_TASK_ID]).toEqual([]);
+        expect(state.appendedMessages).toEqual([]);
       });
     });
 
@@ -69,12 +85,12 @@ describe("task-manager", () => {
         state = initial();
       });
 
-      describe("create", () => {
-        it("should create a single task", () => {
-          const input: Input = {
-            type: "create",
+      describe("task-created", () => {
+        it("should create a task with ready status", () => {
+          const input: TaskManagerInput = {
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
@@ -84,230 +100,302 @@ describe("task-manager", () => {
 
           expect(newState.creations["task-1"]).toBeDefined();
           expect(newState.creations["task-1"]?.title).toBe("Task 1");
-          expect(newState.creations["task-1"]?.createdAt).toBe(1000);
-          expect(deriveTaskStatus(newState, "task-1")).toEqual({ type: "ready" });
+          expect(newState.statuses["task-1"]).toBe("ready");
           expect(newState.children[ROOT_TASK_ID]).toContain("task-1");
         });
 
-        it("should create multiple tasks", () => {
-          state = transition({
-            type: "create",
-            timestamp: 1000,
-            id: "task-1",
-            title: "Task 1",
-            goal: "Do something",
-            parentId: ROOT_TASK_ID,
-          })(state);
-
-          state = transition({
-            type: "create",
-            timestamp: 2000,
-            id: "task-2",
-            title: "Task 2",
-            goal: "Do another thing",
-            parentId: ROOT_TASK_ID,
-          })(state);
-
-          expect(Object.keys(state.creations)).toHaveLength(2);
-          expect(state.children[ROOT_TASK_ID]).toHaveLength(2);
-        });
-
-        it("should create child tasks under parent", () => {
+        it("should create child task and set parent to pending if parent is running", () => {
           // Create parent
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "parent",
+            taskId: "parent",
             title: "Parent",
             goal: "Parent task",
             parentId: ROOT_TASK_ID,
           })(state);
 
-          // Create children
+          // Start parent
           state = transition({
-            type: "create",
-            timestamp: 2000,
-            id: "child-1",
-            title: "Child 1",
-            goal: "Child task 1",
-            parentId: "parent",
+            type: "task-started",
+            timestamp: 1500,
+            taskId: "parent",
           })(state);
 
-          state = transition({
-            type: "create",
-            timestamp: 3000,
-            id: "child-2",
-            title: "Child 2",
-            goal: "Child task 2",
-            parentId: "parent",
-          })(state);
-
-          expect(state.children["parent"]).toEqual(["child-1", "child-2"]);
-          expect(state.creations["child-1"]?.parentId).toBe("parent");
-          expect(state.creations["child-2"]?.parentId).toBe("parent");
-        });
-
-        it("should derive parent status as pending when has incomplete children", () => {
-          // Create parent
-          state = transition({
-            type: "create",
-            timestamp: 1000,
-            id: "parent",
-            title: "Parent",
-            goal: "Parent task",
-            parentId: ROOT_TASK_ID,
-          })(state);
+          expect(state.statuses["parent"]).toBe("running");
 
           // Create child
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 2000,
-            id: "child-1",
+            taskId: "child-1",
             title: "Child 1",
             goal: "Child task 1",
             parentId: "parent",
           })(state);
 
-          // Parent should be pending because child is not complete
-          expect(deriveTaskStatus(state, "parent")).toEqual({ type: "pending" });
-          expect(deriveTaskStatus(state, "child-1")).toEqual({ type: "ready" });
+          // Parent should be pending, child should be ready
+          expect(state.statuses["parent"]).toBe("pending");
+          expect(state.statuses["child-1"]).toBe("ready");
+          expect(state.children["parent"]).toContain("child-1");
         });
       });
 
-      describe("complete", () => {
-        it("should mark task as succeeded", () => {
-          // Create a task first
+      describe("task-started", () => {
+        it("should transition ready to running", () => {
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
-          // Complete the task
           const newState = transition({
-            type: "complete",
+            type: "task-started",
             timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          expect(newState.statuses["task-1"]).toBe("running");
+        });
+
+        it("should not transition non-ready task", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          // Start it
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          // Complete it
+          state = transition({
+            type: "task-completed",
+            timestamp: 3000,
+            taskId: "task-1",
+            result: "Done",
+          })(state);
+
+          // Try to start again - should not change
+          const newState = transition({
+            type: "task-started",
+            timestamp: 4000,
+            taskId: "task-1",
+          })(state);
+
+          expect(newState.statuses["task-1"]).toBe("completed");
+        });
+      });
+
+      describe("task-completed", () => {
+        it("should mark task as completed with result", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          const newState = transition({
+            type: "task-completed",
+            timestamp: 3000,
             taskId: "task-1",
             result: "Task completed successfully",
           })(state);
 
-          expect(deriveTaskStatus(newState, "task-1")).toEqual({
-            type: "succeeded",
+          expect(newState.statuses["task-1"]).toBe("completed");
+          expect(newState.results["task-1"]).toEqual({
+            type: "success",
             result: "Task completed successfully",
           });
         });
 
-        it("should update parent status when all children complete", () => {
-          // Create parent with children
+        it("should set parent to ready when all children complete", () => {
+          // Create and start parent
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "parent",
+            taskId: "parent",
             title: "Parent",
             goal: "Parent task",
             parentId: ROOT_TASK_ID,
           })(state);
 
           state = transition({
-            type: "create",
+            type: "task-started",
+            timestamp: 1500,
+            taskId: "parent",
+          })(state);
+
+          // Create child (parent becomes pending)
+          state = transition({
+            type: "task-created",
             timestamp: 2000,
-            id: "child-1",
+            taskId: "child-1",
             title: "Child 1",
             goal: "Child task 1",
             parentId: "parent",
           })(state);
 
-          expect(deriveTaskStatus(state, "parent")).toEqual({ type: "pending" });
+          expect(state.statuses["parent"]).toBe("pending");
 
-          // Complete the child
-          const newState = transition({
-            type: "complete",
+          // Start and complete child
+          state = transition({
+            type: "task-started",
+            timestamp: 2500,
+            taskId: "child-1",
+          })(state);
+
+          state = transition({
+            type: "task-completed",
             timestamp: 3000,
             taskId: "child-1",
             result: "Done",
           })(state);
 
-          expect(deriveTaskStatus(newState, "parent")).toEqual({ type: "ready" });
+          // Parent should be ready again
+          expect(state.statuses["parent"]).toBe("ready");
         });
       });
 
-      describe("fail", () => {
-        it("should mark task as failed", () => {
+      describe("task-failed", () => {
+        it("should mark task as failed with error", () => {
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
-          const newState = transition({
-            type: "fail",
+          state = transition({
+            type: "task-started",
             timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          const newState = transition({
+            type: "task-failed",
+            timestamp: 3000,
             taskId: "task-1",
             error: "Something went wrong",
           })(state);
 
-          expect(deriveTaskStatus(newState, "task-1")).toEqual({
-            type: "failed",
+          expect(newState.statuses["task-1"]).toBe("failed");
+          expect(newState.results["task-1"]).toEqual({
+            type: "failure",
             error: "Something went wrong",
           });
         });
       });
 
-      describe("cancel", () => {
+      describe("task-suspended", () => {
+        it("should mark task as suspended with reason", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          const newState = transition({
+            type: "task-suspended",
+            timestamp: 3000,
+            taskId: "task-1",
+            reason: "Waiting for user input",
+          })(state);
+
+          expect(newState.statuses["task-1"]).toBe("suspended");
+          expect(newState.results["task-1"]).toEqual({
+            type: "suspended",
+            reason: "Waiting for user input",
+          });
+        });
+      });
+
+      describe("task-cancelled", () => {
         it("should cancel a task", () => {
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
           const newState = transition({
-            type: "cancel",
+            type: "task-cancelled",
             timestamp: 2000,
             taskId: "task-1",
-            error: "Cancelled by user",
+            reason: "Cancelled by user",
           })(state);
 
-          expect(deriveTaskStatus(newState, "task-1")).toEqual({
-            type: "failed",
-            error: "Cancelled by user",
+          expect(newState.statuses["task-1"]).toBe("cancelled");
+          expect(newState.results["task-1"]).toEqual({
+            type: "cancelled",
+            reason: "Cancelled by user",
           });
         });
 
         it("should cancel task and its children recursively", () => {
-          // Create parent task
+          // Create parent and start it
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "parent",
+            taskId: "parent",
             title: "Parent",
             goal: "Parent task",
             parentId: ROOT_TASK_ID,
           })(state);
 
+          state = transition({
+            type: "task-started",
+            timestamp: 1500,
+            taskId: "parent",
+          })(state);
+
           // Create children
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 2000,
-            id: "child-1",
+            taskId: "child-1",
             title: "Child 1",
             goal: "Child task 1",
             parentId: "parent",
           })(state);
 
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 3000,
-            id: "child-2",
+            taskId: "child-2",
             title: "Child 2",
             goal: "Child task 2",
             parentId: "parent",
@@ -315,103 +403,251 @@ describe("task-manager", () => {
 
           // Cancel parent
           const newState = transition({
-            type: "cancel",
+            type: "task-cancelled",
             timestamp: 4000,
             taskId: "parent",
-            error: "Cancelled",
+            reason: "Cancelled",
           })(state);
 
-          expect(deriveTaskStatus(newState, "parent").type).toBe("failed");
-          expect(deriveTaskStatus(newState, "child-1").type).toBe("failed");
-          expect(deriveTaskStatus(newState, "child-2").type).toBe("failed");
+          expect(newState.statuses["parent"]).toBe("cancelled");
+          expect(newState.statuses["child-1"]).toBe("cancelled");
+          expect(newState.statuses["child-2"]).toBe("cancelled");
+        });
+
+        it("should not cancel already terminal tasks", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          state = transition({
+            type: "task-completed",
+            timestamp: 3000,
+            taskId: "task-1",
+            result: "Done",
+          })(state);
+
+          // Try to cancel completed task
+          const newState = transition({
+            type: "task-cancelled",
+            timestamp: 4000,
+            taskId: "task-1",
+            reason: "Cancelled",
+          })(state);
+
+          // Should still be completed
+          expect(newState.statuses["task-1"]).toBe("completed");
         });
       });
 
-      describe("append", () => {
-        it("should append info to a task", () => {
+      describe("message-appended", () => {
+        it("should append message to task", () => {
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
           const newState = transition({
-            type: "append",
+            type: "message-appended",
             timestamp: 2000,
             taskIds: ["task-1"],
-            info: "Additional information",
+            message: "Additional information",
           })(state);
 
-          const infos = newState.appendedInfos.filter(
-            (i) => i.taskId === "task-1"
+          const messages = newState.appendedMessages.filter(
+            (m) => m.taskId === "task-1"
           );
-          expect(infos.map((i) => i.info)).toContain("Additional information");
+          expect(messages.map((m) => m.message)).toContain(
+            "Additional information"
+          );
         });
 
-        it("should append multiple infos to a task", () => {
+        it("should set non-running tasks to ready", () => {
+          // Create and complete a task
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
           state = transition({
-            type: "append",
+            type: "task-started",
             timestamp: 2000,
-            taskIds: ["task-1"],
-            info: "Info 1",
+            taskId: "task-1",
           })(state);
 
           state = transition({
-            type: "append",
+            type: "task-completed",
+            timestamp: 3000,
+            taskId: "task-1",
+            result: "Done",
+          })(state);
+
+          expect(state.statuses["task-1"]).toBe("completed");
+
+          // Append message - should become ready
+          const newState = transition({
+            type: "message-appended",
+            timestamp: 4000,
+            taskIds: ["task-1"],
+            message: "New info",
+          })(state);
+
+          expect(newState.statuses["task-1"]).toBe("ready");
+        });
+
+        it("should not change running task status", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          const newState = transition({
+            type: "message-appended",
             timestamp: 3000,
             taskIds: ["task-1"],
-            info: "Info 2",
+            message: "New info",
           })(state);
 
-          const infos = state.appendedInfos
-            .filter((i) => i.taskId === "task-1")
-            .map((i) => i.info);
-          expect(infos).toEqual(["Info 1", "Info 2"]);
+          // Should still be running
+          expect(newState.statuses["task-1"]).toBe("running");
+          // But message should be appended
+          expect(newState.appendedMessages.length).toBe(1);
         });
 
-        it("should append info to multiple tasks in one input", () => {
+        it("should append message to multiple tasks", () => {
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1000,
-            id: "task-1",
+            taskId: "task-1",
             title: "Task 1",
             goal: "Do something",
             parentId: ROOT_TASK_ID,
           })(state);
 
           state = transition({
-            type: "create",
+            type: "task-created",
             timestamp: 1500,
-            id: "task-2",
+            taskId: "task-2",
             title: "Task 2",
             goal: "Do something else",
             parentId: ROOT_TASK_ID,
           })(state);
 
           const newState = transition({
-            type: "append",
+            type: "message-appended",
             timestamp: 2000,
             taskIds: ["task-1", "task-2"],
-            info: "Shared info",
+            message: "Shared info",
           })(state);
 
-          const targets = newState.appendedInfos
-            .filter((i) => i.info === "Shared info")
-            .map((i) => i.taskId);
+          const targets = newState.appendedMessages
+            .filter((m) => m.message === "Shared info")
+            .map((m) => m.taskId);
 
           expect(targets).toEqual(["task-1", "task-2"]);
+        });
+
+        it("should set suspended task to ready on message", () => {
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "task-1",
+            title: "Task 1",
+            goal: "Do something",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 2000,
+            taskId: "task-1",
+          })(state);
+
+          state = transition({
+            type: "task-suspended",
+            timestamp: 3000,
+            taskId: "task-1",
+            reason: "Waiting for input",
+          })(state);
+
+          expect(state.statuses["task-1"]).toBe("suspended");
+
+          const newState = transition({
+            type: "message-appended",
+            timestamp: 4000,
+            taskIds: ["task-1"],
+            message: "User response",
+          })(state);
+
+          expect(newState.statuses["task-1"]).toBe("ready");
+        });
+
+        it("should set pending task to ready on message", () => {
+          // Create and start parent
+          state = transition({
+            type: "task-created",
+            timestamp: 1000,
+            taskId: "parent",
+            title: "Parent",
+            goal: "Parent task",
+            parentId: ROOT_TASK_ID,
+          })(state);
+
+          state = transition({
+            type: "task-started",
+            timestamp: 1500,
+            taskId: "parent",
+          })(state);
+
+          // Create child (parent becomes pending)
+          state = transition({
+            type: "task-created",
+            timestamp: 2000,
+            taskId: "child-1",
+            title: "Child 1",
+            goal: "Child task 1",
+            parentId: "parent",
+          })(state);
+
+          expect(state.statuses["parent"]).toBe("pending");
+
+          // Append message to parent
+          const newState = transition({
+            type: "message-appended",
+            timestamp: 3000,
+            taskIds: ["parent"],
+            message: "Need to reconsider",
+          })(state);
+
+          expect(newState.statuses["parent"]).toBe("ready");
         });
       });
     });
@@ -431,18 +667,18 @@ describe("task-manager", () => {
 
     it("should create and query tasks", () => {
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "task-1",
+        taskId: "task-1",
         title: "Task 1",
         goal: "Do something",
         parentId: ROOT_TASK_ID,
       });
 
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 2000,
-        id: "task-2",
+        taskId: "task-2",
         title: "Task 2",
         goal: "Do another thing",
         parentId: ROOT_TASK_ID,
@@ -450,96 +686,37 @@ describe("task-manager", () => {
 
       expect(manager.getAllTaskIds()).toHaveLength(2);
       expect(manager.getActiveTasks()).toHaveLength(2);
-      expect(manager.getCompletedTasks()).toHaveLength(0);
+      expect(manager.getTerminalTasks()).toHaveLength(0);
     });
 
     it("should return next task as earliest created ready task", () => {
-      // Create task-2 first (earlier timestamp)
       manager.dispatch({
-        type: "create",
-        timestamp: 1000,
-        id: "task-2",
-        title: "Task 2",
-        goal: "Created first",
-        parentId: ROOT_TASK_ID,
-      });
-
-      // Create task-1 later (later timestamp)
-      manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 2000,
-        id: "task-1",
-        title: "Task 1",
+        taskId: "task-2",
+        title: "Task 2",
         goal: "Created second",
         parentId: ROOT_TASK_ID,
       });
 
-      // Should return task-2 because it was created first
-      const nextTask = manager.getNextTask();
-      expect(nextTask?.id).toBe("task-2");
-    });
-
-    it("should return child as next task when parent has children", () => {
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "parent",
-        title: "Parent",
-        goal: "Parent task",
+        taskId: "task-1",
+        title: "Task 1",
+        goal: "Created first",
         parentId: ROOT_TASK_ID,
       });
 
-      manager.dispatch({
-        type: "create",
-        timestamp: 2000,
-        id: "child-1",
-        title: "Child 1",
-        goal: "Child task 1",
-        parentId: "parent",
-      });
-
-      // Parent is pending, child is ready
-      // Child should be returned as it's the only ready task
       const nextTask = manager.getNextTask();
-      expect(nextTask?.id).toBe("child-1");
-    });
-
-    it("should return parent after all children complete", () => {
-      manager.dispatch({
-        type: "create",
-        timestamp: 1000,
-        id: "parent",
-        title: "Parent",
-        goal: "Parent task",
-        parentId: ROOT_TASK_ID,
-      });
-
-      manager.dispatch({
-        type: "create",
-        timestamp: 2000,
-        id: "child-1",
-        title: "Child 1",
-        goal: "Child task 1",
-        parentId: "parent",
-      });
-
-      manager.dispatch({
-        type: "complete",
-        timestamp: 3000,
-        taskId: "child-1",
-        result: "Done",
-      });
-
-      // Now parent should be next (it's the only ready task)
-      const nextTask = manager.getNextTask();
-      expect(nextTask?.id).toBe("parent");
+      expect(nextTask?.id).toBe("task-1");
     });
 
     it("should get task info correctly", () => {
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "task-1",
+        taskId: "task-1",
         title: "Task 1",
         goal: "Do something",
         parentId: ROOT_TASK_ID,
@@ -549,7 +726,7 @@ describe("task-manager", () => {
       expect(taskInfo?.id).toBe("task-1");
       expect(taskInfo?.title).toBe("Task 1");
       expect(taskInfo?.goal).toBe("Do something");
-      expect(taskInfo?.status).toEqual({ type: "ready" });
+      expect(taskInfo?.status).toBe("ready");
       expect(taskInfo?.createdAt).toBe(1000);
     });
 
@@ -559,18 +736,24 @@ describe("task-manager", () => {
 
     it("should track task stats", () => {
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "parent",
+        taskId: "parent",
         title: "Parent",
         goal: "Parent task",
         parentId: ROOT_TASK_ID,
       });
 
       manager.dispatch({
-        type: "create",
+        type: "task-started",
+        timestamp: 1500,
+        taskId: "parent",
+      });
+
+      manager.dispatch({
+        type: "task-created",
         timestamp: 2000,
-        id: "child-1",
+        taskId: "child-1",
         title: "Child 1",
         goal: "Child task 1",
         parentId: "parent",
@@ -580,30 +763,37 @@ describe("task-manager", () => {
       expect(stats.total).toBe(2);
       expect(stats.ready).toBe(1); // child-1 is ready
       expect(stats.pending).toBe(1); // parent is pending
-      expect(stats.succeeded).toBe(0);
+      expect(stats.running).toBe(0);
+      expect(stats.completed).toBe(0);
       expect(stats.failed).toBe(0);
     });
 
-    it("should report isAllCompleted correctly", () => {
+    it("should report isAllTerminal correctly", () => {
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "task-1",
+        taskId: "task-1",
         title: "Task 1",
         goal: "Do something",
         parentId: ROOT_TASK_ID,
       });
 
-      expect(manager.isAllCompleted()).toBe(false);
+      expect(manager.isAllTerminal()).toBe(false);
 
       manager.dispatch({
-        type: "complete",
+        type: "task-started",
         timestamp: 2000,
+        taskId: "task-1",
+      });
+
+      manager.dispatch({
+        type: "task-completed",
+        timestamp: 3000,
         taskId: "task-1",
         result: "Done",
       });
 
-      expect(manager.isAllCompleted()).toBe(true);
+      expect(manager.isAllTerminal()).toBe(true);
     });
 
     it("should subscribe to state changes", () => {
@@ -613,9 +803,9 @@ describe("task-manager", () => {
       });
 
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "task-1",
+        taskId: "task-1",
         title: "Task 1",
         goal: "Do something",
         parentId: ROOT_TASK_ID,
@@ -625,38 +815,63 @@ describe("task-manager", () => {
       expect(outputs[0]?.creations["task-1"]).toBeDefined();
     });
 
-    it("should return earliest ready task among multiple ready tasks", () => {
-      // Create three tasks with different timestamps
+    it("should get ready and running tasks separately", () => {
       manager.dispatch({
-        type: "create",
-        timestamp: 3000,
-        id: "task-c",
-        title: "Task C",
-        goal: "Created last",
-        parentId: ROOT_TASK_ID,
-      });
-
-      manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 1000,
-        id: "task-a",
-        title: "Task A",
-        goal: "Created first",
+        taskId: "task-1",
+        title: "Task 1",
+        goal: "Do something",
         parentId: ROOT_TASK_ID,
       });
 
       manager.dispatch({
-        type: "create",
+        type: "task-created",
         timestamp: 2000,
-        id: "task-b",
-        title: "Task B",
-        goal: "Created second",
+        taskId: "task-2",
+        title: "Task 2",
+        goal: "Do something else",
         parentId: ROOT_TASK_ID,
       });
 
-      // Should return task-a because it has the earliest createdAt
-      const nextTask = manager.getNextTask();
-      expect(nextTask?.id).toBe("task-a");
+      manager.dispatch({
+        type: "task-started",
+        timestamp: 3000,
+        taskId: "task-1",
+      });
+
+      expect(manager.getReadyTasks()).toHaveLength(1);
+      expect(manager.getReadyTasks()[0]?.id).toBe("task-2");
+      expect(manager.getRunningTasks()).toHaveLength(1);
+      expect(manager.getRunningTasks()[0]?.id).toBe("task-1");
+    });
+
+    it("should get appended messages", () => {
+      manager.dispatch({
+        type: "task-created",
+        timestamp: 1000,
+        taskId: "task-1",
+        title: "Task 1",
+        goal: "Do something",
+        parentId: ROOT_TASK_ID,
+      });
+
+      manager.dispatch({
+        type: "message-appended",
+        timestamp: 2000,
+        taskIds: ["task-1"],
+        message: "Message 1",
+      });
+
+      manager.dispatch({
+        type: "message-appended",
+        timestamp: 3000,
+        taskIds: ["task-1"],
+        message: "Message 2",
+      });
+
+      const messages = manager.getAppendedMessages("task-1");
+      expect(messages).toEqual(["Message 1", "Message 2"]);
     });
   });
 });
